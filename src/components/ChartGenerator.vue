@@ -6,7 +6,7 @@
           <v-icon icon="mdi-cog" class="mr-2"></v-icon>
           Einstellungen
         </v-card-title>
-        
+
         <v-card-text class="pt-6">
           <v-text-field
             v-model="chartTitle"
@@ -45,15 +45,27 @@
             <v-row>
               <v-col cols="4">
                 <v-label class="text-caption">Primär</v-label>
-                <input type="color" v-model="colors.primary" class="color-picker" />
+                <input
+                  type="color"
+                  v-model="colors.primary"
+                  class="color-picker"
+                />
               </v-col>
               <v-col cols="4">
                 <v-label class="text-caption">Sekundär</v-label>
-                <input type="color" v-model="colors.secondary" class="color-picker" />
+                <input
+                  type="color"
+                  v-model="colors.secondary"
+                  class="color-picker"
+                />
               </v-col>
               <v-col cols="4">
                 <v-label class="text-caption">Hintergrund</v-label>
-                <input type="color" v-model="colors.background" class="color-picker" />
+                <input
+                  type="color"
+                  v-model="colors.background"
+                  class="color-picker"
+                />
               </v-col>
             </v-row>
           </div>
@@ -64,7 +76,7 @@
             variant="outlined"
             density="comfortable"
             prepend-icon="mdi-file-upload"
-            @change="handleFileUpload"
+            @update:model-value="handleFileUpload"
             class="mb-4"
           ></v-file-input>
 
@@ -83,7 +95,12 @@
             </div>
 
             <div class="data-points-container">
-              <v-row v-for="(point, index) in data" :key="index" class="mb-2" no-gutters>
+              <v-row
+                v-for="(point, index) in data"
+                :key="index"
+                class="mb-2"
+                no-gutters
+              >
                 <v-col cols="6" class="pr-1">
                   <v-text-field
                     v-model="point.label"
@@ -136,7 +153,7 @@
           <v-icon icon="mdi-eye" class="mr-2"></v-icon>
           Vorschau
         </v-card-title>
-        
+
         <v-card-text class="pa-6">
           <div class="preview-container" v-html="svgContent"></div>
         </v-card-text>
@@ -146,78 +163,111 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { generateBarChart, generateLineChart, generatePieChart } from '../utils/chartGenerators'
-import type { DataPoint } from '../utils/chartGenerators'
+import { ref, computed } from "vue";
+import {
+  generateBarChart,
+  generateLineChart,
+  generatePieChart,
+} from "../utils/chartGenerators";
+import type { DataPoint } from "../utils/chartGenerators";
 
-const chartType = ref<'bar' | 'line' | 'pie'>('bar')
-const chartTitle = ref<string>('Mein Chart')
+const chartType = ref<"bar" | "line" | "pie">("bar");
+const chartTitle = ref<string>("Mein Chart");
 const data = ref<DataPoint[]>([
-  { label: 'Q1', value: 30 },
-  { label: 'Q2', value: 45 },
-  { label: 'Q3', value: 60 },
-  { label: 'Q4', value: 55 }
-])
+  { label: "Q1", value: 30 },
+  { label: "Q2", value: 45 },
+  { label: "Q3", value: 60 },
+  { label: "Q4", value: 55 },
+]);
 
 const colors = ref({
-  primary: '#4F46E5',
-  secondary: '#818CF8',
-  background: '#FFFFFF'
-})
+  primary: "#4F46E5",
+  secondary: "#818CF8",
+  background: "#FFFFFF",
+});
 
 const addDataPoint = () => {
-  data.value.push({ label: `Item ${data.value.length + 1}`, value: 0 })
-}
+  data.value.push({ label: `Item ${data.value.length + 1}`, value: 0 });
+};
 
-const removeDataPoint = (index) => {
-  data.value.splice(index, 1)
-}
+const removeDataPoint = (index: any) => {
+  data.value.splice(index, 1);
+};
 
-const handleFileUpload = (event) => {
-  const file = event.target.files[0]
-  if (!file) return
+const handleFileUpload = (files: File | File[] | null) => {
+  const file = Array.isArray(files) ? files[0] : files;
+  if (!file) return;
 
-  const reader = new FileReader()
+  const reader = new FileReader();
   reader.onload = (e) => {
-    const text = e.target.result
-    const lines = text.trim().split('\n')
-    const parsed = lines.slice(1).map(line => {
-      const [label, value] = line.split(',')
-      return { label: label.trim(), value: parseFloat(value) || 0 }
-    })
-    data.value = parsed
-  }
-  reader.readAsText(file)
-}
+    const text = e.target?.result as string;
+    if (!text) return;
+
+    const lines = text.trim().split("\n").filter(line => line.trim());
+
+    // Detect delimiter: comma or semicolon (common in German CSVs)
+    const delimiter = lines[0].includes(';') ? ';' : ',';
+
+    // Skip header if first line contains non-numeric data in all value positions
+    const firstLine = lines[0].split(delimiter);
+    const hasHeader = firstLine.length > 1 && isNaN(parseFloat(firstLine[1].replace(',', '.')));
+    const dataLines = hasHeader ? lines.slice(1) : lines;
+
+    const parsed = dataLines.map((line) => {
+      const columns = line.split(delimiter).map(col => col.trim());
+
+      // Use first column as label
+      const label = columns[0];
+
+      // Find first numeric column for value (skip first column)
+      let value = 0;
+      for (let i = 1; i < columns.length; i++) {
+        const normalizedValue = columns[i].replace(',', '.');
+        const parsedValue = parseFloat(normalizedValue);
+        if (!isNaN(parsedValue)) {
+          value = parsedValue;
+          break;
+        }
+      }
+
+      return { label, value };
+    });
+
+    data.value = parsed;
+  };
+  reader.readAsText(file);
+};
 
 const svgContent = computed(() => {
   const config = {
     data: data.value,
     colors: colors.value,
-    title: chartTitle.value
-  }
+    title: chartTitle.value,
+  };
 
   switch (chartType.value) {
-    case 'bar':
-      return generateBarChart(config)
-    case 'line':
-      return generateLineChart(config)
-    case 'pie':
-      return generatePieChart(config)
+    case "bar":
+      return generateBarChart(config);
+    case "line":
+      return generateLineChart(config);
+    case "pie":
+      return generatePieChart(config);
     default:
-      return ''
+      return "";
   }
-})
+});
 
 const downloadSVG = () => {
-  const blob = new Blob([svgContent.value], { type: 'image/svg+xml' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `${chartTitle.value.replace(/\s+/g, '_')}_${chartType.value}.svg`
-  a.click()
-  URL.revokeObjectURL(url)
-}
+  const blob = new Blob([svgContent.value], { type: "image/svg+xml" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${chartTitle.value.replace(/\s+/g, "_")}_${
+    chartType.value
+  }.svg`;
+  a.click();
+  URL.revokeObjectURL(url);
+};
 </script>
 
 <style scoped>
