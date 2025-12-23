@@ -85,55 +85,19 @@
           ></v-file-input>
 
           <div class="mb-4">
-            <div class="d-flex justify-space-between align-center mb-3">
-              <div class="text-subtitle-2">Datenpunkte</div>
-              <v-btn
-                size="small"
-                color="primary"
-                variant="tonal"
-                @click="addDataPoint"
-                prepend-icon="mdi-plus"
-              >
-                Hinzufügen
-              </v-btn>
-            </div>
-
-            <div class="data-points-container">
-              <v-row
-                v-for="(point, index) in data"
-                :key="index"
-                class="mb-2"
-                no-gutters
-              >
-                <v-col cols="6" class="pr-1">
-                  <v-text-field
-                    v-model="point.label"
-                    density="compact"
-                    variant="outlined"
-                    hide-details
-                    placeholder="Label"
-                  ></v-text-field>
-                </v-col>
-                <v-col cols="4" class="px-1">
-                  <v-text-field
-                    v-model.number="point.value"
-                    type="number"
-                    density="compact"
-                    variant="outlined"
-                    hide-details
-                    placeholder="Wert"
-                  ></v-text-field>
-                </v-col>
-                <v-col cols="2" class="pl-1">
-                  <v-btn
-                    icon="mdi-delete"
-                    size="small"
-                    color="error"
-                    variant="text"
-                    @click="removeDataPoint(index)"
-                  ></v-btn>
-                </v-col>
-              </v-row>
+            <div class="text-subtitle-2 mb-3">Daten</div>
+            <v-data-table
+              v-if="tableItems.length > 0"
+              :headers="tableHeaders"
+              :items="tableItems"
+              :items-per-page="10"
+              density="compact"
+              class="elevation-1"
+              height="300"
+            >
+            </v-data-table>
+            <div v-else class="text-caption text-grey pa-4 text-center">
+              CSV hochladen, um Daten anzuzeigen
             </div>
           </div>
 
@@ -185,6 +149,10 @@ const data = ref<DataPoint[]>([
   { label: "Q4", value: 55 },
 ]);
 
+// Data table
+const tableHeaders = ref<any[]>([]);
+const tableItems = ref<any[]>([]);
+
 const colors = ref({
   primary: "#4F46E5",
   secondary: "#818CF8",
@@ -213,13 +181,34 @@ const handleFileUpload = (files: File | File[] | null) => {
     // Detect delimiter: comma or semicolon (common in German CSVs)
     const delimiter = lines[0].includes(';') ? ';' : ',';
 
-    // Skip header if first line contains non-numeric data in all value positions
-    const firstLine = lines[0].split(delimiter);
+    // Check if first line is a header
+    const firstLine = lines[0].split(delimiter).map(col => col.trim());
     const hasHeader = firstLine.length > 1 && isNaN(parseFloat(firstLine[1].replace(',', '.')));
+
+    // Generate column headers
+    const headers = hasHeader ? firstLine : firstLine.map((_, i) => `Column ${i + 1}`);
     const dataLines = hasHeader ? lines.slice(1) : lines;
 
+    // Create Vuetify table headers
+    tableHeaders.value = headers.map((header, i) => ({
+      title: header,
+      key: `col_${i}`,
+      sortable: true,
+    }));
+
+    // Parse data for both chart and table
+    const allRows: any[] = [];
     const parsed = dataLines.map((line) => {
       const columns = line.split(delimiter).map(col => col.trim());
+
+      // Create row for table with all columns
+      const row: any = {};
+      columns.forEach((col, i) => {
+        const normalizedValue = col.replace(',', '.');
+        const numValue = parseFloat(normalizedValue);
+        row[`col_${i}`] = isNaN(numValue) ? col : numValue;
+      });
+      allRows.push(row);
 
       // Use first column as label
       const label = columns[0];
@@ -239,6 +228,7 @@ const handleFileUpload = (files: File | File[] | null) => {
     });
 
     data.value = parsed;
+    tableItems.value = allRows;
   };
   reader.readAsText(file);
 };
