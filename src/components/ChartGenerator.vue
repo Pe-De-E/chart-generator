@@ -33,6 +33,10 @@
                 <v-icon>mdi-chart-line</v-icon>
                 <span class="ml-2">Line</span>
               </v-btn>
+              <v-btn value="scatter" size="large">
+                <v-icon>mdi-chart-scatter-plot</v-icon>
+                <span class="ml-2">Scatter</span>
+              </v-btn>
               <v-btn value="pie" size="large">
                 <v-icon>mdi-chart-pie</v-icon>
                 <span class="ml-2">Pie</span>
@@ -168,10 +172,11 @@ import {
   generateBarChart,
   generateLineChart,
   generatePieChart,
+  generateScatterChart,
 } from "../utils/chartGenerators";
 import type { DataPoint } from "../utils/chartGenerators";
 
-const chartType = ref<"bar" | "line" | "pie">("bar");
+const chartType = ref<"bar" | "line" | "pie" | "scatter">("bar");
 const chartTitle = ref<string>("Mein Chart");
 const data = ref<DataPoint[]>([
   { label: "Q1", value: 30 },
@@ -250,6 +255,8 @@ const svgContent = computed(() => {
       return generateBarChart(config);
     case "line":
       return generateLineChart(config);
+    case "scatter":
+      return generateScatterChart(config);
     case "pie":
       return generatePieChart(config);
     default:
