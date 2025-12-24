@@ -146,80 +146,18 @@
                     :color="getQualityColor(dataQuality.qualityScore)"
                     size="small"
                     variant="flat"
+                    @click="showQualityDialog = true"
+                    style="cursor: pointer;"
                   >
                     <v-icon start icon="mdi-chart-box-outline"></v-icon>
                     {{ getQualityLabel(dataQuality.qualityScore) }} ({{ dataQuality.completenessPercentage }}%)
                   </v-chip>
-                  <v-menu>
-                    <template v-slot:activator="{ props }">
-                      <v-btn
-                        v-bind="props"
-                        icon="mdi-information-outline"
-                        size="small"
-                        variant="text"
-                      ></v-btn>
-                    </template>
-                    <v-card max-width="400">
-                      <v-card-title class="text-subtitle-1">
-                        Datenqualitätsanalyse
-                      </v-card-title>
-                      <v-card-text>
-                        <v-list density="compact">
-                          <v-list-item>
-                            <v-list-item-title class="text-caption text-grey-darken-2">
-                              Vollständigkeit
-                            </v-list-item-title>
-                            <v-list-item-subtitle class="text-body-2 font-weight-bold">
-                              {{ dataQuality.completenessPercentage }}%
-                            </v-list-item-subtitle>
-                          </v-list-item>
-                          <v-list-item>
-                            <v-list-item-title class="text-caption text-grey-darken-2">
-                              Gefüllte Felder
-                            </v-list-item-title>
-                            <v-list-item-subtitle class="text-body-2">
-                              {{ dataQuality.filledFields }} / {{ dataQuality.totalFields }}
-                            </v-list-item-subtitle>
-                          </v-list-item>
-                          <v-list-item>
-                            <v-list-item-title class="text-caption text-grey-darken-2">
-                              Qualitätsbewertung
-                            </v-list-item-title>
-                            <v-list-item-subtitle>
-                              <v-chip
-                                :color="getQualityColor(dataQuality.qualityScore)"
-                                size="x-small"
-                                variant="flat"
-                              >
-                                {{ getQualityLabel(dataQuality.qualityScore) }}
-                              </v-chip>
-                            </v-list-item-subtitle>
-                          </v-list-item>
-                        </v-list>
-
-                        <v-divider class="my-3"></v-divider>
-
-                        <div v-if="dataQuality.issues.length > 0">
-                          <div class="text-caption text-grey-darken-2 mb-2">Gefundene Probleme:</div>
-                          <v-chip
-                            v-for="(issue, index) in dataQuality.issues"
-                            :key="index"
-                            size="small"
-                            color="warning"
-                            variant="outlined"
-                            class="mb-1 mr-1"
-                          >
-                            <v-icon start icon="mdi-alert-circle-outline" size="x-small"></v-icon>
-                            {{ issue }}
-                          </v-chip>
-                        </div>
-                        <div v-else class="text-caption text-success">
-                          <v-icon icon="mdi-check-circle" size="small"></v-icon>
-                          Keine Probleme gefunden
-                        </div>
-                      </v-card-text>
-                    </v-card>
-                  </v-menu>
+                  <v-btn
+                    icon="mdi-information-outline"
+                    size="small"
+                    variant="text"
+                    @click="showQualityDialog = true"
+                  ></v-btn>
                   <v-btn
                     icon="mdi-arrow-expand-vertical"
                     size="small"
@@ -245,6 +183,192 @@
       </v-card>
     </v-col>
   </v-row>
+
+  <!-- Data Quality Dialog -->
+  <v-dialog v-model="showQualityDialog" max-width="800" scrollable>
+    <v-card>
+      <v-card-title class="bg-grey-lighten-4 d-flex align-items-center justify-space-between">
+        <div>
+          <v-icon icon="mdi-clipboard-check-outline" class="mr-2"></v-icon>
+          Datenqualitätsanalyse
+        </div>
+        <v-chip
+          :color="getQualityColor(dataQuality.qualityScore)"
+          variant="flat"
+        >
+          {{ getQualityLabel(dataQuality.qualityScore) }}
+        </v-chip>
+      </v-card-title>
+
+      <v-card-text class="pt-4">
+        <!-- Overall Quality Score -->
+        <v-card class="mb-4" variant="outlined">
+          <v-card-text>
+            <div class="text-h6 mb-3">Gesamtbewertung</div>
+            <v-row>
+              <v-col cols="12" md="6">
+                <div class="text-center">
+                  <div class="text-h2 font-weight-bold" :style="{ color: getQualityColorHex(dataQuality.qualityScore) }">
+                    {{ dataQuality.completenessPercentage }}%
+                  </div>
+                  <div class="text-caption text-grey">Vollständigkeit</div>
+                  <v-progress-linear
+                    :model-value="dataQuality.completenessPercentage"
+                    :color="getQualityColor(dataQuality.qualityScore)"
+                    height="20"
+                    class="mt-2"
+                  >
+                    <template v-slot:default="{ value }">
+                      <strong>{{ Math.ceil(value) }}%</strong>
+                    </template>
+                  </v-progress-linear>
+                </div>
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-list density="compact">
+                  <v-list-item>
+                    <v-list-item-title class="text-caption">Gesamtzeilen</v-list-item-title>
+                    <v-list-item-subtitle class="text-body-1 font-weight-bold">
+                      {{ dataQuality.totalRows }}
+                    </v-list-item-subtitle>
+                  </v-list-item>
+                  <v-list-item>
+                    <v-list-item-title class="text-caption">Gesamtfelder</v-list-item-title>
+                    <v-list-item-subtitle class="text-body-1 font-weight-bold">
+                      {{ dataQuality.totalFields }}
+                    </v-list-item-subtitle>
+                  </v-list-item>
+                  <v-list-item>
+                    <v-list-item-title class="text-caption">Gefüllte Felder</v-list-item-title>
+                    <v-list-item-subtitle class="text-body-1 font-weight-bold text-success">
+                      {{ dataQuality.filledFields }}
+                    </v-list-item-subtitle>
+                  </v-list-item>
+                  <v-list-item>
+                    <v-list-item-title class="text-caption">Leere Felder</v-list-item-title>
+                    <v-list-item-subtitle class="text-body-1 font-weight-bold text-error">
+                      {{ dataQuality.emptyFields }}
+                    </v-list-item-subtitle>
+                  </v-list-item>
+                </v-list>
+              </v-col>
+            </v-row>
+          </v-card-text>
+        </v-card>
+
+        <!-- Quality Score Explanation -->
+        <v-card class="mb-4" variant="outlined">
+          <v-card-text>
+            <div class="text-h6 mb-3">Was bedeutet die Bewertung?</div>
+            <v-list density="compact">
+              <v-list-item>
+                <template v-slot:prepend>
+                  <v-chip color="success" size="small" variant="flat">Ausgezeichnet</v-chip>
+                </template>
+                <v-list-item-subtitle class="ml-2">
+                  ≥ 95% Vollständigkeit, keine Probleme erkannt
+                </v-list-item-subtitle>
+              </v-list-item>
+              <v-list-item>
+                <template v-slot:prepend>
+                  <v-chip color="info" size="small" variant="flat">Gut</v-chip>
+                </template>
+                <v-list-item-subtitle class="ml-2">
+                  ≥ 85% Vollständigkeit, maximal 2 kleinere Probleme
+                </v-list-item-subtitle>
+              </v-list-item>
+              <v-list-item>
+                <template v-slot:prepend>
+                  <v-chip color="warning" size="small" variant="flat">Befriedigend</v-chip>
+                </template>
+                <v-list-item-subtitle class="ml-2">
+                  ≥ 70% Vollständigkeit, mehrere Probleme vorhanden
+                </v-list-item-subtitle>
+              </v-list-item>
+              <v-list-item>
+                <template v-slot:prepend>
+                  <v-chip color="error" size="small" variant="flat">Mangelhaft</v-chip>
+                </template>
+                <v-list-item-subtitle class="ml-2">
+                  &lt; 70% Vollständigkeit oder erhebliche Qualitätsprobleme
+                </v-list-item-subtitle>
+              </v-list-item>
+            </v-list>
+          </v-card-text>
+        </v-card>
+
+        <!-- Missing Values by Column -->
+        <v-card class="mb-4" variant="outlined" v-if="Object.keys(dataQuality.missingValuesByColumn).length > 0">
+          <v-card-text>
+            <div class="text-h6 mb-3">Fehlende Werte pro Spalte</div>
+            <v-list density="compact">
+              <v-list-item
+                v-for="([column, missing], index) in Object.entries(dataQuality.missingValuesByColumn)"
+                :key="index"
+              >
+                <v-list-item-title>{{ column }}</v-list-item-title>
+                <v-list-item-subtitle>
+                  <v-progress-linear
+                    :model-value="((dataQuality.totalRows - missing) / dataQuality.totalRows) * 100"
+                    :color="missing / dataQuality.totalRows > 0.5 ? 'error' : missing > 0 ? 'warning' : 'success'"
+                    height="20"
+                    class="mt-1"
+                  >
+                    <template v-slot:default>
+                      <strong>{{ dataQuality.totalRows - missing }} / {{ dataQuality.totalRows }}</strong>
+                    </template>
+                  </v-progress-linear>
+                  <div class="text-caption mt-1" v-if="missing > 0">
+                    {{ missing }} fehlend ({{ Math.round((missing / dataQuality.totalRows) * 100) }}%)
+                  </div>
+                </v-list-item-subtitle>
+              </v-list-item>
+            </v-list>
+          </v-card-text>
+        </v-card>
+
+        <!-- Issues Found -->
+        <v-card variant="outlined" v-if="dataQuality.issues.length > 0">
+          <v-card-text>
+            <div class="text-h6 mb-3">
+              <v-icon icon="mdi-alert-circle-outline" color="warning"></v-icon>
+              Gefundene Probleme ({{ dataQuality.issues.length }})
+            </div>
+            <v-alert
+              v-for="(issue, index) in dataQuality.issues"
+              :key="index"
+              type="warning"
+              variant="tonal"
+              density="compact"
+              class="mb-2"
+            >
+              {{ issue }}
+            </v-alert>
+          </v-card-text>
+        </v-card>
+
+        <!-- No Issues -->
+        <v-card variant="outlined" v-else>
+          <v-card-text class="text-center">
+            <v-icon icon="mdi-check-circle" color="success" size="64"></v-icon>
+            <div class="text-h6 mt-2">Keine Probleme gefunden!</div>
+            <div class="text-caption text-grey">Ihre Daten sind in ausgezeichnetem Zustand.</div>
+          </v-card-text>
+        </v-card>
+      </v-card-text>
+
+      <v-card-actions class="bg-grey-lighten-4">
+        <v-spacer></v-spacer>
+        <v-btn
+          color="primary"
+          variant="flat"
+          @click="showQualityDialog = false"
+        >
+          Schließen
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 </template>
 
 <script setup lang="ts">
@@ -276,6 +400,9 @@ const data = ref<DataPoint[]>([
 // Data table
 const tableHeaders = ref<any[]>([]);
 const tableItems = ref<any[]>([]);
+
+// Quality dialog
+const showQualityDialog = ref(false);
 
 // Splitpane sizes
 const chartPaneSize = ref(60);
@@ -412,6 +539,19 @@ const svgContent = computed(() => {
 const dataQuality = computed(() => {
   return analyzeDataQuality(data.value);
 });
+
+const getQualityColorHex = (score: 'excellent' | 'good' | 'fair' | 'poor'): string => {
+  switch (score) {
+    case 'excellent':
+      return '#4CAF50' // green
+    case 'good':
+      return '#2196F3' // blue
+    case 'fair':
+      return '#FF9800' // orange
+    case 'poor':
+      return '#F44336' // red
+  }
+};
 
 const downloadSVG = () => {
   const blob = new Blob([svgContent.value], { type: "image/svg+xml" });
