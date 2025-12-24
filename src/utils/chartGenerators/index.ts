@@ -1,5 +1,6 @@
 export { generateBarChart } from './barChart'
 export { generateLineChart } from './lineChart'
+export { generateAreaChart } from './areaChart'
 export { generatePieChart } from './pieChart'
 export { generateScatterChart } from './scatterChart'
 export type { DataPoint, ChartColors, ChartOptions } from './types'

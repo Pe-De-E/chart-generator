@@ -235,6 +235,9 @@
                       <v-btn value="line">
                         <v-icon>mdi-chart-line</v-icon>
                       </v-btn>
+                      <v-btn value="area">
+                        <v-icon>mdi-chart-areaspline</v-icon>
+                      </v-btn>
                       <v-btn value="scatter">
                         <v-icon>mdi-chart-scatter-plot</v-icon>
                       </v-btn>
@@ -543,6 +546,7 @@ import { ref, computed } from "vue";
 import {
   generateBarChart,
   generateLineChart,
+  generateAreaChart,
   generatePieChart,
   generateScatterChart,
 } from "../utils/chartGenerators";
@@ -559,7 +563,7 @@ const currentStep = ref(1);
 // File upload
 const uploadedFile = ref<File[]>([]);
 
-const chartType = ref<"bar" | "line" | "pie" | "scatter">("bar");
+const chartType = ref<"bar" | "line" | "area" | "pie" | "scatter">("bar");
 const chartTitle = ref<string>("Mein Chart");
 
 // Data table - central source of truth
@@ -720,6 +724,8 @@ const svgContent = computed(() => {
       return generateBarChart(config);
     case "line":
       return generateLineChart(config);
+    case "area":
+      return generateAreaChart(config);
     case "scatter":
       return generateScatterChart(config);
     case "pie":
