@@ -81,12 +81,33 @@ export function analyzeDataQuality(data: DataPoint[]): DataQualityMetrics {
     }
   })
 
-  // Check for duplicate labels
-  const labels = data.map(d => d.label)
-  const uniqueLabels = new Set(labels)
-  if (labels.length !== uniqueLabels.size) {
-    const duplicateCount = labels.length - uniqueLabels.size
-    issues.push(`${duplicateCount} doppelte Label gefunden`)
+  // Check for empty labels
+  const emptyLabels = data.filter(d => !d.label || (typeof d.label === 'string' && d.label.trim() === '')).length
+  if (emptyLabels > 0) {
+    issues.push(`${emptyLabels} Zeile(n) ohne Bezeichnung in erster Spalte`)
+  }
+
+  // Check for duplicate labels (excluding empty ones)
+  const nonEmptyLabels = data
+    .map(d => d.label)
+    .filter(label => label && (typeof label !== 'string' || label.trim() !== ''))
+
+  const uniqueLabels = new Set(nonEmptyLabels)
+  if (nonEmptyLabels.length !== uniqueLabels.size) {
+    // Find which labels are duplicated
+    const labelCounts = new Map<string, number>()
+    nonEmptyLabels.forEach(label => {
+      labelCounts.set(String(label), (labelCounts.get(String(label)) || 0) + 1)
+    })
+    const duplicates = Array.from(labelCounts.entries())
+      .filter(([_, count]) => count > 1)
+      .map(([label, count]) => `"${label}" (${count}x)`)
+      .slice(0, 3) // Show max 3 examples
+
+    if (duplicates.length > 0) {
+      const duplicateCount = nonEmptyLabels.length - uniqueLabels.size
+      issues.push(`${duplicateCount} doppelte Bezeichnung(en): ${duplicates.join(', ')}${duplicates.length === 3 ? '...' : ''}`)
+    }
   }
 
   // Check for zero or negative values in value column
