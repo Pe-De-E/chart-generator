@@ -390,16 +390,28 @@ import {
 
 const chartType = ref<"bar" | "line" | "pie" | "scatter">("bar");
 const chartTitle = ref<string>("Mein Chart");
-const data = ref<DataPoint[]>([
-  { label: "Q1", value: 30 },
-  { label: "Q2", value: 45 },
-  { label: "Q3", value: 60 },
-  { label: "Q4", value: 55 },
+
+// Data table - central source of truth
+const tableHeaders = ref<any[]>([
+  { title: "Label", key: "col_0", sortable: true },
+  { title: "Wert", key: "col_1", sortable: true },
+]);
+const tableItems = ref<any[]>([
+  { col_0: "Q1", col_1: 30 },
+  { col_0: "Q2", col_1: 45 },
+  { col_0: "Q3", col_1: 60 },
+  { col_0: "Q4", col_1: 55 },
 ]);
 
-// Data table
-const tableHeaders = ref<any[]>([]);
-const tableItems = ref<any[]>([]);
+// Derive chart data from tableItems
+const data = computed<DataPoint[]>(() => {
+  if (tableItems.value.length === 0) return [];
+
+  return tableItems.value.map(row => ({
+    label: String(row.col_0 || ''),
+    value: typeof row.col_1 === 'number' ? row.col_1 : parseFloat(String(row.col_1)) || 0,
+  }));
+});
 
 // Quality dialog
 const showQualityDialog = ref(false);
@@ -478,9 +490,9 @@ const handleFileUpload = (files: File | File[] | null | File) => {
       sortable: true,
     }));
 
-    // Parse data for both chart and table
+    // Parse data into table format (data for charts is derived automatically)
     const allRows: any[] = [];
-    const parsed = dataLines.map((line) => {
+    dataLines.forEach((line) => {
       const columns = line.split(delimiter).map(col => col.trim());
 
       // Create row for table with all columns
@@ -491,25 +503,8 @@ const handleFileUpload = (files: File | File[] | null | File) => {
         row[`col_${i}`] = isNaN(numValue) ? col : numValue;
       });
       allRows.push(row);
-
-      // Use first column as label
-      const label = columns[0];
-
-      // Find first numeric column for value (skip first column)
-      let value = 0;
-      for (let i = 1; i < columns.length; i++) {
-        const normalizedValue = columns[i].replace(',', '.');
-        const parsedValue = parseFloat(normalizedValue);
-        if (!isNaN(parsedValue)) {
-          value = parsedValue;
-          break;
-        }
-      }
-
-      return { label, value };
     });
 
-    data.value = parsed;
     tableItems.value = allRows;
   };
   reader.readAsText(file);
@@ -537,7 +532,21 @@ const svgContent = computed(() => {
 });
 
 const dataQuality = computed(() => {
-  return analyzeDataQuality(data.value);
+  // Analyze all columns from tableItems
+  if (tableItems.value.length === 0) {
+    return analyzeDataQuality([]);
+  }
+
+  // Convert tableItems to DataPoint format for analysis
+  const fullData = tableItems.value.map(row => {
+    const dataPoint: any = {};
+    Object.keys(row).forEach(key => {
+      dataPoint[key] = row[key];
+    });
+    return dataPoint;
+  });
+
+  return analyzeDataQuality(fullData);
 });
 
 const getQualityColorHex = (score: 'excellent' | 'good' | 'fair' | 'poor'): string => {
