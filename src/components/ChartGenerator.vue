@@ -279,9 +279,17 @@
 
             <!-- Chart Preview -->
             <v-card variant="outlined">
-              <v-card-title class="text-subtitle-1 bg-grey-lighten-4">
-                <v-icon icon="mdi-eye" class="mr-2"></v-icon>
-                Vorschau
+              <v-card-title class="text-subtitle-1 bg-grey-lighten-4 d-flex justify-space-between align-center">
+                <div>
+                  <v-icon icon="mdi-eye" class="mr-2"></v-icon>
+                  Vorschau
+                </div>
+                <v-btn
+                  icon="mdi-fullscreen"
+                  size="small"
+                  variant="text"
+                  @click="showFullscreenPreview = true"
+                ></v-btn>
               </v-card-title>
               <v-card-text class="pa-6">
                 <div class="preview-container" v-html="svgContent"></div>
@@ -504,6 +512,30 @@
       </v-card-actions>
     </v-card>
   </v-dialog>
+
+  <!-- Fullscreen Preview Dialog -->
+  <v-dialog v-model="showFullscreenPreview" fullscreen>
+    <v-card>
+      <v-toolbar color="primary" dark>
+        <v-toolbar-title>
+          <v-icon icon="mdi-chart-bar" class="mr-2"></v-icon>
+          {{ chartTitle }} ({{ chartType.toUpperCase() }})
+        </v-toolbar-title>
+        <v-spacer></v-spacer>
+        <v-btn
+          icon="mdi-download"
+          @click="downloadSVG"
+        ></v-btn>
+        <v-btn
+          icon="mdi-close"
+          @click="showFullscreenPreview = false"
+        ></v-btn>
+      </v-toolbar>
+      <v-card-text class="pa-8 d-flex align-center justify-center" style="height: calc(100vh - 64px); background: #f5f5f5;">
+        <div class="fullscreen-preview-container" v-html="svgContent"></div>
+      </v-card-text>
+    </v-card>
+  </v-dialog>
 </template>
 
 <script setup lang="ts">
@@ -570,8 +602,9 @@ const numericColumnOptions = computed(() => {
     }));
 });
 
-// Quality dialog
+// Dialogs
 const showQualityDialog = ref(false);
+const showFullscreenPreview = ref(false);
 
 const colors = ref({
   primary: "#4F46E5",
@@ -753,5 +786,22 @@ const resetWizard = () => {
   background: #f5f5f5;
   border-radius: 8px;
   padding: 20px;
+}
+
+.fullscreen-preview-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  max-width: 1400px;
+  max-height: 900px;
+}
+
+.fullscreen-preview-container :deep(svg) {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
 }
 </style>
