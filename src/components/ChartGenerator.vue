@@ -649,8 +649,19 @@ const handleFileUpload = (files: File | File[] | null) => {
       // Create row for table with all columns
       const row: any = {};
       columns.forEach((col, i) => {
-        const normalizedValue = col.replace(',', '.');
-        const numValue = parseFloat(normalizedValue);
+        // Handle empty cells
+        if (!col || col.trim() === '') {
+          row[`col_${i}`] = '';
+          return;
+        }
+
+        // Try to parse as number - handle both comma and dot as decimal separator
+        const normalizedValue = col.replace(/[,]/g, '.');
+        // Remove any non-numeric characters except dots, minus, and e/E for scientific notation
+        const cleanedValue = normalizedValue.replace(/[^\d.eE\-+]/g, '');
+        const numValue = parseFloat(cleanedValue);
+
+        // Store as number if valid, otherwise as string
         row[`col_${i}`] = isNaN(numValue) ? col : numValue;
       });
       allRows.push(row);
@@ -658,9 +669,10 @@ const handleFileUpload = (files: File | File[] | null) => {
 
     tableItems.value = allRows;
 
-    // Auto-select first column as label and first numeric column as value
+    // Auto-select first column as label and first numeric column (that's NOT the label column) as value
     selectedLabelColumn.value = 'col_0';
-    const firstNumeric = numericColumnOptions.value[0];
+    // Find first numeric column that is NOT col_0
+    const firstNumeric = numericColumnOptions.value.find(opt => opt.value !== 'col_0') || numericColumnOptions.value[0];
     if (firstNumeric) {
       selectedValueColumn.value = firstNumeric.value;
     }
@@ -780,28 +792,22 @@ const resetWizard = () => {
 
 .preview-container {
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: center;
   min-height: 400px;
   background: #f5f5f5;
   border-radius: 8px;
   padding: 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .fullscreen-preview-container {
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: center;
   width: 100%;
   height: 100%;
-  max-width: 1400px;
-  max-height: 900px;
-}
-
-.fullscreen-preview-container :deep(svg) {
-  max-width: 100%;
-  max-height: 100%;
-  width: auto;
-  height: auto;
+  overflow: auto;
 }
 </style>

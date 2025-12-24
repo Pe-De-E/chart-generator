@@ -31,13 +31,19 @@ export function generatePieChart({ data, colors, title }: ChartOptions): string 
 
     currentAngle = endAngle
 
+    // Only show labels for slices that are large enough (> 3% of total)
+    const percentage = (d.value / total) * 100
+    const showLabel = percentage > 3 && data.length <= 20
+
     return `
-      <path d="M ${centerX} ${centerY} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2} Z"
-            fill="${color}" stroke="${colors.background}" stroke-width="2"/>
-      <text x="${labelX}" y="${labelY}" text-anchor="middle"
-            font-size="12" font-weight="bold" fill="#FFFFFF">${d.label}</text>
-      <text x="${labelX}" y="${labelY + 15}" text-anchor="middle"
-            font-size="11" fill="#FFFFFF">${d.value}</text>
+      <path d="M ${centerX},${centerY} L ${x1},${y1} A ${radius},${radius} 0 ${largeArc},1 ${x2},${y2} Z"
+            fill="${color}" stroke="${colors.background}" stroke-width="1"/>
+      ${showLabel ? `
+        <text x="${labelX}" y="${labelY}" text-anchor="middle"
+              font-size="12" font-weight="bold" fill="#FFFFFF">${d.label}</text>
+        <text x="${labelX}" y="${labelY + 15}" text-anchor="middle"
+              font-size="11" fill="#FFFFFF">${d.value}</text>
+      ` : ''}
     `
   }).join('')
 

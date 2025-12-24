@@ -1,14 +1,18 @@
 import type { ChartOptions } from './types'
 
 export function generateBarChart({ data, colors, title }: ChartOptions): string {
-  const width = 600
+  // Dynamic width based on data count to ensure bars are visible
+  const minBarWidth = 8
+  const baseWidth = 600
+  const calculatedWidth = Math.max(baseWidth, data.length * minBarWidth * 1.2)
+  const width = calculatedWidth
   const height = 400
   const margin = { top: 60, right: 40, bottom: 80, left: 60 }
   const chartWidth = width - margin.left - margin.right
   const chartHeight = height - margin.top - margin.bottom
 
-  const maxValue = Math.max(...data.map(d => d.value))
-  const barWidth = chartWidth / data.length * 0.8
+  const maxValue = Math.max(...data.map(d => d.value), 1) // Minimum 1 to avoid division by zero
+  const barWidth = (chartWidth / data.length) * 0.8
   const barSpacing = chartWidth / data.length
 
   // Show every nth label based on data count to avoid overlap

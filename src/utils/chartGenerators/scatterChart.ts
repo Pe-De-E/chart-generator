@@ -1,14 +1,18 @@
 import type { ChartOptions } from './types'
 
 export function generateScatterChart({ data, colors, title }: ChartOptions): string {
-  const width = 600
+  // Dynamic width based on data count for better visibility
+  const minPointSpacing = 4
+  const baseWidth = 600
+  const calculatedWidth = Math.max(baseWidth, data.length * minPointSpacing)
+  const width = calculatedWidth
   const height = 400
   const margin = { top: 60, right: 40, bottom: 80, left: 60 }
   const chartWidth = width - margin.left - margin.right
   const chartHeight = height - margin.top - margin.bottom
 
   const maxValue = Math.max(...data.map(d => d.value))
-  const xStep = chartWidth / (data.length - 1)
+  const xStep = data.length > 1 ? chartWidth / (data.length - 1) : chartWidth / 2
 
   // Show every nth label based on data count to avoid overlap
   const labelInterval = data.length > 20 ? Math.ceil(data.length / 15) : 1
