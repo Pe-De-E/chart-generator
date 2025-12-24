@@ -157,6 +157,42 @@
               </v-card-text>
             </v-card>
 
+            <!-- Grouping Suggestion -->
+            <v-card variant="outlined" class="mb-4" v-if="groupingSuggestion.canGroup">
+              <v-card-text>
+                <div class="d-flex align-items-center justify-space-between">
+                  <div class="d-flex align-items-center">
+                    <v-icon :icon="getGroupingIcon(groupingSuggestion.type)" :color="getGroupingColor(groupingSuggestion.canGroup)" class="mr-3" size="large"></v-icon>
+                    <div>
+                      <div class="text-subtitle-2 font-weight-bold">Gruppierung möglich</div>
+                      <div class="text-caption text-grey-darken-1">{{ groupingSuggestion.reason }}</div>
+                    </div>
+                  </div>
+                  <v-chip
+                    :color="getGroupingColor(groupingSuggestion.canGroup)"
+                    variant="flat"
+                    size="small"
+                  >
+                    <v-icon start icon="mdi-lightbulb-on-outline"></v-icon>
+                    {{ groupingSuggestion.groupCount ? `${groupingSuggestion.groupCount} Gruppen` : 'Kategorisierbar' }}
+                  </v-chip>
+                </div>
+                <v-divider class="my-3"></v-divider>
+                <div class="text-caption text-grey-darken-2 mb-2">Mögliche Gruppierungen:</div>
+                <div class="d-flex flex-wrap gap-2">
+                  <v-chip
+                    v-for="(suggestion, index) in groupingSuggestion.suggestions"
+                    :key="index"
+                    size="small"
+                    variant="outlined"
+                    color="info"
+                  >
+                    {{ suggestion }}
+                  </v-chip>
+                </div>
+              </v-card-text>
+            </v-card>
+
             <!-- Full Data Table -->
             <v-card variant="outlined">
               <v-card-title class="text-subtitle-1 bg-grey-lighten-4">
@@ -556,6 +592,11 @@ import {
   getQualityColor,
   getQualityLabel,
 } from "../utils/dataQuality";
+import {
+  analyzeGroupingPotential,
+  getGroupingIcon,
+  getGroupingColor,
+} from "../utils/groupingAnalysis";
 
 // Stepper state
 const currentStep = ref(1);
@@ -751,6 +792,16 @@ const dataQuality = computed(() => {
   });
 
   return analyzeDataQuality(fullData);
+});
+
+const groupingSuggestion = computed(() => {
+  if (tableItems.value.length === 0) {
+    return analyzeGroupingPotential([]);
+  }
+
+  // Extract labels from selected label column
+  const labels = tableItems.value.map(row => String(row[selectedLabelColumn.value] || ''));
+  return analyzeGroupingPotential(labels);
 });
 
 const getQualityColorHex = (score: 'excellent' | 'good' | 'fair' | 'poor'): string => {
