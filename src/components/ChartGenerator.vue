@@ -655,14 +655,30 @@ const handleFileUpload = (files: File | File[] | null) => {
           return;
         }
 
-        // Try to parse as number - handle both comma and dot as decimal separator
-        const normalizedValue = col.replace(/[,]/g, '.');
-        // Remove any non-numeric characters except dots, minus, and e/E for scientific notation
-        const cleanedValue = normalizedValue.replace(/[^\d.eE\-+]/g, '');
-        const numValue = parseFloat(cleanedValue);
+        // Check if value looks like a date (contains date separators like -, /, or multiple dots)
+        const looksLikeDate = /\d{1,4}[-/.]\d{1,2}[-/.]\d{1,4}/.test(col) || // YYYY-MM-DD or DD.MM.YYYY
+                              /\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4}/.test(col)   // MM/DD/YYYY or DD/MM/YY
 
-        // Store as number if valid, otherwise as string
-        row[`col_${i}`] = isNaN(numValue) ? col : numValue;
+        // If it looks like a date, keep it as string
+        if (looksLikeDate) {
+          row[`col_${i}`] = col;
+          return;
+        }
+
+        // Try to parse as number - handle both comma and dot as decimal separator
+        const normalizedValue = col.replace(/,/g, '.');
+        const numValue = parseFloat(normalizedValue);
+
+        // Only convert to number if:
+        // 1. It's a valid number
+        // 2. The string doesn't contain letters (except e/E for scientific notation)
+        const hasLetters = /[a-df-zA-DF-Z]/.test(col) // Exclude e/E
+
+        if (!isNaN(numValue) && !hasLetters && normalizedValue.trim() !== '') {
+          row[`col_${i}`] = numValue;
+        } else {
+          row[`col_${i}`] = col;
+        }
       });
       allRows.push(row);
     });
