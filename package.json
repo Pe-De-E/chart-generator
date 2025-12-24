@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@mdi/font": "^7.4.0",
+    "splitpanes": "^4.0.4",
     "vue": "^3.4.0",
     "vuetify": "^3.5.0"
   },
