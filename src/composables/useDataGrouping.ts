@@ -1,5 +1,5 @@
 import { ref, computed, type Ref } from 'vue'
-import type { DataPoint } from '../utils/chartGenerators'
+import type { SeriesDataPoint, SeriesConfig } from '../utils/chartGenerators'
 import type { TableItem } from './useCSVParser'
 import {
   analyzeGroupingPotential,
@@ -15,7 +15,7 @@ import {
 export function useDataGrouping(
   tableItems: Ref<TableItem[]>,
   selectedLabelColumn: Ref<string>,
-  selectedValueColumn: Ref<string>
+  selectedValueColumns: Ref<SeriesConfig[]>
 ) {
   const enableGrouping = ref(false)
   const groupingPeriod = ref<'year' | 'month' | 'quarter' | 'week'>('month')
@@ -32,47 +32,66 @@ export function useDataGrouping(
     return analyzeGroupingPotential(labels)
   })
 
-  const data = computed<DataPoint[]>(() => {
-    if (tableItems.value.length === 0) return []
+  const seriesData = computed<SeriesDataPoint[]>(() => {
+    if (tableItems.value.length === 0 || selectedValueColumns.value.length === 0) return []
 
-    // Extract raw data - ensure all values are numbers
+    // Extract raw labels
     const rawLabels = tableItems.value.map(row => String(row[selectedLabelColumn.value] || ''))
-    const rawValues = tableItems.value.map(row => {
-      const val = row[selectedValueColumn.value]
-      return typeof val === 'number' ? val : (parseFloat(String(val)) || 0)
+
+    // Extract raw values for EACH series
+    const rawValuesBySeries = selectedValueColumns.value.map(series => {
+      return tableItems.value.map(row => {
+        const val = row[series.columnKey]
+        return typeof val === 'number' ? val : (parseFloat(String(val)) || 0)
+      })
     })
 
     // Apply grouping if enabled
     if (enableGrouping.value && groupingSuggestion.value.canGroup) {
-      let grouped
+      // Group each series independently with the SAME labels
+      const groupedSeries = rawValuesBySeries.map(seriesValues => {
+        switch (groupingSuggestion.value.type) {
+          case 'categorical':
+            return groupByCategorical(rawLabels, seriesValues, aggregationMethod.value)
 
-      switch (groupingSuggestion.value.type) {
-        case 'categorical':
-          grouped = groupByCategorical(rawLabels, rawValues, aggregationMethod.value)
-          break
+          case 'date':
+            return groupByDatePeriod(rawLabels, seriesValues, groupingPeriod.value, aggregationMethod.value)
 
-        case 'date':
-          grouped = groupByDatePeriod(rawLabels, rawValues, groupingPeriod.value, aggregationMethod.value)
-          break
+          case 'numeric':
+            return groupByNumericRange(rawLabels, seriesValues, numericRangeSize.value, aggregationMethod.value)
 
-        case 'numeric':
-          grouped = groupByNumericRange(rawLabels, rawValues, numericRangeSize.value, aggregationMethod.value)
-          break
+          default:
+            return rawLabels.map((label, i) => ({
+              label,
+              value: seriesValues[i],
+              count: 1,
+              originalLabels: [label]
+            }))
+        }
+      })
 
-        default:
-          grouped = rawLabels.map((label, i) => ({
-            label,
-            value: rawValues[i],
-            count: 1,
-            originalLabels: [label]
-          }))
-      }
+      // Merge into SeriesDataPoint[] format
+      // Ensure all series use the SAME grouped labels
+      const uniqueLabels = groupedSeries[0].map(g => g.label)
 
-      return grouped.map(g => ({ label: g.label, value: g.value }))
+      return uniqueLabels.map(label => {
+        const values: Record<string, number> = {}
+        selectedValueColumns.value.forEach((series, i) => {
+          const point = groupedSeries[i].find(p => p.label === label)
+          values[series.name] = point?.value || 0
+        })
+        return { label, values }
+      })
     }
 
-    // Return ungrouped data
-    return rawLabels.map((label, i) => ({ label, value: rawValues[i] }))
+    // Return ungrouped multi-series data
+    return rawLabels.map((label, i) => {
+      const values: Record<string, number> = {}
+      selectedValueColumns.value.forEach((series, idx) => {
+        values[series.name] = rawValuesBySeries[idx][i]
+      })
+      return { label, values }
+    })
   })
 
   function resetGrouping() {
@@ -88,7 +107,7 @@ export function useDataGrouping(
     aggregationMethod,
     numericRangeSize,
     groupingSuggestion,
-    data,
+    seriesData,
     resetGrouping
   }
 }

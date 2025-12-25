@@ -1,6 +1,23 @@
 import type { ChartOptions } from './types'
 
-export function generateBarChart({ data, colors, title }: ChartOptions): string {
+export function generateBarChart(options: ChartOptions): string {
+  const { data } = options
+
+  // For now, only support single-series mode
+  // Multi-series will be implemented in next phase
+  if (!data) {
+    return `<svg width="600" height="400"><text x="300" y="200" text-anchor="middle">Multi-series bar chart coming soon...</text></svg>`
+  }
+
+  const { colors, title } = options
+  return generateSingleSeriesBar(data, colors, title)
+}
+
+function generateSingleSeriesBar(
+  data: Array<{ label: string, value: number }>,
+  colors: { primary?: string, secondary?: string, background: string },
+  title: string
+): string {
   // Dynamic width based on data count to ensure bars are visible
   const minBarWidth = 8
   const baseWidth = 600
@@ -40,7 +57,7 @@ export function generateBarChart({ data, colors, title }: ChartOptions): string 
 
     return `
       <rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}"
-            fill="${colors.primary}" rx="4"/>
+            fill="${colors.primary || '#4F46E5'}" rx="4"/>
       ${showLabel ? `
         <text x="${labelX}" y="${labelY}"
               text-anchor="end" font-size="${fontSize}" fill="#4B5563"

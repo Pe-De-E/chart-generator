@@ -45,13 +45,15 @@
           :column-options="columnOptions"
           :numeric-column-options="numericColumnOptions"
           v-model:selected-label-column="selectedLabelColumn"
-          v-model:selected-value-column="selectedValueColumn"
+          :selected-value-columns="selectedSeries"
           :data-quality="dataQuality"
           :grouping-suggestion="groupingSuggestion"
           v-model:enable-grouping="enableGrouping"
           v-model:grouping-period="groupingPeriod"
           v-model:aggregation-method="aggregationMethod"
           v-model:numeric-range-size="numericRangeSize"
+          @add-series="addSeries"
+          @remove-series="removeSeries"
           @back="currentStep = 1"
           @next="currentStep = 3"
           @show-quality-dialog="showQualityDialog = true"
@@ -65,6 +67,9 @@
           v-model:chart-type="chartType"
           v-model:colors="colors"
           :svg-content="svgContent"
+          :series-config="selectedSeries"
+          @update-series-color="updateSeriesColor"
+          @regenerate-colors="regenerateColors"
           @back="currentStep = 2"
           @reset="resetWizard"
           @download="downloadSVG"
@@ -259,11 +264,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed } from 'vue'
 import FileUploadStep from './steps/FileUploadStep.vue'
 import DataInspectionStep from './steps/DataInspectionStep.vue'
 import ChartCreationStep from './steps/ChartCreationStep.vue'
 import { useCSVParser } from '../composables/useCSVParser'
+import { useSeriesSelection } from '../composables/useSeriesSelection'
 import { useChartConfig } from '../composables/useChartConfig'
 import { useDataGrouping } from '../composables/useDataGrouping'
 import {
@@ -291,31 +297,29 @@ const {
 
 // Column selection
 const selectedLabelColumn = ref('col_0')
-const selectedValueColumn = ref('col_1')
 
-// Auto-update selectedValueColumn when numericColumnOptions change
-watch(numericColumnOptions, (options) => {
-  if (options.length > 0) {
-    // Find first numeric column that is NOT col_0
-    const firstNumeric = options.find(opt => opt.value !== 'col_0') || options[0]
-    if (firstNumeric) {
-      selectedValueColumn.value = firstNumeric.value
-    }
-  }
-})
+// Series Selection composable
+const {
+  selectedSeries,
+  addSeries,
+  removeSeries,
+  updateSeriesColor,
+  regenerateColors,
+  resetSeries
+} = useSeriesSelection(numericColumnOptions)
 
-// Data Grouping composable
+// Data Grouping composable (with multi-series support)
 const {
   enableGrouping,
   groupingPeriod,
   aggregationMethod,
   numericRangeSize,
   groupingSuggestion,
-  data,
+  seriesData,
   resetGrouping
-} = useDataGrouping(tableItems, selectedLabelColumn, selectedValueColumn)
+} = useDataGrouping(tableItems, selectedLabelColumn, selectedSeries)
 
-// Chart Config composable
+// Chart Config composable (with multi-series support)
 const {
   chartType,
   chartTitle,
@@ -323,7 +327,7 @@ const {
   svgContent,
   downloadSVG,
   resetConfig
-} = useChartConfig(data)
+} = useChartConfig(seriesData, selectedSeries)
 
 // Data quality computation
 const dataQuality = computed(() => {
@@ -364,7 +368,7 @@ const getColumnTitle = (columnKey: string): string => {
 const resetWizard = () => {
   currentStep.value = 1
   selectedLabelColumn.value = 'col_0'
-  selectedValueColumn.value = 'col_1'
+  resetSeries()
   resetData()
   resetGrouping()
   resetConfig()

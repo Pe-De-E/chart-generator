@@ -1,6 +1,21 @@
 import type { ChartOptions } from './types'
 
-export function generateAreaChart({ data, colors, title }: ChartOptions): string {
+export function generateAreaChart(options: ChartOptions): string {
+  const { data } = options
+
+  if (!data) {
+    return `<svg width="600" height="400"><text x="300" y="200" text-anchor="middle">Multi-series area chart coming soon...</text></svg>`
+  }
+
+  const { colors, title } = options
+  return generateSingleSeriesArea(data, colors, title)
+}
+
+function generateSingleSeriesArea(
+  data: Array<{ label: string, value: number }>,
+  colors: { primary?: string, secondary?: string, background: string },
+  title: string
+): string {
   // Dynamic width based on data count for better visibility
   const minPointSpacing = 4
   const baseWidth = 600
@@ -53,7 +68,7 @@ export function generateAreaChart({ data, colors, title }: ChartOptions): string
     const labelY = margin.top + chartHeight + 15
 
     return `
-      <circle cx="${x}" cy="${y}" r="4" fill="${colors.secondary}"/>
+      <circle cx="${x}" cy="${y}" r="4" fill="${colors.secondary || '#818CF8'}"/>
       ${showLabel ? `
         <text x="${x}" y="${labelY}"
               text-anchor="end" font-size="${fontSize}" fill="#4B5563"
@@ -83,9 +98,9 @@ export function generateAreaChart({ data, colors, title }: ChartOptions): string
             font-weight="bold" fill="#1F2937">${title}</text>
       ${yAxis}
       <!-- Filled area -->
-      <polygon points="${fullAreaPath}" fill="${colors.primary}" opacity="0.3"/>
+      <polygon points="${fullAreaPath}" fill="${colors.primary || '#4F46E5'}" opacity="0.3"/>
       <!-- Line on top of area -->
-      <polyline points="${linePoints}" fill="none" stroke="${colors.primary}"
+      <polyline points="${linePoints}" fill="none" stroke="${colors.primary || '#4F46E5'}"
                 stroke-width="2"/>
       ${circles}
       <line x1="${margin.left}" y1="${margin.top + chartHeight}"

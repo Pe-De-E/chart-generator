@@ -60,26 +60,33 @@
                     Farben anpassen
                   </v-btn>
                 </template>
-                <v-card min-width="200">
+                <v-card min-width="300">
                   <v-card-text>
-                    <div class="mb-3">
-                      <v-label class="text-caption">Primär</v-label>
-                      <input
-                        type="color"
-                        :value="colors.primary"
-                        @input="$emit('update:colors', { ...colors, primary: ($event.target as HTMLInputElement).value })"
-                        class="color-picker-full"
-                      />
+                    <!-- Serien-Farben -->
+                    <div v-if="seriesConfig && seriesConfig.length > 0">
+                      <v-label class="text-subtitle-2 mb-2 d-block">Serien-Farben</v-label>
+                      <div v-for="(series, index) in seriesConfig" :key="series.columnKey" class="mb-3">
+                        <v-label class="text-caption">{{ series.name }}</v-label>
+                        <input
+                          type="color"
+                          :value="series.color"
+                          @input="$emit('updateSeriesColor', index, ($event.target as HTMLInputElement).value)"
+                          class="color-picker-full"
+                        />
+                      </div>
+                      <v-btn
+                        variant="text"
+                        size="small"
+                        prepend-icon="mdi-refresh"
+                        class="mb-3"
+                        @click="$emit('regenerateColors')"
+                      >
+                        Farben neu generieren
+                      </v-btn>
+                      <v-divider class="my-3"></v-divider>
                     </div>
-                    <div class="mb-3">
-                      <v-label class="text-caption">Sekundär</v-label>
-                      <input
-                        type="color"
-                        :value="colors.secondary"
-                        @input="$emit('update:colors', { ...colors, secondary: ($event.target as HTMLInputElement).value })"
-                        class="color-picker-full"
-                      />
-                    </div>
+
+                    <!-- Hintergrund-Farbe -->
                     <div>
                       <v-label class="text-caption">Hintergrund</v-label>
                       <input
@@ -148,6 +155,7 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
 import type { ChartType, ChartColors } from '../../composables/useChartConfig'
+import type { SeriesConfig } from '../../utils/chartGenerators/types'
 
 defineProps({
   chartTitle: {
@@ -165,6 +173,10 @@ defineProps({
   svgContent: {
     type: String,
     required: true
+  },
+  seriesConfig: {
+    type: Array as PropType<SeriesConfig[]>,
+    default: () => []
   }
 })
 
@@ -176,6 +188,8 @@ defineEmits<{
   'update:chartTitle': [value: string]
   'update:chartType': [value: ChartType]
   'update:colors': [value: ChartColors]
+  updateSeriesColor: [index: number, color: string]
+  regenerateColors: []
 }>()
 </script>
 

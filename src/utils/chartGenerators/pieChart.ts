@@ -1,6 +1,36 @@
 import type { ChartOptions } from './types'
 
-export function generatePieChart({ data, colors, title }: ChartOptions): string {
+export function generatePieChart(options: ChartOptions): string {
+  const { data, seriesData, seriesConfig, colors, title } = options
+
+  // Check if multi-series mode
+  if (seriesData && seriesConfig && seriesConfig.length > 1) {
+    // Multi-series not supported for pie charts
+    return `
+      <svg width="600" height="400" xmlns="http://www.w3.org/2000/svg">
+        <rect width="600" height="400" fill="${colors.background}"/>
+        <text x="300" y="180" text-anchor="middle" font-size="18" fill="#1F2937">
+          Pie Chart unterstützt keine mehreren Serien
+        </text>
+        <text x="300" y="210" text-anchor="middle" font-size="14" fill="#6B7280">
+          Bitte wählen Sie einen anderen Chart-Typ oder reduzieren Sie auf eine Serie
+        </text>
+      </svg>
+    `
+  }
+
+  if (!data) {
+    return `<svg width="600" height="400"><text x="300" y="200" text-anchor="middle">No data</text></svg>`
+  }
+
+  return generateSingleSeriesPie(data, colors, title)
+}
+
+function generateSingleSeriesPie(
+  data: Array<{ label: string, value: number }>,
+  colors: { background: string },
+  title: string
+): string {
   const width = 600
   const height = 400
   const centerX = width / 2

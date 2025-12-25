@@ -51,17 +51,58 @@
               ></v-select>
             </v-col>
             <v-col cols="12" md="6">
-              <v-select
-                :model-value="selectedValueColumn"
-                @update:model-value="emit('update:selectedValueColumn', $event)"
-                :items="numericColumnOptions"
-                label="Wert-Spalte (Y-Achse)"
-                variant="outlined"
-                density="comfortable"
-                prepend-inner-icon="mdi-numeric"
-                hint="Wählen Sie die Spalte für numerische Werte"
-                persistent-hint
-              ></v-select>
+              <div class="text-subtitle-2 mb-2">Wert-Spalten (Y-Achse)</div>
+
+              <!-- Ausgewählte Serien anzeigen -->
+              <div class="selected-series-container mb-3" v-if="selectedValueColumns.length > 0">
+                <v-chip
+                  v-for="(series, index) in selectedValueColumns"
+                  :key="series.columnKey"
+                  closable
+                  :color="series.color"
+                  class="ma-1"
+                  @click:close="emit('removeSeries', index)"
+                >
+                  <v-icon start>mdi-chart-line</v-icon>
+                  {{ series.name }}
+                </v-chip>
+              </div>
+
+              <!-- Serie hinzufügen -->
+              <v-row>
+                <v-col cols="8">
+                  <v-select
+                    v-model="newSeriesColumn"
+                    :items="availableNumericColumns"
+                    label="Spalte hinzufügen"
+                    variant="outlined"
+                    density="compact"
+                    prepend-inner-icon="mdi-plus-circle"
+                    :disabled="availableNumericColumns.length === 0"
+                  ></v-select>
+                </v-col>
+                <v-col cols="4">
+                  <v-btn
+                    color="primary"
+                    variant="outlined"
+                    block
+                    :disabled="!newSeriesColumn"
+                    @click="handleAddSeries"
+                  >
+                    <v-icon start>mdi-plus</v-icon>
+                    Hinzufügen
+                  </v-btn>
+                </v-col>
+              </v-row>
+
+              <v-alert
+                type="info"
+                density="compact"
+                class="mt-2"
+                v-if="selectedValueColumns.length === 0"
+              >
+                Wählen Sie mindestens eine numerische Spalte für die Y-Achse
+              </v-alert>
             </v-col>
           </v-row>
         </v-card-text>
@@ -202,7 +243,7 @@
       <v-btn
         color="primary"
         variant="flat"
-        :disabled="!selectedLabelColumn || !selectedValueColumn"
+        :disabled="!selectedLabelColumn || selectedValueColumns.length === 0"
         @click="emit('next')"
       >
         Weiter
@@ -213,15 +254,16 @@
 </template>
 
 <script setup lang="ts">
-import type { PropType } from 'vue'
+import { ref, computed, type PropType } from 'vue'
 import type { TableHeader, TableItem } from '../../composables/useCSVParser'
 import type { GroupingSuggestion } from '../../utils/groupingAnalysis'
 import type { AggregationMethod } from '../../utils/dataGrouping'
 import type { DataQualityMetrics } from '../../utils/dataQuality'
+import type { SeriesConfig } from '../../utils/chartGenerators/types'
 import { getQualityColor, getQualityLabel } from '../../utils/dataQuality'
 import { getGroupingIcon, getGroupingColor } from '../../utils/groupingAnalysis'
 
-defineProps({
+const props = defineProps({
   tableHeaders: {
     type: Array as PropType<TableHeader[]>,
     required: true
@@ -242,8 +284,8 @@ defineProps({
     type: String,
     required: true
   },
-  selectedValueColumn: {
-    type: String,
+  selectedValueColumns: {
+    type: Array as PropType<SeriesConfig[]>,
     required: true
   },
   dataQuality: {
@@ -277,10 +319,27 @@ const emit = defineEmits([
   'next',
   'show-quality-dialog',
   'update:selectedLabelColumn',
-  'update:selectedValueColumn',
+  'addSeries',
+  'removeSeries',
   'update:enableGrouping',
   'update:groupingPeriod',
   'update:aggregationMethod',
   'update:numericRangeSize'
 ])
+
+// Local state für neue Serie
+const newSeriesColumn = ref<string>('')
+
+// Verfügbare Spalten (exkludiere bereits ausgewählte)
+const availableNumericColumns = computed(() => {
+  const selectedColumnKeys = props.selectedValueColumns.map(s => s.columnKey)
+  return props.numericColumnOptions.filter(opt => !selectedColumnKeys.includes(opt.value))
+})
+
+function handleAddSeries() {
+  if (newSeriesColumn.value) {
+    emit('addSeries', newSeriesColumn.value)
+    newSeriesColumn.value = '' // Reset nach Hinzufügen
+  }
+}
 </script>

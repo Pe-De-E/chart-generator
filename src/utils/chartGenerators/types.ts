@@ -5,14 +5,38 @@ export interface DataPoint {
   [key: string]: string | number
 }
 
+// Multi-series data structure
+export interface SeriesDataPoint {
+  label: string
+  values: Record<string, number> // { "Umsatz": 1000, "Kosten": 800 }
+}
+
+// Series configuration (metadata for each series)
+export interface SeriesConfig {
+  name: string        // Display name (e.g., "Umsatz")
+  columnKey: string   // Source column (e.g., "col_2")
+  color: string       // Assigned color
+}
+
 export interface ChartColors {
-  primary: string
+  // Legacy colors (for backward compatibility with single-series)
+  primary?: string
   secondary?: string
+
+  // Multi-series colors
+  series?: string[]   // Array of colors for each series
+
   background: string
 }
 
 export interface ChartOptions {
-  data: DataPoint[]
+  // Single-series mode (legacy)
+  data?: DataPoint[]
+
+  // Multi-series mode (new)
+  seriesData?: SeriesDataPoint[]
+  seriesConfig?: SeriesConfig[]
+
   colors: ChartColors
   title: string
 }

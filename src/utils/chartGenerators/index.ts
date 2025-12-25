@@ -3,4 +3,10 @@ export { generateLineChart } from './lineChart'
 export { generateAreaChart } from './areaChart'
 export { generatePieChart } from './pieChart'
 export { generateScatterChart } from './scatterChart'
-export type { DataPoint, ChartColors, ChartOptions } from './types'
+export type {
+  DataPoint,
+  ChartColors,
+  ChartOptions,
+  SeriesDataPoint,
+  SeriesConfig
+} from './types'
