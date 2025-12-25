@@ -24,25 +24,7 @@ export function analyzeGroupingPotential(labels: string[]): GroupingSuggestion {
   const uniqueLabels = new Set(nonEmptyLabels)
   const duplicateCount = nonEmptyLabels.length - uniqueLabels.size
 
-  // Check for categorical grouping (duplicates)
-  if (duplicateCount > 0) {
-    const duplicatePercentage = (duplicateCount / nonEmptyLabels.length) * 100
-
-    if (duplicatePercentage > 10) {
-      return {
-        type: 'categorical',
-        reason: `${duplicateCount} doppelte Bezeichnungen gefunden (${Math.round(duplicatePercentage)}%)`,
-        groupCount: uniqueLabels.size,
-        suggestions: [
-          'Werte nach Kategorie gruppieren',
-          'Summe/Durchschnitt pro Kategorie berechnen'
-        ],
-        canGroup: true
-      }
-    }
-  }
-
-  // Check for date-based grouping
+  // Check for date-based grouping (before categorical, as dates are more specific)
   const datePatterns = {
     iso: /^\d{4}-\d{2}-\d{2}/, // YYYY-MM-DD
     german: /^\d{2}\.\d{2}\.\d{4}/, // DD.MM.YYYY
@@ -108,6 +90,24 @@ export function analyzeGroupingPotential(labels: string[]): GroupingSuggestion {
           'In Bereiche gruppieren (z.B. 0-10, 11-20, ...)',
           'Nach Dezilen gruppieren',
           'Nach Quartilen gruppieren'
+        ],
+        canGroup: true
+      }
+    }
+  }
+
+  // Check for categorical grouping (duplicates)
+  if (duplicateCount > 0) {
+    const duplicatePercentage = (duplicateCount / nonEmptyLabels.length) * 100
+
+    if (duplicatePercentage > 10) {
+      return {
+        type: 'categorical',
+        reason: `${duplicateCount} doppelte Bezeichnungen gefunden (${Math.round(duplicatePercentage)}%)`,
+        groupCount: uniqueLabels.size,
+        suggestions: [
+          'Werte nach Kategorie gruppieren',
+          'Summe/Durchschnitt pro Kategorie berechnen'
         ],
         canGroup: true
       }

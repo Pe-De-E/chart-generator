@@ -225,7 +225,10 @@ describe('groupByNumericRange', () => {
 
     const result = groupByNumericRange(labels, values, 10, 'sum')
 
-    expect(result).toHaveLength(3)
+    // 10,5 and 15,3 both fall in 10-19 range, 20,7 falls in 20-29 range
+    expect(result).toHaveLength(2)
+    expect(result.find(r => r.label === '10-19')?.value).toBe(30) // 10 + 20
+    expect(result.find(r => r.label === '20-29')?.value).toBe(30) // 30
   })
 
   it('should calculate average for numeric ranges', () => {

@@ -97,9 +97,6 @@ export function groupByNumericRange(
   const validNumericLabels = numericLabels.filter(n => !isNaN(n))
   if (validNumericLabels.length === 0) return []
 
-  const min = Math.min(...validNumericLabels)
-  const max = Math.max(...validNumericLabels)
-
   const groups = new Map<string, { values: number[], labels: string[] }>()
 
   labels.forEach((label, i) => {
