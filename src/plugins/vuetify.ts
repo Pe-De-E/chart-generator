@@ -16,6 +16,16 @@ export default createVuetify({
           secondary: '#818CF8',
           accent: '#EC4899',
         }
+      },
+      dark: {
+        dark: true,
+        colors: {
+          primary: '#6366F1',
+          secondary: '#A5B4FC',
+          accent: '#F472B6',
+          background: '#1E1E1E',
+          surface: '#2D2D2D',
+        }
       }
     }
   }
