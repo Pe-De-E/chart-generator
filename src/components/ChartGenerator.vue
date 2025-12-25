@@ -100,6 +100,7 @@
           v-model:chart-title="chartTitle"
           v-model:chart-type="chartType"
           v-model:colors="colors"
+          v-model:statistical-overlays="statisticalOverlays"
           :svg-content="svgContent"
           :series-config="selectedSeries"
           @update-series-color="updateSeriesColor"
@@ -401,6 +402,7 @@ const {
   chartType,
   chartTitle,
   colors,
+  statisticalOverlays,
   svgContent,
   downloadSVG,
   resetConfig

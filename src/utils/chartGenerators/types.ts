@@ -29,6 +29,15 @@ export interface ChartColors {
   background: string
 }
 
+export interface StatisticalOverlays {
+  showMean: boolean
+  showMedian: boolean
+  showStdDev: boolean
+  showMinMax: boolean
+  showQuartiles: boolean
+  color: string  // Color for statistical lines/areas
+}
+
 export interface ChartOptions {
   // Single-series mode (legacy)
   data?: DataPoint[]
@@ -39,4 +48,7 @@ export interface ChartOptions {
 
   colors: ChartColors
   title: string
+
+  // Statistical overlays
+  statisticalOverlays?: StatisticalOverlays
 }

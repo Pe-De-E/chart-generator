@@ -8,5 +8,6 @@ export type {
   ChartColors,
   ChartOptions,
   SeriesDataPoint,
-  SeriesConfig
+  SeriesConfig,
+  StatisticalOverlays
 } from './types'

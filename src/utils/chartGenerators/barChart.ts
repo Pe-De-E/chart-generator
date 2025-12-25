@@ -1,4 +1,5 @@
 import type { ChartOptions } from './types'
+import { renderStatisticalOverlays, hasAnyOverlayEnabled } from './statisticalOverlayRenderer'
 
 // Helper function to generate legend
 function generateLegend(
@@ -32,19 +33,20 @@ export function generateBarChart(options: ChartOptions): string {
 
   if (isSingleSeries) {
     // Legacy single-series mode
-    const { colors, title } = options
-    return generateSingleSeriesBar(data!, colors, title)
+    const { colors, title, statisticalOverlays } = options
+    return generateSingleSeriesBar(data!, colors, title, statisticalOverlays)
   } else {
     // Multi-series mode
-    const { colors, title } = options
-    return generateMultiSeriesBar(seriesData!, seriesConfig!, colors, title)
+    const { colors, title, statisticalOverlays } = options
+    return generateMultiSeriesBar(seriesData!, seriesConfig!, colors, title, statisticalOverlays)
   }
 }
 
 function generateSingleSeriesBar(
   data: Array<{ label: string, value: number }>,
   colors: { primary?: string, secondary?: string, background: string },
-  title: string
+  title: string,
+  overlays?: ChartOptions['statisticalOverlays']
 ): string {
   // Dynamic width based on data count to ensure bars are visible
   const minBarWidth = 8
@@ -108,6 +110,20 @@ function generateSingleSeriesBar(
           text-anchor="end" font-size="10" fill="#6B7280">${value}</text>
   `).join('')
 
+  // Statistical overlays
+  const statisticalOverlay = overlays && hasAnyOverlayEnabled(overlays)
+    ? renderStatisticalOverlays({
+        overlays,
+        values: data.map(d => d.value),
+        chartX: margin.left,
+        chartY: margin.top,
+        chartWidth,
+        chartHeight,
+        minValue: 0,
+        maxValue
+      })
+    : ''
+
   return `
     <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
       <rect width="${width}" height="${height}" fill="${colors.background}"/>
@@ -115,6 +131,7 @@ function generateSingleSeriesBar(
             font-weight="bold" fill="#1F2937">${title}</text>
       ${yAxis}
       ${bars}
+      ${statisticalOverlay}
       <line x1="${margin.left}" y1="${margin.top + chartHeight}"
             x2="${width - margin.right}" y2="${margin.top + chartHeight}"
             stroke="#E5E7EB" stroke-width="2"/>
@@ -129,7 +146,8 @@ function generateMultiSeriesBar(
   seriesData: Array<{ label: string, values: Record<string, number> }>,
   seriesConfig: Array<{ name: string, columnKey: string, color: string }>,
   colors: { series?: string[], background: string },
-  title: string
+  title: string,
+  overlays?: ChartOptions['statisticalOverlays']
 ): string {
   const seriesCount = seriesConfig.length
 
@@ -214,6 +232,20 @@ function generateMultiSeriesBar(
   const legendY = margin.top + chartHeight + 50
   const legend = generateLegend(seriesConfig, legendY, width)
 
+  // Statistical overlays (using already calculated allValues from above)
+  const statisticalOverlay = overlays && hasAnyOverlayEnabled(overlays)
+    ? renderStatisticalOverlays({
+        overlays,
+        values: allValues.filter(v => typeof v === 'number' && !isNaN(v)),
+        chartX: margin.left,
+        chartY: margin.top,
+        chartWidth,
+        chartHeight,
+        minValue: 0,
+        maxValue
+      })
+    : ''
+
   return `
     <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
       <rect width="${width}" height="${height}" fill="${colors.background}"/>
@@ -221,6 +253,7 @@ function generateMultiSeriesBar(
             font-weight="bold" fill="#1F2937">${title}</text>
       ${yAxis}
       ${allBars}
+      ${statisticalOverlay}
       <line x1="${margin.left}" y1="${margin.top + chartHeight}"
             x2="${width - margin.right}" y2="${margin.top + chartHeight}"
             stroke="#E5E7EB" stroke-width="2"/>

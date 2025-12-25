@@ -7,7 +7,8 @@ import {
   generateScatterChart,
   type SeriesDataPoint,
   type SeriesConfig,
-  type DataPoint
+  type DataPoint,
+  type StatisticalOverlays
 } from '../utils/chartGenerators'
 
 // Re-export ChartColors from types (for backward compatibility)
@@ -25,6 +26,16 @@ export function useChartConfig(
   // Colors are now managed by seriesConfig, but we keep background color here
   const colors = ref({
     background: '#FFFFFF'
+  })
+
+  // Statistical overlays
+  const statisticalOverlays = ref<StatisticalOverlays>({
+    showMean: false,
+    showMedian: false,
+    showStdDev: false,
+    showMinMax: false,
+    showQuartiles: false,
+    color: '#FF6B6B'
   })
 
   const svgContent = computed(() => {
@@ -45,7 +56,8 @@ export function useChartConfig(
           secondary: '#818CF8',
           background: colors.value.background
         },
-        title: chartTitle.value
+        title: chartTitle.value,
+        statisticalOverlays: statisticalOverlays.value
       }
 
       // Call legacy single-series generators
@@ -72,7 +84,8 @@ export function useChartConfig(
           series: seriesConfig.value.map(s => s.color),
           background: colors.value.background
         },
-        title: chartTitle.value
+        title: chartTitle.value,
+        statisticalOverlays: statisticalOverlays.value
       }
 
       // Call multi-series generators (generators will detect multi-series mode)
@@ -109,12 +122,21 @@ export function useChartConfig(
     colors.value = {
       background: '#FFFFFF'
     }
+    statisticalOverlays.value = {
+      showMean: false,
+      showMedian: false,
+      showStdDev: false,
+      showMinMax: false,
+      showQuartiles: false,
+      color: '#FF6B6B'
+    }
   }
 
   return {
     chartType,
     chartTitle,
     colors,
+    statisticalOverlays,
     svgContent,
     downloadSVG,
     resetConfig
