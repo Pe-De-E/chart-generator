@@ -19,8 +19,19 @@
 
       <v-divider></v-divider>
 
+      <template v-if="showCleaningStep">
+        <v-stepper-item
+          :complete="currentStep > 3"
+          :value="3"
+          title="Bereinigen"
+          icon="mdi-broom"
+        ></v-stepper-item>
+
+        <v-divider></v-divider>
+      </template>
+
       <v-stepper-item
-        :value="3"
+        :value="showCleaningStep ? 4 : 3"
         title="Chart erstellen"
         icon="mdi-chart-bar"
       ></v-stepper-item>
@@ -55,13 +66,36 @@
           @add-series="addSeries"
           @remove-series="removeSeries"
           @back="currentStep = 1"
-          @next="currentStep = 3"
+          @next="handleStep2Next"
           @show-quality-dialog="showQualityDialog = true"
         />
       </v-stepper-window-item>
 
-      <!-- Step 3: Create Chart -->
-      <v-stepper-window-item :value="3">
+      <!-- Step 2b: Data Cleaning (conditional) -->
+      <v-stepper-window-item v-if="showCleaningStep" :value="3">
+        <DataCleaningStep
+          :table-headers="tableHeaders"
+          :table-items="tableItems"
+          :cleaned-table-items="cleanedTableItems"
+          :cleaning-suggestions="cleaningSuggestions"
+          :applied-operations="appliedOperations"
+          :operation-history="[]"
+          :selected-options="selectedOptions"
+          :is-processing="isProcessing"
+          :error-message="errorMessage"
+          :has-changes="hasChanges"
+          :cleaning-summary="cleaningSummary"
+          @back="currentStep = 2"
+          @next="handleCleaningNext"
+          @skip="handleSkipCleaning"
+          @apply="applyOperation"
+          @reset="resetToOriginal"
+          @undo="undoLastOperation"
+        />
+      </v-stepper-window-item>
+
+      <!-- Step 3/4: Create Chart -->
+      <v-stepper-window-item :value="showCleaningStep ? 4 : 3">
         <ChartCreationStep
           v-model:chart-title="chartTitle"
           v-model:chart-type="chartType"
@@ -70,7 +104,7 @@
           :series-config="selectedSeries"
           @update-series-color="updateSeriesColor"
           @regenerate-colors="regenerateColors"
-          @back="currentStep = 2"
+          @back="handleChartStepBack"
           @reset="resetWizard"
           @download="downloadSVG"
           @show-fullscreen="showFullscreenPreview = true"
@@ -267,11 +301,13 @@
 import { ref, computed } from 'vue'
 import FileUploadStep from './steps/FileUploadStep.vue'
 import DataInspectionStep from './steps/DataInspectionStep.vue'
+import DataCleaningStep from './steps/DataCleaningStep.vue'
 import ChartCreationStep from './steps/ChartCreationStep.vue'
 import { useCSVParser } from '../composables/useCSVParser'
 import { useSeriesSelection } from '../composables/useSeriesSelection'
 import { useChartConfig } from '../composables/useChartConfig'
 import { useDataGrouping } from '../composables/useDataGrouping'
+import { useDataCleaning } from '../composables/useDataCleaning'
 import {
   analyzeDataQuality,
   getQualityColor,
@@ -308,28 +344,7 @@ const {
   resetSeries
 } = useSeriesSelection(numericColumnOptions)
 
-// Data Grouping composable (with multi-series support)
-const {
-  enableGrouping,
-  groupingPeriod,
-  aggregationMethod,
-  numericRangeSize,
-  groupingSuggestion,
-  seriesData,
-  resetGrouping
-} = useDataGrouping(tableItems, selectedLabelColumn, selectedSeries)
-
-// Chart Config composable (with multi-series support)
-const {
-  chartType,
-  chartTitle,
-  colors,
-  svgContent,
-  downloadSVG,
-  resetConfig
-} = useChartConfig(seriesData, selectedSeries)
-
-// Data quality computation
+// Data quality computation (moved before useDataCleaning)
 const dataQuality = computed(() => {
   if (tableItems.value.length === 0) {
     return analyzeDataQuality([])
@@ -345,6 +360,51 @@ const dataQuality = computed(() => {
 
   return analyzeDataQuality(fullData)
 })
+
+// Data Cleaning composable (NEW)
+const {
+  cleanedTableItems,
+  showCleaningStep,
+  cleaningSuggestions,
+  appliedOperations,
+  selectedOptions,
+  isProcessing,
+  errorMessage,
+  hasChanges,
+  cleaningSummary,
+  initializeCleaningStep,
+  applyOperation,
+  undoLastOperation,
+  resetToOriginal,
+  skipCleaning,
+  finalizeChanges
+} = useDataCleaning(tableItems, tableHeaders, dataQuality, selectedLabelColumn)
+
+// Effective table items (cleaned or original)
+const effectiveTableItems = computed(() =>
+  cleanedTableItems.value.length > 0 ? cleanedTableItems.value : tableItems.value
+)
+
+// Data Grouping composable (with multi-series support) - now uses effectiveTableItems
+const {
+  enableGrouping,
+  groupingPeriod,
+  aggregationMethod,
+  numericRangeSize,
+  groupingSuggestion,
+  seriesData,
+  resetGrouping
+} = useDataGrouping(effectiveTableItems, selectedLabelColumn, selectedSeries)
+
+// Chart Config composable (with multi-series support)
+const {
+  chartType,
+  chartTitle,
+  colors,
+  svgContent,
+  downloadSVG,
+  resetConfig
+} = useChartConfig(seriesData, selectedSeries)
 
 // Helper functions
 const getQualityColorHex = (score: 'excellent' | 'good' | 'fair' | 'poor'): string => {
@@ -365,6 +425,41 @@ const getColumnTitle = (columnKey: string): string => {
   return header ? header.title : columnKey
 }
 
+// Navigation handlers
+const handleStep2Next = () => {
+  // Check if there are fixable issues that warrant cleaning step
+  if (dataQuality.value.structuredIssues.length > 0) {
+    const fixableIssues = dataQuality.value.structuredIssues.filter(
+      issue => issue.type !== 'too_few_rows'
+    )
+    if (fixableIssues.length > 0) {
+      initializeCleaningStep()
+      currentStep.value = 3 // Go to cleaning step
+      return
+    }
+  }
+  // No issues or no fixable issues → skip to chart creation
+  currentStep.value = 3
+}
+
+const handleCleaningNext = () => {
+  finalizeChanges()
+  currentStep.value = showCleaningStep.value ? 4 : 3
+}
+
+const handleSkipCleaning = () => {
+  skipCleaning()
+  currentStep.value = 3 // Adjust step number after hiding cleaning step
+}
+
+const handleChartStepBack = () => {
+  if (showCleaningStep.value) {
+    currentStep.value = 3 // Back to cleaning step
+  } else {
+    currentStep.value = 2 // Back to inspection step
+  }
+}
+
 const resetWizard = () => {
   currentStep.value = 1
   selectedLabelColumn.value = 'col_0'
@@ -372,6 +467,7 @@ const resetWizard = () => {
   resetData()
   resetGrouping()
   resetConfig()
+  skipCleaning() // Reset cleaning state
 }
 </script>
 

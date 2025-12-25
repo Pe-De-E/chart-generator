@@ -1,5 +1,14 @@
 import type { DataPoint } from './chartGenerators'
 
+export interface DataQualityIssue {
+  type: 'empty_labels' | 'duplicate_labels' | 'negative_values' | 'missing_values' | 'too_many_zeros' | 'column_mostly_empty' | 'too_few_rows'
+  severity: 'high' | 'medium' | 'low'
+  message: string
+  affectedCount: number
+  affectedColumn?: string
+  metadata?: any
+}
+
 export interface DataQualityMetrics {
   totalRows: number
   totalFields: number
@@ -9,6 +18,7 @@ export interface DataQualityMetrics {
   missingValuesByColumn: Record<string, number>
   qualityScore: 'excellent' | 'good' | 'fair' | 'poor'
   issues: string[]
+  structuredIssues: DataQualityIssue[]
 }
 
 /**
@@ -24,7 +34,8 @@ export function analyzeDataQuality(data: DataPoint[]): DataQualityMetrics {
       completenessPercentage: 0,
       missingValuesByColumn: {},
       qualityScore: 'poor',
-      issues: ['Keine Daten vorhanden']
+      issues: ['Keine Daten vorhanden'],
+      structuredIssues: []
     }
   }
 
@@ -68,23 +79,57 @@ export function analyzeDataQuality(data: DataPoint[]): DataQualityMetrics {
   const emptyFields = totalFields - filledFields
   const completenessPercentage = Math.round((filledFields / totalFields) * 100)
 
+  // Structured issues array
+  const structuredIssues: DataQualityIssue[] = []
+
   // Check for specific issues
   if (totalRows < 3) {
     issues.push('Sehr wenige Datensätze (< 3)')
+    structuredIssues.push({
+      type: 'too_few_rows',
+      severity: 'high',
+      message: 'Sehr wenige Datensätze (< 3)',
+      affectedCount: totalRows
+    })
   }
 
   // Check for columns with many missing values
   Object.entries(missingValuesByColumn).forEach(([column, missing]) => {
     const missingPercentage = (missing / totalRows) * 100
     if (missingPercentage > 50) {
-      issues.push(`Spalte "${column}" hat ${Math.round(missingPercentage)}% fehlende Werte`)
+      const message = `Spalte "${column}" hat ${Math.round(missingPercentage)}% fehlende Werte`
+      issues.push(message)
+      structuredIssues.push({
+        type: 'column_mostly_empty',
+        severity: 'high',
+        message,
+        affectedCount: missing,
+        affectedColumn: column
+      })
+    } else if (missing > 0 && missingPercentage > 10) {
+      // Also track columns with moderate missing values
+      structuredIssues.push({
+        type: 'missing_values',
+        severity: 'medium',
+        message: `Spalte "${column}" hat ${missing} fehlende Werte`,
+        affectedCount: missing,
+        affectedColumn: column
+      })
     }
   })
 
   // Check for empty labels
   const emptyLabels = data.filter(d => !d.label || (typeof d.label === 'string' && d.label.trim() === '')).length
   if (emptyLabels > 0) {
-    issues.push(`${emptyLabels} Zeile(n) ohne Bezeichnung in erster Spalte`)
+    const message = `${emptyLabels} Zeile(n) ohne Bezeichnung in erster Spalte`
+    issues.push(message)
+    structuredIssues.push({
+      type: 'empty_labels',
+      severity: 'high',
+      message,
+      affectedCount: emptyLabels,
+      affectedColumn: 'label'
+    })
   }
 
   // Check for duplicate labels (excluding empty ones)
@@ -106,7 +151,16 @@ export function analyzeDataQuality(data: DataPoint[]): DataQualityMetrics {
 
     if (duplicates.length > 0) {
       const duplicateCount = nonEmptyLabels.length - uniqueLabels.size
-      issues.push(`${duplicateCount} doppelte Bezeichnung(en): ${duplicates.join(', ')}${duplicates.length === 3 ? '...' : ''}`)
+      const message = `${duplicateCount} doppelte Bezeichnung(en): ${duplicates.join(', ')}${duplicates.length === 3 ? '...' : ''}`
+      issues.push(message)
+      structuredIssues.push({
+        type: 'duplicate_labels',
+        severity: 'medium',
+        message,
+        affectedCount: duplicateCount,
+        affectedColumn: 'label',
+        metadata: { duplicates }
+      })
     }
   }
 
@@ -114,10 +168,26 @@ export function analyzeDataQuality(data: DataPoint[]): DataQualityMetrics {
   const negativeValues = data.filter(d => d.value < 0).length
   const zeroValues = data.filter(d => d.value === 0).length
   if (negativeValues > 0) {
-    issues.push(`${negativeValues} negative Werte gefunden`)
+    const message = `${negativeValues} negative Werte gefunden`
+    issues.push(message)
+    structuredIssues.push({
+      type: 'negative_values',
+      severity: 'medium',
+      message,
+      affectedCount: negativeValues,
+      affectedColumn: 'value'
+    })
   }
   if (zeroValues > totalRows * 0.5) {
-    issues.push(`Viele Null-Werte (${zeroValues} von ${totalRows})`)
+    const message = `Viele Null-Werte (${zeroValues} von ${totalRows})`
+    issues.push(message)
+    structuredIssues.push({
+      type: 'too_many_zeros',
+      severity: 'low',
+      message,
+      affectedCount: zeroValues,
+      affectedColumn: 'value'
+    })
   }
 
   // Determine quality score
@@ -140,7 +210,8 @@ export function analyzeDataQuality(data: DataPoint[]): DataQualityMetrics {
     completenessPercentage,
     missingValuesByColumn,
     qualityScore,
-    issues
+    issues,
+    structuredIssues
   }
 }
 
