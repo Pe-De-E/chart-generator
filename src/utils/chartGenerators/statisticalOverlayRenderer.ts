@@ -34,16 +34,6 @@ export function renderStatisticalOverlays(options: OverlayRenderOptions): string
   const range = maxValue - minValue
   const overlayParts: string[] = []
 
-  // Debug logging
-  console.log('Statistical Overlays Debug:', {
-    overlays,
-    stats,
-    values: values.slice(0, 10),
-    range,
-    minValue,
-    maxValue
-  })
-
   // Helper function to convert value to Y coordinate
   const valueToY = (value: number): number => {
     const normalized = (value - minValue) / range
@@ -163,32 +153,24 @@ export function renderStatisticalOverlays(options: OverlayRenderOptions): string
   if (overlays.showMedian) {
     const medianY = valueToY(stats.median)
 
-    console.log('Rendering Median:', {
-      showMedian: overlays.showMedian,
-      medianValue: stats.median,
-      medianY,
-      chartY,
-      chartHeight,
-      color: overlays.color
-    })
-
     overlayParts.push(`
       <line
         x1="${chartX}"
         y1="${medianY}"
         x2="${chartX + chartWidth}"
         y2="${medianY}"
-        stroke="#FF0000"
-        stroke-width="5"
+        stroke="${overlays.color}"
+        stroke-width="3"
+        stroke-dasharray="8,4"
         opacity="1"
       />
       <text
         x="${chartX + chartWidth + 5}"
         y="${medianY + 4}"
-        font-size="14"
-        fill="#FF0000"
-        font-weight="700"
-      >MEDIAN: ${formatStatValue(stats.median)}</text>
+        font-size="11"
+        fill="${overlays.color}"
+        font-weight="600"
+      >~ ${formatStatValue(stats.median)}</text>
     `)
   }
 
@@ -234,16 +216,11 @@ export function renderStatisticalOverlays(options: OverlayRenderOptions): string
   }
 
   // Group all overlays
-  const result = `
+  return `
     <g class="statistical-overlays">
       ${overlayParts.join('\n')}
     </g>
   `
-
-  console.log('Generated overlay SVG:', result)
-  console.log('Number of overlay parts:', overlayParts.length)
-
-  return result
 }
 
 /**
