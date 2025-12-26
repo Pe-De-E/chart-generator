@@ -12,93 +12,67 @@
         v-for="column in columnInfos"
         :key="column.key"
         cols="12"
-        sm="6"
-        md="4"
-        lg="3"
+        sm="4"
+        md="3"
+        lg="2"
       >
         <!-- Spalten-Karte -->
         <v-card variant="outlined" class="column-card">
           <!-- Header mit Spaltenname -->
-          <v-card-title class="bg-grey-lighten-5 py-2">
-            <div class="d-flex align-center justify-space-between">
-              <div class="d-flex align-center">
-                <v-icon icon="mdi-table-column" size="small" class="mr-1"></v-icon>
-                <span class="text-body-2 font-weight-bold">{{ column.title }}</span>
-              </div>
-              <v-chip size="x-small" color="primary" variant="flat">
-                {{ getDataTypeLabel(column.dataType) }}
-              </v-chip>
+          <v-card-title class="bg-grey-lighten-5 py-1 px-2">
+            <div class="text-caption font-weight-bold text-truncate">
+              {{ column.title }}
             </div>
           </v-card-title>
 
           <!-- Datenqualität -->
-          <v-card-text class="py-2">
-            <div class="mb-2">
-              <v-progress-linear
-                :model-value="column.completeness"
-                :color="getQualityColor(column.completeness)"
-                height="6"
-                class="mb-1"
-              ></v-progress-linear>
-              <div class="text-caption text-grey">
-                {{ column.filledValues }}/{{ column.totalValues }} ({{ column.completeness.toFixed(0) }}%)
-              </div>
+          <v-card-text class="pa-2">
+            <v-progress-linear
+              :model-value="column.completeness"
+              :color="getQualityColor(column.completeness)"
+              height="4"
+              class="mb-1"
+            ></v-progress-linear>
+            <div class="text-caption text-grey mb-1" style="font-size: 0.65rem;">
+              {{ column.completeness.toFixed(0) }}% • {{ getDataTypeLabel(column.dataType) }}
             </div>
 
             <!-- Erkannte Probleme -->
-            <div v-if="column.issues.length > 0" class="mb-2">
-              <div class="text-caption font-weight-medium mb-1">Probleme</div>
-              <div class="d-flex flex-wrap gap-1">
-                <v-chip
-                  v-for="issue in column.issues"
-                  :key="issue.type"
-                  :color="getSeverityColor(issue.severity)"
-                  size="x-small"
-                  class="text-caption"
-                >
-                  {{ issue.affectedCount }}
-                </v-chip>
-              </div>
-            </div>
-
-            <!-- Datenvorschau -->
-            <div class="mb-2">
-              <div class="text-caption font-weight-medium mb-1">Vorschau</div>
-              <div class="preview-box pa-1 bg-grey-lighten-4 rounded">
-                <div
-                  v-for="(value, idx) in column.previewValues.slice(0, 3)"
-                  :key="idx"
-                  class="text-caption text-grey-darken-1 text-truncate"
-                >
-                  {{ formatValue(value) }}
-                </div>
-              </div>
+            <div v-if="column.issues.length > 0" class="mb-1">
+              <v-chip
+                size="x-small"
+                color="warning"
+                variant="flat"
+                style="font-size: 0.65rem; height: 16px;"
+              >
+                {{ column.issues.length }} Problem{{ column.issues.length > 1 ? 'e' : '' }}
+              </v-chip>
             </div>
 
             <!-- Angewandte Operationen -->
-            <div v-if="column.appliedOperations.length > 0" class="mb-2">
+            <div v-if="column.appliedOperations.length > 0">
               <v-chip
                 color="success"
                 size="x-small"
                 variant="flat"
+                style="font-size: 0.65rem; height: 16px;"
               >
-                <v-icon icon="mdi-check" start size="x-small"></v-icon>
-                {{ column.appliedOperations.length }} angewendet
+                <v-icon icon="mdi-check" start style="font-size: 0.7rem;"></v-icon>
+                {{ column.appliedOperations.length }}
               </v-chip>
             </div>
           </v-card-text>
 
           <!-- Aktions-Button -->
-          <v-card-actions class="pt-0 pb-2">
+          <v-card-actions class="pa-2 pt-0">
             <v-btn
               color="primary"
-              variant="outlined"
-              size="small"
+              variant="tonal"
+              size="x-small"
               block
               @click="openOperationsDialog(column)"
             >
-              <v-icon icon="mdi-wrench" start size="small"></v-icon>
-              Operationen
+              <v-icon icon="mdi-wrench" size="x-small"></v-icon>
             </v-btn>
           </v-card-actions>
         </v-card>
@@ -383,35 +357,17 @@ function getQualityColor(completeness: number): string {
   return 'error'
 }
 
-function getSeverityColor(severity: 'high' | 'medium' | 'low'): string {
-  switch (severity) {
-    case 'high':
-      return 'error'
-    case 'medium':
-      return 'warning'
-    case 'low':
-      return 'info'
-  }
-}
-
 function getDataTypeLabel(dataType: 'numeric' | 'text' | 'mixed' | 'date'): string {
   switch (dataType) {
     case 'numeric':
-      return 'Numerisch'
+      return 'Num'
     case 'text':
       return 'Text'
     case 'mixed':
-      return 'Gemischt'
+      return 'Mix'
     case 'date':
       return 'Datum'
   }
-}
-
-function formatValue(value: string | number): string {
-  if (value === '' || value === null || value === undefined) {
-    return '(leer)'
-  }
-  return String(value)
 }
 
 function applyOperation(columnKey: string, operationType: string, operationName: string) {
