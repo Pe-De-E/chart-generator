@@ -9,7 +9,7 @@
             Daten bereinigen
           </div>
           <div class="text-caption text-grey mt-1">
-            Schritt 3 von 4: Wählen Sie Bereinigungsoptionen für erkannte Probleme
+            Schritt 2 von 3: Spalten auswählen und Daten bereinigen
           </div>
         </div>
       </div>
@@ -277,7 +277,11 @@
             :cleaned-table-items="cleanedTableItems"
             :cleaning-suggestions="cleaningSuggestions"
             :applied-operations="appliedOperations"
+            :selected-label-column="selectedLabelColumn"
+            :selected-value-columns="selectedValueColumns"
             @apply-column-operation="handleColumnOperation"
+            @update:selected-label-column="emit('update:selectedLabelColumn', $event)"
+            @update:selected-value-columns="emit('update:selectedValueColumns', $event)"
           />
         </v-window-item>
       </v-window>
@@ -339,6 +343,8 @@ const props = defineProps<{
     totalSuggestions: number
     skippedCount: number
   }
+  selectedLabelColumn: string
+  selectedValueColumns: string[]
 }>()
 
 const emit = defineEmits<{
@@ -348,6 +354,8 @@ const emit = defineEmits<{
   (e: 'apply', suggestion: CleaningSuggestion, optionIndex: number): void
   (e: 'reset'): void
   (e: 'undo'): void
+  (e: 'update:selectedLabelColumn', value: string): void
+  (e: 'update:selectedValueColumns', value: string[]): void
 }>()
 
 // Tab state

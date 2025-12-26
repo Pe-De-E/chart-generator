@@ -13,25 +13,14 @@
       <v-stepper-item
         :complete="currentStep > 2"
         :value="2"
-        title="Inspizieren"
-        icon="mdi-table-eye"
+        title="Konfigurieren"
+        icon="mdi-cog"
       ></v-stepper-item>
 
       <v-divider></v-divider>
 
-      <template v-if="showCleaningStep">
-        <v-stepper-item
-          :complete="currentStep > 3"
-          :value="3"
-          title="Bereinigen"
-          icon="mdi-broom"
-        ></v-stepper-item>
-
-        <v-divider></v-divider>
-      </template>
-
       <v-stepper-item
-        :value="showCleaningStep ? 4 : 3"
+        :value="3"
         title="Chart erstellen"
         icon="mdi-chart-bar"
       ></v-stepper-item>
@@ -44,35 +33,12 @@
           :table-headers="tableHeaders"
           :table-items="tableItems"
           :parse-c-s-v="parseCSV"
-          @next="currentStep = 2"
+          @next="handleUploadNext"
         />
       </v-stepper-window-item>
 
-      <!-- Step 2: Inspect & Configure -->
+      <!-- Step 2: Configure & Clean -->
       <v-stepper-window-item :value="2">
-        <DataInspectionStep
-          :table-headers="tableHeaders"
-          :table-items="tableItems"
-          :column-options="columnOptions"
-          :numeric-column-options="numericColumnOptions"
-          v-model:selected-label-column="selectedLabelColumn"
-          :selected-value-columns="selectedSeries"
-          :data-quality="dataQuality"
-          :grouping-suggestion="groupingSuggestion"
-          v-model:enable-grouping="enableGrouping"
-          v-model:grouping-period="groupingPeriod"
-          v-model:aggregation-method="aggregationMethod"
-          v-model:numeric-range-size="numericRangeSize"
-          @add-series="addSeries"
-          @remove-series="removeSeries"
-          @back="currentStep = 1"
-          @next="handleStep2Next"
-          @show-quality-dialog="showQualityDialog = true"
-        />
-      </v-stepper-window-item>
-
-      <!-- Step 2b: Data Cleaning (conditional) -->
-      <v-stepper-window-item v-if="showCleaningStep" :value="3">
         <DataCleaningStep
           :table-headers="tableHeaders"
           :table-items="tableItems"
@@ -85,8 +51,10 @@
           :error-message="errorMessage"
           :has-changes="hasChanges"
           :cleaning-summary="cleaningSummary"
-          @back="currentStep = 2"
-          @next="handleCleaningNext"
+          v-model:selected-label-column="selectedLabelColumn"
+          v-model:selected-value-columns="selectedValueColumnKeys"
+          @back="currentStep = 1"
+          @next="handleConfigureNext"
           @skip="handleSkipCleaning"
           @apply="applyOperation"
           @reset="resetToOriginal"
@@ -94,8 +62,8 @@
         />
       </v-stepper-window-item>
 
-      <!-- Step 3/4: Create Chart -->
-      <v-stepper-window-item :value="showCleaningStep ? 4 : 3">
+      <!-- Step 3: Create Chart -->
+      <v-stepper-window-item :value="3">
         <ChartCreationStep
           v-model:chart-title="chartTitle"
           v-model:chart-type="chartType"
@@ -301,7 +269,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import FileUploadStep from './steps/FileUploadStep.vue'
-import DataInspectionStep from './steps/DataInspectionStep.vue'
 import DataCleaningStep from './steps/DataCleaningStep.vue'
 import ChartCreationStep from './steps/ChartCreationStep.vue'
 import { useCSVParser } from '../composables/useCSVParser'
@@ -326,7 +293,6 @@ const showFullscreenPreview = ref(false)
 const {
   tableHeaders,
   tableItems,
-  columnOptions,
   numericColumnOptions,
   parseCSV,
   resetData
@@ -344,6 +310,25 @@ const {
   regenerateColors,
   resetSeries
 } = useSeriesSelection(numericColumnOptions)
+
+// Computed: Extract column keys from selected series
+const selectedValueColumnKeys = computed({
+  get: () => selectedSeries.value.map(s => s.columnKey),
+  set: (keys: string[]) => {
+    // Wenn Keys sich ändern, update selectedSeries
+    // Entferne Spalten, die nicht mehr in keys sind
+    const currentKeys = selectedSeries.value.map(s => s.columnKey)
+    const toRemove = currentKeys.filter(k => !keys.includes(k))
+    toRemove.forEach(key => {
+      const index = selectedSeries.value.findIndex(s => s.columnKey === key)
+      if (index > -1) removeSeries(index)
+    })
+
+    // Füge neue Spalten hinzu
+    const toAdd = keys.filter(k => !currentKeys.includes(k))
+    toAdd.forEach(key => addSeries(key))
+  }
+})
 
 // Data quality computation (moved before useDataCleaning)
 const dataQuality = computed(() => {
@@ -365,7 +350,6 @@ const dataQuality = computed(() => {
 // Data Cleaning composable (NEW)
 const {
   cleanedTableItems,
-  showCleaningStep,
   cleaningSuggestions,
   appliedOperations,
   selectedOptions,
@@ -388,11 +372,6 @@ const effectiveTableItems = computed(() =>
 
 // Data Grouping composable (with multi-series support) - now uses effectiveTableItems
 const {
-  enableGrouping,
-  groupingPeriod,
-  aggregationMethod,
-  numericRangeSize,
-  groupingSuggestion,
   seriesData,
   resetGrouping
 } = useDataGrouping(effectiveTableItems, selectedLabelColumn, selectedSeries)
@@ -428,38 +407,28 @@ const getColumnTitle = (columnKey: string): string => {
 }
 
 // Navigation handlers
-const handleStep2Next = () => {
-  // Check if there are fixable issues that warrant cleaning step
-  if (dataQuality.value.structuredIssues.length > 0) {
-    const fixableIssues = dataQuality.value.structuredIssues.filter(
-      issue => issue.type !== 'too_few_rows'
-    )
-    if (fixableIssues.length > 0) {
-      initializeCleaningStep()
-      currentStep.value = 3 // Go to cleaning step
-      return
-    }
+const handleUploadNext = () => {
+  // Initialize cleaning step when CSV is uploaded
+  initializeCleaningStep()
+  currentStep.value = 2
+}
+
+const handleConfigureNext = () => {
+  // Finalize any cleaning changes and move to chart creation
+  if (hasChanges.value) {
+    finalizeChanges()
   }
-  // No issues or no fixable issues → skip to chart creation
   currentStep.value = 3
 }
 
-const handleCleaningNext = () => {
-  finalizeChanges()
-  currentStep.value = showCleaningStep.value ? 4 : 3
-}
-
 const handleSkipCleaning = () => {
+  // Skip cleaning and go directly to chart creation
   skipCleaning()
-  currentStep.value = 3 // Adjust step number after hiding cleaning step
+  currentStep.value = 3
 }
 
 const handleChartStepBack = () => {
-  if (showCleaningStep.value) {
-    currentStep.value = 3 // Back to cleaning step
-  } else {
-    currentStep.value = 2 // Back to inspection step
-  }
+  currentStep.value = 2 // Back to configure step
 }
 
 const resetWizard = () => {

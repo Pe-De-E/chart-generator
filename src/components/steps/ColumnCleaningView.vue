@@ -20,8 +20,40 @@
         <v-card variant="outlined" class="column-card">
           <!-- Header mit Spaltenname -->
           <v-card-title class="bg-grey-lighten-5 py-1 px-2">
-            <div class="text-caption font-weight-bold text-truncate">
-              {{ column.title }}
+            <div class="d-flex align-center justify-space-between">
+              <div class="text-caption font-weight-bold text-truncate flex-grow-1">
+                {{ column.title }}
+              </div>
+              <div class="d-flex align-center gap-1">
+                <v-tooltip text="Als Label (X-Achse)" location="top">
+                  <template v-slot:activator="{ props: tooltipProps }">
+                    <v-radio
+                      v-bind="tooltipProps"
+                      :model-value="selectedLabelColumn"
+                      :value="column.key"
+                      @update:model-value="emit('update:selectedLabelColumn', $event)"
+                      density="compact"
+                      hide-details
+                      color="primary"
+                      style="margin: 0;"
+                    ></v-radio>
+                  </template>
+                </v-tooltip>
+                <v-tooltip text="Als Wert (Y-Achse)" location="top">
+                  <template v-slot:activator="{ props: tooltipProps }">
+                    <v-checkbox
+                      v-bind="tooltipProps"
+                      :model-value="selectedValueColumns"
+                      :value="column.key"
+                      @update:model-value="toggleValueColumn(column.key)"
+                      density="compact"
+                      hide-details
+                      color="success"
+                      style="margin: 0;"
+                    ></v-checkbox>
+                  </template>
+                </v-tooltip>
+              </div>
             </div>
           </v-card-title>
 
@@ -313,10 +345,14 @@ const props = defineProps<{
   cleanedTableItems: TableItem[]
   cleaningSuggestions: CleaningSuggestion[]
   appliedOperations: AppliedOperation[]
+  selectedLabelColumn: string
+  selectedValueColumns: string[]
 }>()
 
 const emit = defineEmits<{
   (e: 'applyColumnOperation', columnKey: string, operation: (data: TableItem[]) => TableItem[], operationName: string): void
+  (e: 'update:selectedLabelColumn', value: string): void
+  (e: 'update:selectedValueColumns', value: string[]): void
 }>()
 
 const currentData = computed(() =>
@@ -349,6 +385,21 @@ function closeOperationsDialog() {
 function handleOperationClick(columnKey: string, operationType: string, operationName: string) {
   applyOperation(columnKey, operationType, operationName)
   closeOperationsDialog()
+}
+
+function toggleValueColumn(columnKey: string) {
+  const currentColumns = [...props.selectedValueColumns]
+  const index = currentColumns.indexOf(columnKey)
+
+  if (index > -1) {
+    // Remove column
+    currentColumns.splice(index, 1)
+  } else {
+    // Add column
+    currentColumns.push(columnKey)
+  }
+
+  emit('update:selectedValueColumns', currentColumns)
 }
 
 function getQualityColor(completeness: number): string {
