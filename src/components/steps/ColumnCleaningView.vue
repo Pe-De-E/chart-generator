@@ -7,92 +7,116 @@
     </v-alert>
 
     <!-- Grid Layout -->
-    <v-row>
+    <v-row dense>
       <v-col
         v-for="column in columnInfos"
         :key="column.key"
         cols="12"
-        md="6"
-        lg="4"
+        sm="6"
+        md="4"
+        lg="3"
       >
         <!-- Spalten-Karte -->
-        <v-card variant="outlined" class="column-card h-100">
+        <v-card variant="outlined" class="column-card">
           <!-- Header mit Spaltenname -->
-          <v-card-title class="bg-grey-lighten-5">
-            <v-icon icon="mdi-table-column" class="mr-2"></v-icon>
-            {{ column.title }}
-          </v-card-title>
-
-          <!-- Datenqualität -->
-          <v-card-text>
-            <div class="mb-3">
-              <div class="text-subtitle-2 mb-2">Datenqualität</div>
-              <v-progress-linear
-                :model-value="column.completeness"
-                :color="getQualityColor(column.completeness)"
-                height="8"
-                class="mb-1"
-              ></v-progress-linear>
-              <div class="text-caption text-grey">
-                {{ column.filledValues }}/{{ column.totalValues }} Werte
-                ({{ column.completeness.toFixed(1) }}%)
+          <v-card-title class="bg-grey-lighten-5 py-2">
+            <div class="d-flex align-center justify-space-between">
+              <div class="d-flex align-center">
+                <v-icon icon="mdi-table-column" size="small" class="mr-1"></v-icon>
+                <span class="text-body-2 font-weight-bold">{{ column.title }}</span>
               </div>
-              <v-chip size="x-small" class="mt-1" color="primary" variant="outlined">
+              <v-chip size="x-small" color="primary" variant="flat">
                 {{ getDataTypeLabel(column.dataType) }}
               </v-chip>
             </div>
+          </v-card-title>
+
+          <!-- Datenqualität -->
+          <v-card-text class="py-2">
+            <div class="mb-2">
+              <v-progress-linear
+                :model-value="column.completeness"
+                :color="getQualityColor(column.completeness)"
+                height="6"
+                class="mb-1"
+              ></v-progress-linear>
+              <div class="text-caption text-grey">
+                {{ column.filledValues }}/{{ column.totalValues }} ({{ column.completeness.toFixed(0) }}%)
+              </div>
+            </div>
 
             <!-- Erkannte Probleme -->
-            <div v-if="column.issues.length > 0" class="mb-3">
-              <div class="text-subtitle-2 mb-2">Erkannte Probleme</div>
-              <v-chip
-                v-for="issue in column.issues"
-                :key="issue.type"
-                :color="getSeverityColor(issue.severity)"
-                size="small"
-                class="mr-1 mb-1"
-              >
-                {{ issue.title }} ({{ issue.affectedCount }})
-              </v-chip>
+            <div v-if="column.issues.length > 0" class="mb-2">
+              <div class="text-caption font-weight-medium mb-1">Probleme</div>
+              <div class="d-flex flex-wrap gap-1">
+                <v-chip
+                  v-for="issue in column.issues"
+                  :key="issue.type"
+                  :color="getSeverityColor(issue.severity)"
+                  size="x-small"
+                  class="text-caption"
+                >
+                  {{ issue.affectedCount }}
+                </v-chip>
+              </div>
             </div>
 
             <!-- Datenvorschau -->
-            <div class="mb-3">
-              <div class="text-subtitle-2 mb-2">Vorschau</div>
-              <div class="preview-box pa-2 bg-grey-lighten-4 rounded">
+            <div class="mb-2">
+              <div class="text-caption font-weight-medium mb-1">Vorschau</div>
+              <div class="preview-box pa-1 bg-grey-lighten-4 rounded">
                 <div
-                  v-for="(value, idx) in column.previewValues"
+                  v-for="(value, idx) in column.previewValues.slice(0, 3)"
                   :key="idx"
-                  class="text-caption text-grey-darken-1"
+                  class="text-caption text-grey-darken-1 text-truncate"
                 >
                   {{ formatValue(value) }}
-                </div>
-                <div v-if="column.previewValues.length === 0" class="text-caption text-grey">
-                  (Keine Daten)
                 </div>
               </div>
             </div>
 
             <!-- Angewandte Operationen -->
-            <div v-if="column.appliedOperations.length > 0" class="mb-3">
-              <div class="text-subtitle-2 mb-2">Angewendet</div>
+            <div v-if="column.appliedOperations.length > 0" class="mb-2">
               <v-chip
-                v-for="(op, idx) in column.appliedOperations"
-                :key="idx"
                 color="success"
-                size="small"
-                variant="outlined"
-                class="mb-1 d-block text-wrap"
-                style="height: auto; white-space: normal;"
+                size="x-small"
+                variant="flat"
               >
-                <v-icon icon="mdi-check" start size="small"></v-icon>
-                {{ op.title }}
+                <v-icon icon="mdi-check" start size="x-small"></v-icon>
+                {{ column.appliedOperations.length }} angewendet
               </v-chip>
             </div>
           </v-card-text>
 
-          <!-- Bereinigungsoptionen -->
-          <v-expansion-panels class="ma-3">
+          <!-- Aktions-Button -->
+          <v-card-actions class="pt-0 pb-2">
+            <v-btn
+              color="primary"
+              variant="outlined"
+              size="small"
+              block
+              @click="openOperationsDialog(column)"
+            >
+              <v-icon icon="mdi-wrench" start size="small"></v-icon>
+              Operationen
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-col>
+    </v-row>
+
+    <!-- Operations Dialog -->
+    <v-dialog v-model="showOperationsDialog" max-width="600">
+      <v-card v-if="selectedColumn">
+        <v-card-title class="bg-primary text-white">
+          <div class="d-flex align-center">
+            <v-icon icon="mdi-table-column" class="mr-2"></v-icon>
+            {{ selectedColumn.title }}
+          </div>
+        </v-card-title>
+
+        <v-card-text class="pa-0">
+          <v-expansion-panels>
             <!-- Gruppe 1: Fehlende Werte -->
             <v-expansion-panel>
               <v-expansion-panel-title>
@@ -101,12 +125,12 @@
                     <v-icon icon="mdi-help-circle" class="mr-2"></v-icon>
                     <span>Fehlende Werte</span>
                     <v-chip
-                      v-if="column.emptyValues > 0"
+                      v-if="selectedColumn.emptyValues > 0"
                       size="x-small"
                       color="warning"
                       class="ml-2"
                     >
-                      {{ column.emptyValues }} leer
+                      {{ selectedColumn.emptyValues }} leer
                     </v-chip>
                   </div>
                 </template>
@@ -114,39 +138,39 @@
               <v-expansion-panel-text>
                 <v-list density="compact">
                   <v-list-item
-                    @click="applyOperation(column.key, 'removeEmptyRows', 'Zeilen mit leeren Werten entfernen')"
+                    @click="handleOperationClick(selectedColumn.key, 'removeEmptyRows', 'Zeilen mit leeren Werten entfernen')"
                   >
                     <v-list-item-title>Zeilen entfernen</v-list-item-title>
                     <v-list-item-subtitle>Entfernt Zeilen mit leeren Werten in dieser Spalte</v-list-item-subtitle>
                   </v-list-item>
                   <v-list-item
-                    @click="applyOperation(column.key, 'fillMean', 'Mit Mittelwert füllen')"
-                    :disabled="column.dataType !== 'numeric'"
+                    @click="handleOperationClick(selectedColumn.key, 'fillMean', 'Mit Mittelwert füllen')"
+                    :disabled="selectedColumn.dataType !== 'numeric'"
                   >
                     <v-list-item-title>Mit Mittelwert füllen</v-list-item-title>
                     <v-list-item-subtitle>Nur für numerische Spalten</v-list-item-subtitle>
                   </v-list-item>
                   <v-list-item
-                    @click="applyOperation(column.key, 'fillMedian', 'Mit Median füllen')"
-                    :disabled="column.dataType !== 'numeric'"
+                    @click="handleOperationClick(selectedColumn.key, 'fillMedian', 'Mit Median füllen')"
+                    :disabled="selectedColumn.dataType !== 'numeric'"
                   >
                     <v-list-item-title>Mit Median füllen</v-list-item-title>
                     <v-list-item-subtitle>Nur für numerische Spalten</v-list-item-subtitle>
                   </v-list-item>
                   <v-list-item
-                    @click="applyOperation(column.key, 'fillZero', 'Mit Null füllen')"
+                    @click="handleOperationClick(selectedColumn.key, 'fillZero', 'Mit Null füllen')"
                   >
                     <v-list-item-title>Mit Null füllen</v-list-item-title>
                     <v-list-item-subtitle>Ersetzt leere Werte mit 0</v-list-item-subtitle>
                   </v-list-item>
                   <v-list-item
-                    @click="applyOperation(column.key, 'fillForward', 'Vorwärts füllen')"
+                    @click="handleOperationClick(selectedColumn.key, 'fillForward', 'Vorwärts füllen')"
                   >
                     <v-list-item-title>Vorwärts füllen (Forward fill)</v-list-item-title>
                     <v-list-item-subtitle>Verwendet vorherigen Wert</v-list-item-subtitle>
                   </v-list-item>
                   <v-list-item
-                    @click="applyOperation(column.key, 'fillBackward', 'Rückwärts füllen')"
+                    @click="handleOperationClick(selectedColumn.key, 'fillBackward', 'Rückwärts füllen')"
                   >
                     <v-list-item-title>Rückwärts füllen (Backward fill)</v-list-item-title>
                     <v-list-item-subtitle>Verwendet nächsten Wert</v-list-item-subtitle>
@@ -168,22 +192,22 @@
               <v-expansion-panel-text>
                 <v-list density="compact">
                   <v-list-item
-                    @click="applyOperation(column.key, 'removeNegatives', 'Zeilen mit Negativwerten entfernen')"
-                    :disabled="column.dataType !== 'numeric'"
+                    @click="handleOperationClick(selectedColumn.key, 'removeNegatives', 'Zeilen mit Negativwerten entfernen')"
+                    :disabled="selectedColumn.dataType !== 'numeric'"
                   >
                     <v-list-item-title>Zeilen entfernen</v-list-item-title>
                     <v-list-item-subtitle>Entfernt Zeilen mit negativen Werten</v-list-item-subtitle>
                   </v-list-item>
                   <v-list-item
-                    @click="applyOperation(column.key, 'convertAbsolute', 'In Absolutwerte umwandeln')"
-                    :disabled="column.dataType !== 'numeric'"
+                    @click="handleOperationClick(selectedColumn.key, 'convertAbsolute', 'In Absolutwerte umwandeln')"
+                    :disabled="selectedColumn.dataType !== 'numeric'"
                   >
                     <v-list-item-title>In Absolutwerte umwandeln</v-list-item-title>
                     <v-list-item-subtitle>-5 wird zu 5</v-list-item-subtitle>
                   </v-list-item>
                   <v-list-item
-                    @click="applyOperation(column.key, 'replaceNegativesZero', 'Negative mit Null ersetzen')"
-                    :disabled="column.dataType !== 'numeric'"
+                    @click="handleOperationClick(selectedColumn.key, 'replaceNegativesZero', 'Negative mit Null ersetzen')"
+                    :disabled="selectedColumn.dataType !== 'numeric'"
                   >
                     <v-list-item-title>Mit Null ersetzen</v-list-item-title>
                     <v-list-item-subtitle>-5 wird zu 0</v-list-item-subtitle>
@@ -205,15 +229,15 @@
               <v-expansion-panel-text>
                 <v-list density="compact">
                   <v-list-item
-                    @click="applyOperation(column.key, 'removeOutliersIQR', 'Ausreißer per IQR-Methode entfernen')"
-                    :disabled="column.dataType !== 'numeric'"
+                    @click="handleOperationClick(selectedColumn.key, 'removeOutliersIQR', 'Ausreißer per IQR-Methode entfernen')"
+                    :disabled="selectedColumn.dataType !== 'numeric'"
                   >
                     <v-list-item-title>IQR-Methode</v-list-item-title>
                     <v-list-item-subtitle>Interquartile Range Methode</v-list-item-subtitle>
                   </v-list-item>
                   <v-list-item
-                    @click="applyOperation(column.key, 'removeOutliersZScore', 'Ausreißer per Z-Score entfernen')"
-                    :disabled="column.dataType !== 'numeric'"
+                    @click="handleOperationClick(selectedColumn.key, 'removeOutliersZScore', 'Ausreißer per Z-Score entfernen')"
+                    :disabled="selectedColumn.dataType !== 'numeric'"
                   >
                     <v-list-item-title>Z-Score Methode</v-list-item-title>
                     <v-list-item-subtitle>Entfernt Werte >3 Standardabweichungen</v-list-item-subtitle>
@@ -235,35 +259,35 @@
               <v-expansion-panel-text>
                 <v-list density="compact">
                   <v-list-item
-                    @click="applyOperation(column.key, 'normalizeWhitespace', 'Whitespace normalisieren')"
+                    @click="handleOperationClick(selectedColumn.key, 'normalizeWhitespace', 'Whitespace normalisieren')"
                   >
                     <v-list-item-title>Whitespace normalisieren</v-list-item-title>
                     <v-list-item-subtitle>Entfernt überflüssige Leerzeichen</v-list-item-subtitle>
                   </v-list-item>
                   <v-list-item
-                    @click="applyOperation(column.key, 'keepFirstOccurrence', 'Erste Vorkommen behalten')"
-                    v-if="column.key === 'col_0'"
+                    @click="handleOperationClick(selectedColumn.key, 'keepFirstOccurrence', 'Erste Vorkommen behalten')"
+                    v-if="selectedColumn.key === 'col_0'"
                   >
                     <v-list-item-title>Duplikate entfernen</v-list-item-title>
                     <v-list-item-subtitle>Behält erste Vorkommen</v-list-item-subtitle>
                   </v-list-item>
                   <v-list-item
-                    @click="applyOperation(column.key, 'addSuffixToDuplicates', 'Suffix zu Duplikaten hinzufügen')"
-                    v-if="column.key === 'col_0'"
+                    @click="handleOperationClick(selectedColumn.key, 'addSuffixToDuplicates', 'Suffix zu Duplikaten hinzufügen')"
+                    v-if="selectedColumn.key === 'col_0'"
                   >
                     <v-list-item-title>Suffix hinzufügen</v-list-item-title>
                     <v-list-item-subtitle>Label, Label (1), Label (2)</v-list-item-subtitle>
                   </v-list-item>
                   <v-list-item
-                    @click="applyOperation(column.key, 'fillEmptyLabelsNumbers', 'Leere Labels mit Zahlen füllen')"
-                    v-if="column.key === 'col_0'"
+                    @click="handleOperationClick(selectedColumn.key, 'fillEmptyLabelsNumbers', 'Leere Labels mit Zahlen füllen')"
+                    v-if="selectedColumn.key === 'col_0'"
                   >
                     <v-list-item-title>Mit Zahlen füllen</v-list-item-title>
                     <v-list-item-subtitle>Füllt leere Labels mit 1, 2, 3...</v-list-item-subtitle>
                   </v-list-item>
                   <v-list-item
-                    @click="applyOperation(column.key, 'fillEmptyLabelsText', 'Leere Labels mit Text füllen')"
-                    v-if="column.key === 'col_0'"
+                    @click="handleOperationClick(selectedColumn.key, 'fillEmptyLabelsText', 'Leere Labels mit Text füllen')"
+                    v-if="selectedColumn.key === 'col_0'"
                   >
                     <v-list-item-title>Mit "Unnamed" füllen</v-list-item-title>
                     <v-list-item-subtitle>Füllt mit "Unnamed 1", "Unnamed 2"...</v-list-item-subtitle>
@@ -272,18 +296,28 @@
               </v-expansion-panel-text>
             </v-expansion-panel>
           </v-expansion-panels>
-        </v-card>
-      </v-col>
-    </v-row>
+        </v-card-text>
+
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn
+            variant="text"
+            @click="closeOperationsDialog"
+          >
+            Schließen
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import type { TableItem, TableHeader } from '../../composables/useCSVParser'
 import type { CleaningSuggestion } from '../../utils/dataCleaningSuggestions'
 import type { AppliedOperation } from '../../composables/useDataCleaning'
-import { analyzeAllColumns } from '../../utils/columnAnalysis'
+import { analyzeAllColumns, type ColumnInfo } from '../../utils/columnAnalysis'
 import {
   removeRowsWithEmptyColumn,
   fillMissingValues,
@@ -323,6 +357,25 @@ const columnInfos = computed(() =>
     props.appliedOperations
   )
 )
+
+// Dialog state
+const showOperationsDialog = ref(false)
+const selectedColumn = ref<ColumnInfo | null>(null)
+
+function openOperationsDialog(column: ColumnInfo) {
+  selectedColumn.value = column
+  showOperationsDialog.value = true
+}
+
+function closeOperationsDialog() {
+  showOperationsDialog.value = false
+  selectedColumn.value = null
+}
+
+function handleOperationClick(columnKey: string, operationType: string, operationName: string) {
+  applyOperation(columnKey, operationType, operationName)
+  closeOperationsDialog()
+}
 
 function getQualityColor(completeness: number): string {
   if (completeness >= 90) return 'success'
@@ -425,18 +478,23 @@ function applyOperation(columnKey: string, operationType: string, operationName:
 <style scoped>
 .column-card {
   transition: all 0.2s;
+  height: 100%;
 }
 
 .column-card:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
 }
 
 .preview-box {
-  max-height: 150px;
+  max-height: 60px;
   overflow-y: auto;
+  font-size: 0.75rem;
 }
 
-.h-100 {
-  height: 100%;
+.text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style>
