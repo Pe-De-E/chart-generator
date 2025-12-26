@@ -14,7 +14,23 @@
         </div>
       </div>
 
-      <!-- Info Alert -->
+      <!-- Tabs für Ansichtswechsel -->
+      <v-tabs v-model="currentTab" class="mb-4" color="primary">
+        <v-tab value="problems">
+          <v-icon icon="mdi-alert-circle" start></v-icon>
+          Nach Problemen
+        </v-tab>
+        <v-tab value="columns">
+          <v-icon icon="mdi-table-column" start></v-icon>
+          Nach Spalten
+        </v-tab>
+      </v-tabs>
+
+      <!-- Tab Content -->
+      <v-window v-model="currentTab">
+        <!-- Problem-basierte Ansicht -->
+        <v-window-item value="problems">
+          <!-- Info Alert -->
       <v-alert
         v-if="cleaningSuggestions.length > 0"
         type="warning"
@@ -251,6 +267,20 @@
           </v-data-table>
         </v-card-text>
       </v-card>
+        </v-window-item>
+
+        <!-- Spalten-basierte Ansicht -->
+        <v-window-item value="columns">
+          <ColumnCleaningView
+            :table-headers="tableHeaders"
+            :table-items="tableItems"
+            :cleaned-table-items="cleanedTableItems"
+            :cleaning-suggestions="cleaningSuggestions"
+            :applied-operations="appliedOperations"
+            @apply-column-operation="handleColumnOperation"
+          />
+        </v-window-item>
+      </v-window>
     </v-card-text>
 
     <v-card-actions class="bg-grey-lighten-5 px-4 py-3">
@@ -288,6 +318,7 @@ import { computed, ref, watch } from 'vue'
 import type { TableItem, TableHeader } from '../../composables/useCSVParser'
 import type { CleaningSuggestion } from '../../utils/dataCleaningSuggestions'
 import type { AppliedOperation } from '../../composables/useDataCleaning'
+import ColumnCleaningView from './ColumnCleaningView.vue'
 
 const props = defineProps<{
   tableHeaders: TableHeader[]
@@ -318,6 +349,9 @@ const emit = defineEmits<{
   (e: 'reset'): void
   (e: 'undo'): void
 }>()
+
+// Tab state
+const currentTab = ref<'problems' | 'columns'>('problems')
 
 // Local mutable copy of selectedOptions
 const localSelectedOptions = ref<Record<string, number>>({})
@@ -356,6 +390,36 @@ const handleSkip = () => {
 
 const handleNext = () => {
   emit('next')
+}
+
+const handleColumnOperation = (
+  columnKey: string,
+  operation: (data: TableItem[]) => TableItem[],
+  operationName: string
+) => {
+  // Create a custom CleaningSuggestion for the column operation
+  const customSuggestion: CleaningSuggestion = {
+    id: `column_${columnKey}_${Date.now()}`,
+    type: 'missing_values', // Placeholder type
+    severity: 'medium',
+    title: `${operationName} (${props.tableHeaders.find(h => h.key === columnKey)?.title || columnKey})`,
+    description: operationName,
+    affectedCount: 0,
+    affectedColumn: columnKey,
+    options: [
+      {
+        label: operationName,
+        description: operationName,
+        isDefault: true,
+        apply: operation
+      }
+    ],
+    icon: 'mdi-table-column',
+    color: 'primary'
+  }
+
+  // Apply the operation using the existing apply handler
+  emit('apply', customSuggestion, 0)
 }
 </script>
 
