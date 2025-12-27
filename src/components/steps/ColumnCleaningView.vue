@@ -27,30 +27,28 @@
               <div class="d-flex align-center gap-1">
                 <v-tooltip text="Als Label (X-Achse)" location="top">
                   <template v-slot:activator="{ props: tooltipProps }">
-                    <v-radio
+                    <v-btn
                       v-bind="tooltipProps"
-                      :model-value="selectedLabelColumn"
-                      :value="column.key"
-                      @update:model-value="emit('update:selectedLabelColumn', $event)"
+                      :icon="selectedLabelColumn === column.key ? 'mdi-alpha-l-circle' : 'mdi-alpha-l-circle-outline'"
+                      :color="selectedLabelColumn === column.key ? 'primary' : 'grey'"
+                      size="small"
+                      variant="text"
+                      @click="toggleLabelColumn(column.key)"
                       density="compact"
-                      hide-details
-                      color="primary"
-                      style="margin: 0;"
-                    ></v-radio>
+                    ></v-btn>
                   </template>
                 </v-tooltip>
-                <v-tooltip text="Als Wert (Y-Achse)" location="top">
+                <v-tooltip v-if="column.dataType === 'numeric'" text="Als Wert (Y-Achse)" location="top">
                   <template v-slot:activator="{ props: tooltipProps }">
-                    <v-checkbox
+                    <v-btn
                       v-bind="tooltipProps"
-                      :model-value="selectedValueColumns"
-                      :value="column.key"
-                      @update:model-value="toggleValueColumn(column.key)"
+                      :icon="selectedValueColumns.includes(column.key) ? 'mdi-alpha-v-circle' : 'mdi-alpha-v-circle-outline'"
+                      :color="selectedValueColumns.includes(column.key) ? 'success' : 'grey'"
+                      size="small"
+                      variant="text"
+                      @click="toggleValueColumn(column.key)"
                       density="compact"
-                      hide-details
-                      color="success"
-                      style="margin: 0;"
-                    ></v-checkbox>
+                    ></v-btn>
                   </template>
                 </v-tooltip>
               </div>
@@ -385,6 +383,16 @@ function closeOperationsDialog() {
 function handleOperationClick(columnKey: string, operationType: string, operationName: string) {
   applyOperation(columnKey, operationType, operationName)
   closeOperationsDialog()
+}
+
+function toggleLabelColumn(columnKey: string) {
+  if (props.selectedLabelColumn === columnKey) {
+    // Deselect if already selected
+    emit('update:selectedLabelColumn', '')
+  } else {
+    // Select new column
+    emit('update:selectedLabelColumn', columnKey)
+  }
 }
 
 function toggleValueColumn(columnKey: string) {

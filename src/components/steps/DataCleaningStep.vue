@@ -308,7 +308,7 @@
         color="primary"
         variant="flat"
         @click="handleNext"
-        :disabled="isProcessing"
+        :disabled="isProcessing || !canProceed"
       >
         Weiter
         <v-icon icon="mdi-chevron-right" end></v-icon>
@@ -359,7 +359,7 @@ const emit = defineEmits<{
 }>()
 
 // Tab state
-const currentTab = ref<'problems' | 'columns'>('problems')
+const currentTab = ref<'problems' | 'columns'>('columns')
 
 // Local mutable copy of selectedOptions
 const localSelectedOptions = ref<Record<string, number>>({})
@@ -372,6 +372,10 @@ watch(() => props.selectedOptions, (newVal) => {
 const currentData = computed(() =>
   props.cleanedTableItems.length > 0 ? props.cleanedTableItems : props.tableItems
 )
+
+const canProceed = computed(() => {
+  return props.selectedLabelColumn !== '' && props.selectedValueColumns.length > 0
+})
 
 const isSuggestionApplied = (suggestionId: string): boolean => {
   return suggestionId in props.selectedOptions
