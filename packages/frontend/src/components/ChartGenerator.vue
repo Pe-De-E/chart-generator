@@ -1,87 +1,73 @@
 <template>
-  <v-stepper v-model="currentStep" alt-labels>
-    <v-stepper-header>
-      <v-stepper-item
-        :complete="currentStep > 1"
-        :value="1"
-        title="Hochladen"
-        icon="mdi-file-upload"
-      ></v-stepper-item>
+  <v-layout>
+    <!-- Sidebar Navigation -->
+    <StepNavigation
+      v-model:current-step="currentStep"
+      :completed-steps="completedStepsList"
+      :step-validations="stepValidations"
+    />
 
-      <v-divider></v-divider>
+    <!-- Main Content Area -->
+    <v-main>
+      <v-container fluid class="pa-6">
+        <v-window v-model="currentStep">
+          <!-- Step 1: Upload CSV -->
+          <v-window-item :value="1">
+            <FileUploadStep
+              :table-headers="tableHeaders"
+              :table-items="tableItems"
+              :parse-c-s-v="parseCSV"
+              @next="handleUploadNext"
+            />
+          </v-window-item>
 
-      <v-stepper-item
-        :complete="currentStep > 2"
-        :value="2"
-        title="Konfigurieren"
-        icon="mdi-cog"
-      ></v-stepper-item>
+          <!-- Step 2: Configure & Clean -->
+          <v-window-item :value="2">
+            <DataCleaningStep
+              :table-headers="tableHeaders"
+              :table-items="tableItems"
+              :cleaned-table-items="cleanedTableItems"
+              :cleaning-suggestions="cleaningSuggestions"
+              :applied-operations="appliedOperations"
+              :operation-history="[]"
+              :selected-options="selectedOptions"
+              :is-processing="isProcessing"
+              :error-message="errorMessage"
+              :has-changes="hasChanges"
+              :cleaning-summary="cleaningSummary"
+              v-model:selected-label-column="selectedLabelColumn"
+              v-model:selected-value-columns="selectedValueColumnKeys"
+              @back="currentStep = 1"
+              @next="handleConfigureNext"
+              @skip="handleSkipCleaning"
+              @apply="applyOperation"
+              @reset="resetToOriginal"
+              @undo="undoLastOperation"
+            />
+          </v-window-item>
 
-      <v-divider></v-divider>
-
-      <v-stepper-item
-        :value="3"
-        title="Chart erstellen"
-        icon="mdi-chart-bar"
-      ></v-stepper-item>
-    </v-stepper-header>
-
-    <v-stepper-window>
-      <!-- Step 1: Upload CSV -->
-      <v-stepper-window-item :value="1">
-        <FileUploadStep
-          :table-headers="tableHeaders"
-          :table-items="tableItems"
-          :parse-c-s-v="parseCSV"
-          @next="handleUploadNext"
-        />
-      </v-stepper-window-item>
-
-      <!-- Step 2: Configure & Clean -->
-      <v-stepper-window-item :value="2">
-        <DataCleaningStep
-          :table-headers="tableHeaders"
-          :table-items="tableItems"
-          :cleaned-table-items="cleanedTableItems"
-          :cleaning-suggestions="cleaningSuggestions"
-          :applied-operations="appliedOperations"
-          :operation-history="[]"
-          :selected-options="selectedOptions"
-          :is-processing="isProcessing"
-          :error-message="errorMessage"
-          :has-changes="hasChanges"
-          :cleaning-summary="cleaningSummary"
-          v-model:selected-label-column="selectedLabelColumn"
-          v-model:selected-value-columns="selectedValueColumnKeys"
-          @back="currentStep = 1"
-          @next="handleConfigureNext"
-          @skip="handleSkipCleaning"
-          @apply="applyOperation"
-          @reset="resetToOriginal"
-          @undo="undoLastOperation"
-        />
-      </v-stepper-window-item>
-
-      <!-- Step 3: Create Chart -->
-      <v-stepper-window-item :value="3">
-        <ChartCreationStep
-          v-model:chart-title="chartTitle"
-          v-model:chart-type="chartType"
-          v-model:colors="colors"
-          v-model:statistical-overlays="statisticalOverlays"
-          :svg-content="svgContent"
-          :series-config="selectedSeries"
-          @update-series-color="updateSeriesColor"
-          @regenerate-colors="regenerateColors"
-          @back="handleChartStepBack"
-          @reset="resetWizard"
-          @download="downloadSVG"
-          @save="saveChart"
-          @show-fullscreen="showFullscreenPreview = true"
-        />
-      </v-stepper-window-item>
-    </v-stepper-window>
-  </v-stepper>
+          <!-- Step 3: Create Chart -->
+          <v-window-item :value="3">
+            <ChartCreationStep
+              v-model:chart-title="chartTitle"
+              v-model:chart-type="chartType"
+              v-model:colors="colors"
+              v-model:statistical-overlays="statisticalOverlays"
+              :svg-content="svgContent"
+              :series-config="selectedSeries"
+              @update-series-color="updateSeriesColor"
+              @regenerate-colors="regenerateColors"
+              @back="handleChartStepBack"
+              @reset="resetWizard"
+              @download="downloadSVG"
+              @save="saveChart"
+              @show-fullscreen="showFullscreenPreview = true"
+            />
+          </v-window-item>
+        </v-window>
+      </v-container>
+    </v-main>
+  </v-layout>
 
   <!-- Data Quality Dialog -->
   <v-dialog v-model="showQualityDialog" max-width="800" scrollable>
@@ -270,6 +256,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import StepNavigation from './StepNavigation.vue'
 import FileUploadStep from './steps/FileUploadStep.vue'
 import DataCleaningStep from './steps/DataCleaningStep.vue'
 import ChartCreationStep from './steps/ChartCreationStep.vue'
@@ -291,6 +278,83 @@ const route = useRoute()
 // Stepper state
 const currentStep = ref(1)
 const loadedChartId = ref<string | null>(null)
+
+// Step validation interface
+interface StepValidation {
+  isValid: boolean
+  missingTodos: string[]
+}
+
+// Validate Step 1: File Upload
+const validateStep1 = computed((): StepValidation => {
+  const missingTodos: string[] = []
+
+  if (tableItems.value.length === 0) {
+    missingTodos.push('CSV-Datei hochladen')
+  }
+  if (tableHeaders.value.length === 0) {
+    missingTodos.push('Daten müssen erfolgreich geparst werden')
+  }
+
+  return {
+    isValid: missingTodos.length === 0,
+    missingTodos
+  }
+})
+
+// Validate Step 2: Configuration
+const validateStep2 = computed((): StepValidation => {
+  const missingTodos: string[] = []
+
+  if (!selectedLabelColumn.value) {
+    missingTodos.push('Label-Spalte auswählen')
+  }
+  if (selectedSeries.value.length === 0) {
+    missingTodos.push('Mindestens eine Werte-Spalte auswählen')
+  }
+
+  return {
+    isValid: missingTodos.length === 0,
+    missingTodos
+  }
+})
+
+// Validate Step 3: Chart Creation
+const validateStep3 = computed((): StepValidation => {
+  const missingTodos: string[] = []
+
+  if (!chartType.value) {
+    missingTodos.push('Chart-Typ auswählen')
+  }
+  if (!chartTitle.value || chartTitle.value.trim() === '') {
+    missingTodos.push('Chart-Titel eingeben')
+  }
+  if (!svgContent.value) {
+    missingTodos.push('Chart muss generiert werden')
+  }
+
+  return {
+    isValid: missingTodos.length === 0,
+    missingTodos
+  }
+})
+
+// Step validations map
+const stepValidations = computed(() => ({
+  1: validateStep1.value,
+  2: validateStep2.value,
+  3: validateStep3.value
+}))
+
+// Completed steps tracking for sidebar navigation
+const completedStepsList = computed(() => {
+  const completed: number[] = []
+  // All steps before current step are considered completed
+  for (let i = 1; i < currentStep.value; i++) {
+    completed.push(i)
+  }
+  return completed
+})
 
 // Load chart if ID is in query
 onMounted(async () => {
