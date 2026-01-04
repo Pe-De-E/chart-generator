@@ -52,3 +52,37 @@ export interface ChartOptions {
   // Statistical overlays
   statisticalOverlays?: StatisticalOverlays
 }
+
+// Chart persistence types
+export type ChartType = 'bar' | 'line' | 'scatter' | 'pie' | 'area'
+
+export interface SavedChart {
+  id: string
+  userId: string
+  title: string
+  type: ChartType
+  data: Record<string, unknown> // JSON data
+  config: Record<string, unknown> // JSON config
+  svgContent: string | null
+  isPublic: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateChartRequest {
+  title: string
+  type: ChartType
+  data: Record<string, unknown>
+  config: Record<string, unknown>
+  svgContent?: string
+  isPublic?: boolean
+}
+
+export interface UpdateChartRequest {
+  title?: string
+  type?: ChartType
+  data?: Record<string, unknown>
+  config?: Record<string, unknown>
+  svgContent?: string
+  isPublic?: boolean
+}

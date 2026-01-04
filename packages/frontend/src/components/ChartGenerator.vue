@@ -76,6 +76,7 @@
           @back="handleChartStepBack"
           @reset="resetWizard"
           @download="downloadSVG"
+          @save="saveChart"
           @show-fullscreen="showFullscreenPreview = true"
         />
       </v-stepper-window-item>
@@ -267,7 +268,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import FileUploadStep from './steps/FileUploadStep.vue'
 import DataCleaningStep from './steps/DataCleaningStep.vue'
 import ChartCreationStep from './steps/ChartCreationStep.vue'
@@ -281,9 +283,22 @@ import {
   getQualityColor,
   getQualityLabel
 } from '../utils/dataQuality'
+import { chartService } from '../services/chart.service'
+
+const router = useRouter()
+const route = useRoute()
 
 // Stepper state
 const currentStep = ref(1)
+const loadedChartId = ref<string | null>(null)
+
+// Load chart if ID is in query
+onMounted(async () => {
+  const chartId = route.query.id as string
+  if (chartId) {
+    await loadChartData(chartId)
+  }
+})
 
 // Dialogs
 const showQualityDialog = ref(false)
@@ -439,6 +454,115 @@ const resetWizard = () => {
   resetGrouping()
   resetConfig()
   skipCleaning() // Reset cleaning state
+}
+
+const saveChart = async () => {
+  try {
+    if (loadedChartId.value) {
+      // Update existing chart
+      await chartService.updateChart(loadedChartId.value, {
+        title: chartTitle.value,
+        type: chartType.value,
+        data: {
+          seriesData: seriesData.value,
+          tableItems: effectiveTableItems.value,
+        },
+        config: {
+          seriesConfig: selectedSeries.value,
+          colors: colors.value,
+          statisticalOverlays: statisticalOverlays.value,
+          selectedLabelColumn: selectedLabelColumn.value,
+          selectedValueColumns: selectedValueColumnKeys.value,
+        },
+        svgContent: svgContent.value,
+      })
+      alert('Chart erfolgreich aktualisiert!')
+    } else {
+      // Create new chart
+      const chart = await chartService.createChart({
+        title: chartTitle.value,
+        type: chartType.value,
+        data: {
+          seriesData: seriesData.value,
+          tableItems: effectiveTableItems.value,
+        },
+        config: {
+          seriesConfig: selectedSeries.value,
+          colors: colors.value,
+          statisticalOverlays: statisticalOverlays.value,
+          selectedLabelColumn: selectedLabelColumn.value,
+          selectedValueColumns: selectedValueColumnKeys.value,
+        },
+        svgContent: svgContent.value,
+      })
+      loadedChartId.value = chart.id
+      alert('Chart erfolgreich gespeichert!')
+    }
+    router.push('/')
+  } catch (error) {
+    console.error('Error saving chart:', error)
+    alert('Fehler beim Speichern des Charts')
+  }
+}
+
+const loadChartData = async (chartId: string) => {
+  try {
+    const chart = await chartService.getChartById(chartId)
+    loadedChartId.value = chart.id
+
+    // Set chart configuration
+    chartTitle.value = chart.title
+    chartType.value = chart.type as any
+
+    // Load data from saved chart
+    const savedData = chart.data as any
+    const savedConfig = chart.config as any
+
+    if (savedData.tableItems && Array.isArray(savedData.tableItems)) {
+      // Reconstruct table headers from first item
+      const firstItem = savedData.tableItems[0]
+      if (firstItem) {
+        const headers = Object.keys(firstItem).map((key, index) => ({
+          title: key,
+          key,
+          sortable: true,
+        }))
+        tableHeaders.value = headers
+      }
+      tableItems.value = savedData.tableItems
+    }
+
+    // Restore configuration
+    if (savedConfig.selectedLabelColumn) {
+      selectedLabelColumn.value = savedConfig.selectedLabelColumn
+    }
+    if (savedConfig.selectedValueColumns) {
+      selectedValueColumnKeys.value = savedConfig.selectedValueColumns
+    }
+    if (savedConfig.seriesConfig && Array.isArray(savedConfig.seriesConfig)) {
+      // Restore series selection
+      savedConfig.seriesConfig.forEach((series: any) => {
+        selectedSeries.value.push({
+          name: series.name,
+          columnKey: series.columnKey,
+          color: series.color,
+        })
+      })
+    }
+    if (savedConfig.colors) {
+      colors.value = savedConfig.colors
+    }
+    if (savedConfig.statisticalOverlays) {
+      statisticalOverlays.value = savedConfig.statisticalOverlays
+    }
+
+    // Skip to chart creation step
+    currentStep.value = 3
+  } catch (error) {
+    console.error('Error loading chart:', error)
+    alert('Fehler beim Laden des Charts')
+    router.push('/')
+  }
 }
 </script>
 

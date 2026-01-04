@@ -238,6 +238,14 @@
         Neu starten
       </v-btn>
       <v-btn
+        color="success"
+        variant="flat"
+        prepend-icon="mdi-content-save"
+        @click="$emit('save')"
+      >
+        Speichern
+      </v-btn>
+      <v-btn
         color="primary"
         variant="flat"
         prepend-icon="mdi-download"
@@ -285,6 +293,7 @@ defineEmits<{
   back: []
   reset: []
   download: []
+  save: []
   'show-fullscreen': []
   'update:chartTitle': [value: string]
   'update:chartType': [value: ChartType]
