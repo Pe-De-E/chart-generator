@@ -1,31 +1,22 @@
 {
-  "name": "chart-generator-poc",
+  "name": "chart-generator",
   "version": "1.0.0",
-  "type": "module",
+  "private": true,
   "scripts": {
-    "dev": "vite",
-    "build": "vue-tsc && vite build",
-    "preview": "vite preview",
-    "test": "vitest",
-    "test:ui": "vitest --ui",
-    "type-check": "vue-tsc --noEmit"
-  },
-  "dependencies": {
-    "@mdi/font": "^7.4.0",
-    "splitpanes": "^4.0.4",
-    "vue": "^3.4.0",
-    "vuetify": "^3.5.0"
+    "dev": "concurrently \"pnpm --filter @chart-generator/frontend dev\" \"pnpm --filter @chart-generator/backend dev\"",
+    "dev:all": "pnpm db:setup && pnpm dev",
+    "dev:frontend": "pnpm --filter @chart-generator/frontend dev",
+    "dev:backend": "pnpm --filter @chart-generator/backend dev",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "type-check": "pnpm -r type-check",
+    "db:setup": "node scripts/check-docker.js && docker-compose up -d && pnpm db:wait && pnpm --filter @chart-generator/backend db:generate",
+    "db:wait": "node scripts/wait-for-db.js",
+    "db:start": "node scripts/check-docker.js && docker-compose up -d postgres",
+    "db:stop": "docker-compose down",
+    "db:reset": "pnpm --filter @chart-generator/backend db:reset"
   },
   "devDependencies": {
-    "@types/node": "^25.0.3",
-    "@vitejs/plugin-vue": "^5.0.0",
-    "@vue/test-utils": "^2.4.0",
-    "jsdom": "^23.2.0",
-    "sass": "^1.70.0",
-    "typescript": "^5.9.3",
-    "vite": "^5.0.0",
-    "vite-plugin-vuetify": "^2.0.0",
-    "vitest": "^1.2.0",
-    "vue-tsc": "^3.2.1"
+    "concurrently": "^8.2.0"
   }
 }
