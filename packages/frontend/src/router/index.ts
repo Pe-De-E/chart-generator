@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 
 // Import views
+import Home from '../views/Home.vue'
 import ChartGenerator from '../components/ChartGenerator.vue'
 import Login from '../views/Login.vue'
 import Signup from '../views/Signup.vue'
@@ -10,6 +11,12 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/',
     name: 'Home',
+    component: Home,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/generator',
+    name: 'Generator',
     component: ChartGenerator,
     meta: { requiresAuth: true },
   },

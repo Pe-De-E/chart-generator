@@ -1,11 +1,20 @@
 <template>
   <v-app>
     <v-app-bar color="primary" elevation="2">
-      <v-app-bar-title class="text-h5 font-weight-bold">
+      <v-app-bar-title class="text-h5 font-weight-bold" style="cursor: pointer" @click="router.push('/')">
         📊 Chart Generator
       </v-app-bar-title>
 
       <v-spacer></v-spacer>
+
+      <v-btn
+        v-if="isAuthenticated"
+        variant="text"
+        prepend-icon="mdi-plus-circle"
+        @click="router.push('/generator')"
+      >
+        New Chart
+      </v-btn>
 
       <v-btn
         :icon="theme.global.current.value.dark ? 'mdi-weather-sunny' : 'mdi-weather-night'"
@@ -26,11 +35,17 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useTheme } from 'vuetify'
+import { useRouter } from 'vue-router'
 import UserMenu from './components/UserMenu.vue'
 
 const theme = useTheme()
+const router = useRouter()
+
+const isAuthenticated = computed(() => {
+  return !!sessionStorage.getItem('accessToken')
+})
 
 // Load saved theme preference from localStorage
 onMounted(() => {
