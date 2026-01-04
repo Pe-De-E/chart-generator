@@ -53,6 +53,12 @@ onMounted(() => {
   if (savedTheme) {
     theme.global.name.value = savedTheme
   }
+
+  // Listen for auth logout events (token expiry)
+  window.addEventListener('auth:logout', () => {
+    // Redirect to login page
+    router.push({ name: 'Login', query: { expired: 'true' } })
+  })
 })
 
 function toggleTheme() {

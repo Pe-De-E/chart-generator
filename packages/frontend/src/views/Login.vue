@@ -8,6 +8,10 @@
           </v-card-title>
 
           <v-card-text>
+            <v-alert v-if="sessionExpired" type="info" class="mb-4" closable>
+              Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.
+            </v-alert>
+
             <v-form @submit.prevent="handleLogin">
               <v-text-field
                 v-model="email"
@@ -67,11 +71,15 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuth } from '../composables/useAuth'
 
 const router = useRouter()
+const route = useRoute()
 const { login, isLoading, error } = useAuth()
+
+// Check if user was redirected due to session expiry
+const sessionExpired = computed(() => route.query.expired === 'true')
 
 const email = ref('')
 const password = ref('')
