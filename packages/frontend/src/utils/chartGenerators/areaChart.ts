@@ -1,4 +1,5 @@
 import type { ChartOptions } from '@chart-generator/shared'
+import { renderStatisticalOverlays, hasAnyOverlayEnabled } from './statisticalOverlayRenderer'
 
 // Helper function to generate legend
 function generateLegend(
@@ -32,19 +33,20 @@ export function generateAreaChart(options: ChartOptions): string {
 
   if (isSingleSeries) {
     // Legacy single-series mode
-    const { colors, title } = options
-    return generateSingleSeriesArea(data!, colors, title)
+    const { colors, title, statisticalOverlays } = options
+    return generateSingleSeriesArea(data!, colors, title, statisticalOverlays)
   } else {
     // Multi-series mode
-    const { colors, title } = options
-    return generateMultiSeriesArea(seriesData!, seriesConfig!, colors, title)
+    const { colors, title, statisticalOverlays } = options
+    return generateMultiSeriesArea(seriesData!, seriesConfig!, colors, title, statisticalOverlays)
   }
 }
 
 function generateSingleSeriesArea(
   data: Array<{ label: string, value: number }>,
   colors: { primary?: string, secondary?: string, background: string },
-  title: string
+  title: string,
+  overlays?: ChartOptions['statisticalOverlays']
 ): string {
   // Dynamic width based on data count for better visibility
   const minPointSpacing = 4
@@ -121,12 +123,27 @@ function generateSingleSeriesArea(
           text-anchor="end" font-size="10" fill="#6B7280">${value}</text>
   `).join('')
 
+  // Statistical overlays
+  const statisticalOverlay = overlays && hasAnyOverlayEnabled(overlays)
+    ? renderStatisticalOverlays({
+        overlays,
+        values: data.map(d => d.value),
+        chartX: margin.left,
+        chartY: margin.top,
+        chartWidth,
+        chartHeight,
+        minValue: 0,
+        maxValue
+      })
+    : ''
+
   return `
     <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
       <rect width="${width}" height="${height}" fill="${colors.background}"/>
       <text x="${width/2}" y="30" text-anchor="middle" font-size="20"
             font-weight="bold" fill="#1F2937">${title}</text>
       ${yAxis}
+      ${statisticalOverlay}
       <!-- Filled area -->
       <polygon points="${fullAreaPath}" fill="${colors.primary || '#4F46E5'}" opacity="0.3"/>
       <!-- Line on top of area -->
@@ -147,7 +164,8 @@ function generateMultiSeriesArea(
   seriesData: Array<{ label: string, values: Record<string, number> }>,
   seriesConfig: Array<{ name: string, columnKey: string, color: string }>,
   colors: { series?: string[], background: string },
-  title: string
+  title: string,
+  overlays?: ChartOptions['statisticalOverlays']
 ): string {
   // Dynamic width based on data count
   const minPointSpacing = 4
@@ -253,12 +271,27 @@ function generateMultiSeriesArea(
   const legendY = margin.top + chartHeight + 50
   const legend = generateLegend(seriesConfig, legendY, width)
 
+  // Statistical overlays (using already calculated allValues from above)
+  const statisticalOverlay = overlays && hasAnyOverlayEnabled(overlays)
+    ? renderStatisticalOverlays({
+        overlays,
+        values: allValues.filter(v => typeof v === 'number' && !isNaN(v)),
+        chartX: margin.left,
+        chartY: margin.top,
+        chartWidth,
+        chartHeight,
+        minValue: 0,
+        maxValue
+      })
+    : ''
+
   return `
     <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
       <rect width="${width}" height="${height}" fill="${colors.background}"/>
       <text x="${width/2}" y="30" text-anchor="middle" font-size="20"
             font-weight="bold" fill="#1F2937">${title}</text>
       ${yAxis}
+      ${statisticalOverlay}
       ${allAreas}
       ${xLabels}
       <line x1="${margin.left}" y1="${margin.top + chartHeight}"

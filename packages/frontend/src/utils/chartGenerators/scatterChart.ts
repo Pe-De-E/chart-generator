@@ -1,4 +1,5 @@
 import type { ChartOptions } from '@chart-generator/shared'
+import { renderStatisticalOverlays, hasAnyOverlayEnabled } from './statisticalOverlayRenderer'
 
 // Helper function to generate legend
 function generateLegend(
@@ -25,24 +26,25 @@ function generateLegend(
 }
 
 export function generateScatterChart(options: ChartOptions): string {
-  const { data, seriesData, seriesConfig, colors, title } = options
+  const { data, seriesData, seriesConfig, colors, title, statisticalOverlays } = options
 
   // Detect mode
   const isSingleSeries = !!data
 
   if (isSingleSeries) {
     // Legacy single-series mode
-    return generateSingleSeriesScatter(data!, colors, title)
+    return generateSingleSeriesScatter(data!, colors, title, statisticalOverlays)
   } else {
     // Multi-series mode
-    return generateMultiSeriesScatter(seriesData!, seriesConfig!, colors, title)
+    return generateMultiSeriesScatter(seriesData!, seriesConfig!, colors, title, statisticalOverlays)
   }
 }
 
 function generateSingleSeriesScatter(
   data: Array<{ label: string, value: number }>,
   colors: { primary?: string, background: string },
-  title: string
+  title: string,
+  overlays?: ChartOptions['statisticalOverlays']
 ): string {
   // Dynamic width based on data count for better visibility
   const minPointSpacing = 4
@@ -102,12 +104,27 @@ function generateSingleSeriesScatter(
           text-anchor="end" font-size="10" fill="#6B7280">${value}</text>
   `).join('')
 
+  // Statistical overlays
+  const statisticalOverlay = overlays && hasAnyOverlayEnabled(overlays)
+    ? renderStatisticalOverlays({
+        overlays,
+        values: data.map(d => d.value),
+        chartX: margin.left,
+        chartY: margin.top,
+        chartWidth,
+        chartHeight,
+        minValue: 0,
+        maxValue
+      })
+    : ''
+
   return `
     <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
       <rect width="${width}" height="${height}" fill="${colors.background}"/>
       <text x="${width/2}" y="30" text-anchor="middle" font-size="20"
             font-weight="bold" fill="#1F2937">${title}</text>
       ${yAxis}
+      ${statisticalOverlay}
       ${points}
       <line x1="${margin.left}" y1="${margin.top + chartHeight}"
             x2="${width - margin.right}" y2="${margin.top + chartHeight}"
@@ -123,7 +140,8 @@ function generateMultiSeriesScatter(
   seriesData: Array<{ label: string, values: Record<string, number> }>,
   seriesConfig: Array<{ name: string, columnKey: string, color: string }>,
   colors: { series?: string[], background: string },
-  title: string
+  title: string,
+  overlays?: ChartOptions['statisticalOverlays']
 ): string {
   // Dynamic width based on data count
   const minPointSpacing = 4
@@ -200,12 +218,27 @@ function generateMultiSeriesScatter(
   const legendY = margin.top + chartHeight + 50
   const legend = generateLegend(seriesConfig, legendY, width)
 
+  // Statistical overlays (using already calculated allValues from above)
+  const statisticalOverlay = overlays && hasAnyOverlayEnabled(overlays)
+    ? renderStatisticalOverlays({
+        overlays,
+        values: allValues.filter(v => typeof v === 'number' && !isNaN(v)),
+        chartX: margin.left,
+        chartY: margin.top,
+        chartWidth,
+        chartHeight,
+        minValue: 0,
+        maxValue
+      })
+    : ''
+
   return `
     <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
       <rect width="${width}" height="${height}" fill="${colors.background}"/>
       <text x="${width/2}" y="30" text-anchor="middle" font-size="20"
             font-weight="bold" fill="#1F2937">${title}</text>
       ${yAxis}
+      ${statisticalOverlay}
       ${allPoints}
       ${xLabels}
       <line x1="${margin.left}" y1="${margin.top + chartHeight}"
