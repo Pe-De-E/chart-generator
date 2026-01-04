@@ -69,3 +69,4 @@ apiClient.interceptors.response.use(
 )
 
 export default apiClient
+export const api = apiClient

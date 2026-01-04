@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify'
 import { chartController } from '../controllers/chart.controller.js'
-import { authenticate } from '../middleware/auth.middleware.js'
-import { validate } from '../middleware/validation.middleware.js'
+import { authMiddleware } from '../middleware/auth.middleware.js'
+import { validateBody, validateParams } from '../middleware/validation.middleware.js'
 import {
   createChartSchema,
   updateChartSchema,
@@ -10,12 +10,12 @@ import {
 
 export async function chartRoutes(fastify: FastifyInstance) {
   // All chart routes require authentication
-  fastify.addHook('onRequest', authenticate)
+  fastify.addHook('preHandler', authMiddleware)
 
   // Create a new chart
   fastify.post(
     '/',
-    { preHandler: validate(createChartSchema) },
+    { preHandler: [validateBody(createChartSchema)] },
     chartController.createChart.bind(chartController)
   )
 
@@ -25,7 +25,7 @@ export async function chartRoutes(fastify: FastifyInstance) {
   // Get a specific chart by ID
   fastify.get(
     '/:id',
-    { preHandler: validate(chartIdSchema, 'params') },
+    { preHandler: [validateParams(chartIdSchema)] },
     chartController.getChartById.bind(chartController)
   )
 
@@ -34,8 +34,8 @@ export async function chartRoutes(fastify: FastifyInstance) {
     '/:id',
     {
       preHandler: [
-        validate(chartIdSchema, 'params'),
-        validate(updateChartSchema),
+        validateParams(chartIdSchema),
+        validateBody(updateChartSchema),
       ],
     },
     chartController.updateChart.bind(chartController)
@@ -44,7 +44,7 @@ export async function chartRoutes(fastify: FastifyInstance) {
   // Delete a chart
   fastify.delete(
     '/:id',
-    { preHandler: validate(chartIdSchema, 'params') },
+    { preHandler: [validateParams(chartIdSchema)] },
     chartController.deleteChart.bind(chartController)
   )
 }

@@ -73,7 +73,7 @@
         <v-card elevation="2" class="chart-card">
           <v-img
             v-if="chart.svgContent"
-            :src="'data:image/svg+xml;base64,' + btoa(chart.svgContent)"
+            :src="'data:image/svg+xml;base64,' + encodeSvg(chart.svgContent)"
             height="200"
             cover
             class="chart-preview"
@@ -233,6 +233,10 @@ function formatDate(dateString: string): string {
     month: '2-digit',
     year: 'numeric',
   }).format(date)
+}
+
+function encodeSvg(svgContent: string): string {
+  return window.btoa(svgContent)
 }
 </script>
 
