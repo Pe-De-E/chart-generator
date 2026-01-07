@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createVuetify } from 'vuetify'
 import ChartCreationStep from './ChartCreationStep.vue'
-import type { ChartType, ChartColors } from '../../composables/useChartConfig'
-import type { SeriesConfig, StatisticalOverlays } from '../../utils/chartGenerators/types'
+import type { ChartType, ChartColors } from '../../../composables/useChartConfig'
+import type { SeriesConfig, StatisticalOverlays } from '../../../utils/chartGenerators/types'
 
 const vuetify = createVuetify()
 
@@ -44,6 +44,7 @@ describe('ChartCreationStep.vue', () => {
           'v-card-title': { template: '<div class="v-card-title"><slot /></div>' },
           'v-card-text': { template: '<div class="v-card-text"><slot /></div>' },
           'v-card-actions': { template: '<div class="v-card-actions"><slot /></div>' },
+          'v-tooltip': { template: '<div><slot name="activator" :props="{}"></slot></div>' },
           'v-text-field': {
             template: '<input :value="modelValue" @input="handleInput" class="v-text-field" />',
             props: ['modelValue', 'label', 'variant', 'density', 'prependInnerIcon'],
@@ -176,7 +177,6 @@ describe('ChartCreationStep.vue', () => {
 
     it('should emit update:chartType when chart type button is clicked', async () => {
       const wrapper = createWrapper()
-      const btnToggle = wrapper.find('.v-btn-toggle')
       const lineButton = wrapper.findAll('.v-btn-toggle button')[1]
 
       await lineButton.trigger('click')

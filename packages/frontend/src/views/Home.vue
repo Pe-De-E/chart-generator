@@ -181,7 +181,6 @@ function createChart() {
 }
 
 function loadChart(chartId: string) {
-  // TODO: Implement chart loading
   router.push({ name: 'Generator', query: { id: chartId } })
 }
 
