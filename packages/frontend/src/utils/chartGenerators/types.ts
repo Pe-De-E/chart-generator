@@ -51,4 +51,8 @@ export interface ChartOptions {
 
   // Statistical overlays
   statisticalOverlays?: StatisticalOverlays
+
+  // Y-Axis scaling
+  yAxisMin?: number
+  yAxisMax?: number
 }

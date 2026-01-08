@@ -9,9 +9,14 @@
         :chart-type="chartType"
         :colors="colors"
         :series-config="seriesConfig"
+        :custom-y-axis="customYAxis"
+        :y-axis-range="yAxisRange"
+        :data-extent="dataExtent"
         @update:chart-title="$emit('update:chartTitle', $event)"
         @update:chart-type="$emit('update:chartType', $event)"
         @update:colors="$emit('update:colors', $event)"
+        @update:custom-y-axis="$emit('update:customYAxis', $event)"
+        @update:y-axis-range="$emit('update:yAxisRange', $event)"
         @update-series-color="(index, color) => $emit('updateSeriesColor', index, color)"
         @regenerate-colors="$emit('regenerateColors')"
       />
@@ -110,6 +115,18 @@ defineProps({
   seriesConfig: {
     type: Array as PropType<SeriesConfig[]>,
     default: () => []
+  },
+  customYAxis: {
+    type: Boolean,
+    default: false
+  },
+  yAxisRange: {
+    type: Array as PropType<[number, number]>,
+    default: () => [0, 100]
+  },
+  dataExtent: {
+    type: Array as PropType<[number, number]>,
+    default: () => [0, 100]
   }
 })
 
@@ -123,6 +140,8 @@ defineEmits<{
   'update:chartType': [value: ChartType]
   'update:colors': [value: ChartColors]
   'update:statisticalOverlays': [value: StatisticalOverlays]
+  'update:customYAxis': [value: boolean]
+  'update:yAxisRange': [value: [number, number]]
   updateSeriesColor: [index: number, color: string]
   regenerateColors: []
 }>()

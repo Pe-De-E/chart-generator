@@ -53,6 +53,9 @@
               v-model:chart-type="chartType"
               v-model:colors="colors"
               v-model:statistical-overlays="statisticalOverlays"
+              v-model:custom-y-axis="customYAxis"
+              v-model:y-axis-range="yAxisRange"
+              :data-extent="dataExtent"
               :svg-content="svgContent"
               :series-config="selectedSeries"
               @update-series-color="updateSeriesColor"
@@ -461,6 +464,9 @@ const {
   chartTitle,
   colors,
   statisticalOverlays,
+  customYAxis,
+  yAxisRange,
+  dataExtent,
   svgContent,
   downloadSVG,
   resetConfig

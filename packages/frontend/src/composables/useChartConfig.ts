@@ -38,6 +38,40 @@ export function useChartConfig(
     color: '#FF6B6B'
   })
 
+  // Y-Axis scaling
+  const customYAxis = ref(false)
+  const yAxisRange = ref<[number, number]>([0, 100])
+
+  // Compute data extent (min/max values from data)
+  const dataExtent = computed(() => {
+    if (seriesData.value.length === 0) {
+      return [0, 100]
+    }
+
+    let min = Infinity
+    let max = -Infinity
+
+    seriesData.value.forEach(d => {
+      Object.values(d.values).forEach(value => {
+        if (typeof value === 'number') {
+          min = Math.min(min, value)
+          max = Math.max(max, value)
+        }
+      })
+    })
+
+    // Add 10% padding
+    const padding = (max - min) * 0.1
+    return [Math.floor(min - padding), Math.ceil(max + padding)]
+  })
+
+  // Update yAxisRange when data changes
+  computed(() => {
+    if (!customYAxis.value) {
+      yAxisRange.value = dataExtent.value as [number, number]
+    }
+  })
+
   const svgContent = computed(() => {
     // Detect single-series vs multi-series mode
     const isSingleSeries = seriesConfig.value.length === 1
@@ -57,7 +91,11 @@ export function useChartConfig(
           background: colors.value.background
         },
         title: chartTitle.value,
-        statisticalOverlays: statisticalOverlays.value
+        statisticalOverlays: statisticalOverlays.value,
+        ...(customYAxis.value && {
+          yAxisMin: yAxisRange.value[0],
+          yAxisMax: yAxisRange.value[1]
+        })
       }
 
       // Call legacy single-series generators
@@ -85,7 +123,11 @@ export function useChartConfig(
           background: colors.value.background
         },
         title: chartTitle.value,
-        statisticalOverlays: statisticalOverlays.value
+        statisticalOverlays: statisticalOverlays.value,
+        ...(customYAxis.value && {
+          yAxisMin: yAxisRange.value[0],
+          yAxisMax: yAxisRange.value[1]
+        })
       }
 
       // Call multi-series generators (generators will detect multi-series mode)
@@ -130,6 +172,8 @@ export function useChartConfig(
       showQuartiles: false,
       color: '#FF6B6B'
     }
+    customYAxis.value = false
+    yAxisRange.value = dataExtent.value as [number, number]
   }
 
   return {
@@ -137,6 +181,9 @@ export function useChartConfig(
     chartTitle,
     colors,
     statisticalOverlays,
+    customYAxis,
+    yAxisRange,
+    dataExtent,
     svgContent,
     downloadSVG,
     resetConfig

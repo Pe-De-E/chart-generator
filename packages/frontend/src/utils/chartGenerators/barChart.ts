@@ -26,7 +26,7 @@ function generateLegend(
 }
 
 export function generateBarChart(options: ChartOptions): string {
-  const { data, seriesData, seriesConfig } = options
+  const { data, seriesData, seriesConfig, yAxisMin, yAxisMax } = options
 
   // Detect mode
   const isSingleSeries = !!data
@@ -34,11 +34,11 @@ export function generateBarChart(options: ChartOptions): string {
   if (isSingleSeries) {
     // Legacy single-series mode
     const { colors, title, statisticalOverlays } = options
-    return generateSingleSeriesBar(data!, colors, title, statisticalOverlays)
+    return generateSingleSeriesBar(data!, colors, title, statisticalOverlays, yAxisMin, yAxisMax)
   } else {
     // Multi-series mode
     const { colors, title, statisticalOverlays } = options
-    return generateMultiSeriesBar(seriesData!, seriesConfig!, colors, title, statisticalOverlays)
+    return generateMultiSeriesBar(seriesData!, seriesConfig!, colors, title, statisticalOverlays, yAxisMin, yAxisMax)
   }
 }
 
@@ -46,7 +46,9 @@ function generateSingleSeriesBar(
   data: Array<{ label: string, value: number }>,
   colors: { primary?: string, secondary?: string, background: string },
   title: string,
-  overlays?: ChartOptions['statisticalOverlays']
+  overlays?: ChartOptions['statisticalOverlays'],
+  yAxisMin?: number,
+  yAxisMax?: number
 ): string {
   // Dynamic width based on data count to ensure bars are visible
   const minBarWidth = 8
@@ -58,7 +60,11 @@ function generateSingleSeriesBar(
   const chartWidth = width - margin.left - margin.right
   const chartHeight = height - margin.top - margin.bottom
 
-  const maxValue = Math.max(...data.map(d => d.value), 1) // Minimum 1 to avoid division by zero
+  // Use custom y-axis range if provided, otherwise auto-scale
+  const minValue = yAxisMin ?? 0
+  const maxValue = yAxisMax ?? Math.max(...data.map(d => d.value), 1)
+  const valueRange = maxValue - minValue
+
   const barWidth = (chartWidth / data.length) * 0.8
   const barSpacing = chartWidth / data.length
 
@@ -68,15 +74,15 @@ function generateSingleSeriesBar(
 
   // Y-axis scale - calculate nice round numbers
   const yAxisSteps = 5
-  const stepValue = Math.ceil(maxValue / yAxisSteps)
+  const stepValue = valueRange / yAxisSteps
   const yAxisLabels = Array.from({ length: yAxisSteps + 1 }, (_, i) => {
-    const value = i * stepValue
-    const y = margin.top + chartHeight - (value / maxValue) * chartHeight
-    return { value, y }
-  }).filter(item => item.value <= maxValue)
+    const value = minValue + i * stepValue
+    const y = margin.top + chartHeight - ((value - minValue) / valueRange) * chartHeight
+    return { value: Math.round(value), y }
+  })
 
   const bars = data.map((d, i) => {
-    const barHeight = (d.value / maxValue) * chartHeight
+    const barHeight = ((d.value - minValue) / valueRange) * chartHeight
     const x = margin.left + i * barSpacing + (barSpacing - barWidth) / 2
     const y = margin.top + chartHeight - barHeight
 
@@ -119,7 +125,7 @@ function generateSingleSeriesBar(
         chartY: margin.top,
         chartWidth,
         chartHeight,
-        minValue: 0,
+        minValue,
         maxValue
       })
     : ''
@@ -147,7 +153,9 @@ function generateMultiSeriesBar(
   seriesConfig: Array<{ name: string, columnKey: string, color: string }>,
   colors: { series?: string[], background: string },
   title: string,
-  overlays?: ChartOptions['statisticalOverlays']
+  overlays?: ChartOptions['statisticalOverlays'],
+  yAxisMin?: number,
+  yAxisMax?: number
 ): string {
   const seriesCount = seriesConfig.length
 
@@ -163,9 +171,11 @@ function generateMultiSeriesBar(
   const chartWidth = width - margin.left - margin.right
   const chartHeight = height - margin.top - margin.bottom
 
-  // Calculate max value across ALL series
+  // Calculate value range across ALL series
   const allValues = seriesData.flatMap(d => Object.values(d.values))
-  const maxValue = Math.max(...allValues, 1)
+  const minValue = yAxisMin ?? 0
+  const maxValue = yAxisMax ?? Math.max(...allValues, 1)
+  const valueRange = maxValue - minValue
 
   // Group layout
   const groupWidth = chartWidth / seriesData.length
@@ -178,12 +188,12 @@ function generateMultiSeriesBar(
 
   // Y-axis scale
   const yAxisSteps = 5
-  const stepValue = Math.ceil(maxValue / yAxisSteps)
+  const stepValue = valueRange / yAxisSteps
   const yAxisLabels = Array.from({ length: yAxisSteps + 1 }, (_, i) => {
-    const value = i * stepValue
-    const y = margin.top + chartHeight - (value / maxValue) * chartHeight
-    return { value, y }
-  }).filter(item => item.value <= maxValue)
+    const value = minValue + i * stepValue
+    const y = margin.top + chartHeight - ((value - minValue) / valueRange) * chartHeight
+    return { value: Math.round(value), y }
+  })
 
   // Generate grouped bars
   let allBars = ''
@@ -191,7 +201,7 @@ function generateMultiSeriesBar(
   seriesData.forEach((dataPoint, labelIndex) => {
     seriesConfig.forEach((series, seriesIndex) => {
       const value = dataPoint.values[series.name] || 0
-      const barHeight = (value / maxValue) * chartHeight
+      const barHeight = ((value - minValue) / valueRange) * chartHeight
 
       // Position within the group
       const groupX = margin.left + labelIndex * groupWidth
@@ -241,7 +251,7 @@ function generateMultiSeriesBar(
         chartY: margin.top,
         chartWidth,
         chartHeight,
-        minValue: 0,
+        minValue,
         maxValue
       })
     : ''

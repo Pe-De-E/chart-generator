@@ -116,6 +116,34 @@
           </v-menu>
         </v-col>
       </v-row>
+
+      <!-- Y-Axis Scaling (only for bar, line, area, scatter charts) -->
+      <v-row v-if="['bar', 'line', 'area', 'scatter'].includes(chartType)" class="mt-2">
+        <v-col cols="12">
+          <v-checkbox
+            :model-value="customYAxis"
+            @update:model-value="$emit('update:customYAxis', $event)"
+            label="Benutzerdefinierte Y-Achsen-Skalierung"
+            density="comfortable"
+            hide-details
+          ></v-checkbox>
+        </v-col>
+        <v-col v-if="customYAxis" cols="12">
+          <v-label class="text-caption mb-2">
+            Y-Achsen-Bereich: {{ yAxisRange[0] }} - {{ yAxisRange[1] }}
+          </v-label>
+          <v-range-slider
+            :model-value="yAxisRange"
+            @update:model-value="$emit('update:yAxisRange', $event)"
+            :min="dataExtent[0]"
+            :max="dataExtent[1]"
+            :step="1"
+            color="primary"
+            thumb-label="always"
+            strict
+          ></v-range-slider>
+        </v-col>
+      </v-row>
     </v-card-text>
   </v-card>
 </template>
@@ -141,6 +169,18 @@ defineProps({
   seriesConfig: {
     type: Array as PropType<SeriesConfig[]>,
     default: () => []
+  },
+  customYAxis: {
+    type: Boolean,
+    default: false
+  },
+  yAxisRange: {
+    type: Array as PropType<[number, number]>,
+    default: () => [0, 100]
+  },
+  dataExtent: {
+    type: Array as PropType<[number, number]>,
+    default: () => [0, 100]
   }
 })
 
@@ -148,6 +188,8 @@ defineEmits<{
   'update:chartTitle': [value: string]
   'update:chartType': [value: ChartType]
   'update:colors': [value: ChartColors]
+  'update:customYAxis': [value: boolean]
+  'update:yAxisRange': [value: [number, number]]
   updateSeriesColor: [index: number, color: string]
   regenerateColors: []
 }>()
