@@ -201,4 +201,11 @@ export class AuthService {
       },
     })
   }
+
+  /**
+   * Clear all refresh tokens (useful for development/testing)
+   */
+  static async clearAllRefreshTokens(): Promise<void> {
+    await prisma.refreshToken.deleteMany({})
+  }
 }

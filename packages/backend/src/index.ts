@@ -6,6 +6,7 @@ import rateLimit from '@fastify/rate-limit'
 import { env } from './config/env.js'
 import { registerRoutes } from './routes/index.js'
 import { errorHandler, notFoundHandler } from './middleware/error.middleware.js'
+import { AuthService } from './services/auth.service.js'
 
 // Create Fastify instance
 const fastify = Fastify({
@@ -53,6 +54,14 @@ fastify.setNotFoundHandler(notFoundHandler)
 // Start server
 const start = async () => {
   try {
+    // In development, clear all refresh tokens on startup
+    // This ensures users must re-login after backend restart
+    if (env.NODE_ENV === 'development') {
+      fastify.log.info('Development mode: Clearing all refresh tokens...')
+      await AuthService.clearAllRefreshTokens()
+      fastify.log.info('All refresh tokens cleared')
+    }
+
     await fastify.listen({
       port: env.PORT,
       host: env.HOST,

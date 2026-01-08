@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
+import { useAuth } from '../composables/useAuth'
 
 // Import views
 import Home from '../views/Home.vue'
@@ -40,18 +41,22 @@ const router = createRouter({
 })
 
 // Navigation guard to protect routes
-router.beforeEach((to, from, next) => {
-  const token = sessionStorage.getItem('accessToken')
-  const isAuthenticated = !!token
+router.beforeEach(async (to, from, next) => {
+  const { isAuthenticated, isInitialized, init } = useAuth()
+
+  // Wait for auth initialization to complete
+  if (!isInitialized.value) {
+    await init()
+  }
 
   // Check if route requires authentication
-  if (to.meta.requiresAuth && !isAuthenticated) {
+  if (to.meta.requiresAuth && !isAuthenticated.value) {
     next({ name: 'Login' })
     return
   }
 
   // Check if route requires guest (not authenticated)
-  if (to.meta.requiresGuest && isAuthenticated) {
+  if (to.meta.requiresGuest && isAuthenticated.value) {
     next({ name: 'Home' })
     return
   }
