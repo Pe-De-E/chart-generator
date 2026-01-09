@@ -6,6 +6,7 @@ import rateLimit from '@fastify/rate-limit'
 import { env } from './config/env.js'
 import { registerRoutes } from './routes/index.js'
 import { errorHandler, notFoundHandler } from './middleware/error.middleware.js'
+import { requestLogMiddleware, onResponseLog } from './middleware/requestLog.middleware.js'
 import { AuthService } from './services/auth.service.js'
 
 // Create Fastify instance
@@ -43,6 +44,10 @@ await fastify.register(rateLimit, {
   max: env.RATE_LIMIT_MAX,
   timeWindow: env.RATE_LIMIT_WINDOW,
 })
+
+// Request logging hooks
+fastify.addHook('onRequest', requestLogMiddleware)
+fastify.addHook('onResponse', onResponseLog)
 
 // Register routes
 await registerRoutes(fastify)

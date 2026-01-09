@@ -59,3 +59,22 @@ model Chart {
   @@index([isPublic])
   @@map("charts")
 }
+
+// Request logging for admin dashboard
+model RequestLog {
+  id           String   @id @default(uuid())
+  method       String
+  path         String
+  statusCode   Int      @map("status_code")
+  userId       String?  @map("user_id")
+  userEmail    String?  @map("user_email")
+  ipAddress    String?  @map("ip_address")
+  userAgent    String?  @map("user_agent")
+  responseTime Int      @map("response_time")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([statusCode])
+  @@map("request_logs")
+}
