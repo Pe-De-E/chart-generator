@@ -202,6 +202,16 @@ function generateMultiSeriesArea(
     return { value, y }
   }).filter(item => item.value <= maxValue)
 
+  // Collect all values for statistical calculations
+  const allValues: number[] = []
+  seriesData.forEach(d => {
+    Object.values(d.values).forEach(v => {
+      if (typeof v === 'number' && !isNaN(v)) {
+        allValues.push(v)
+      }
+    })
+  })
+
   // Calculate cumulative values for stacking
   const cumulativeData = seriesData.map(d => {
     const cumulative: Record<string, number> = {}
@@ -275,7 +285,7 @@ function generateMultiSeriesArea(
   const statisticalOverlay = overlays && hasAnyOverlayEnabled(overlays)
     ? renderStatisticalOverlays({
         overlays,
-        values: allValues.filter(v => typeof v === 'number' && !isNaN(v)),
+        values: allValues,
         chartX: margin.left,
         chartY: margin.top,
         chartWidth,
