@@ -4,6 +4,7 @@
       <div class="text-h5 mb-4">Chart erstellen</div>
 
       <!-- Chart Settings -->
+      <!-- TODO should be collapsable -->
       <ChartSettingsCard
         :chart-title="chartTitle"
         :chart-type="chartType"
@@ -12,21 +13,28 @@
         @update:chart-title="$emit('update:chartTitle', $event)"
         @update:chart-type="$emit('update:chartType', $event)"
         @update:colors="$emit('update:colors', $event)"
-        @update-series-color="(index, color) => $emit('updateSeriesColor', index, color)"
+        @update-series-color="
+          (index, color) => $emit('updateSeriesColor', index, color)
+        "
         @regenerate-colors="$emit('regenerateColors')"
       />
 
       <!-- Statistical Overlays -->
+      <!-- TODO Should be collapsable -->
       <StatisticalOverlaysCard
         :chart-type="chartType"
         :statistical-overlays="statisticalOverlays"
         :data-extent="dataExtent"
-        @update:statistical-overlays="$emit('update:statisticalOverlays', $event)"
+        @update:statistical-overlays="
+          $emit('update:statisticalOverlays', $event)
+        "
       />
 
       <!-- Chart Preview -->
       <v-card variant="outlined">
-        <v-card-title class="text-subtitle-1 bg-grey-lighten-4 d-flex justify-space-between align-center">
+        <v-card-title
+          class="text-subtitle-1 bg-grey-lighten-4 d-flex justify-space-between align-center"
+        >
           <div>
             <v-icon icon="mdi-eye" class="mr-2"></v-icon>
             Vorschau
@@ -45,19 +53,12 @@
     </v-card-text>
 
     <v-card-actions>
-      <v-btn
-        variant="text"
-        @click="$emit('back')"
-      >
+      <v-btn variant="text" @click="$emit('back')">
         <v-icon start>mdi-chevron-left</v-icon>
         Zurück
       </v-btn>
       <v-spacer></v-spacer>
-      <v-btn
-        color="secondary"
-        variant="outlined"
-        @click="$emit('reset')"
-      >
+      <v-btn color="secondary" variant="outlined" @click="$emit('reset')">
         Neu starten
       </v-btn>
       <v-btn
@@ -81,56 +82,62 @@
 </template>
 
 <script setup lang="ts">
-import type { PropType } from 'vue'
-import type { ChartType, ChartColors } from '../../../composables/useChartConfig'
-import type { SeriesConfig, StatisticalOverlays } from '../../../utils/chartGenerators/types'
-import ChartSettingsCard from './ChartSettingsCard.vue'
-import StatisticalOverlaysCard from './StatisticalOverlaysCard.vue'
+import type { PropType } from "vue";
+import type {
+  ChartType,
+  ChartColors,
+} from "../../../composables/useChartConfig";
+import type {
+  SeriesConfig,
+  StatisticalOverlays,
+} from "../../../utils/chartGenerators/types";
+import ChartSettingsCard from "./ChartSettingsCard.vue";
+import StatisticalOverlaysCard from "./StatisticalOverlaysCard.vue";
 
 defineProps({
   chartTitle: {
     type: String,
-    required: true
+    required: true,
   },
   chartType: {
     type: String as PropType<ChartType>,
-    required: true
+    required: true,
   },
   colors: {
     type: Object as PropType<ChartColors>,
-    required: true
+    required: true,
   },
   statisticalOverlays: {
     type: Object as PropType<StatisticalOverlays>,
-    required: true
+    required: true,
   },
   svgContent: {
     type: String,
-    required: true
+    required: true,
   },
   seriesConfig: {
     type: Array as PropType<SeriesConfig[]>,
-    default: () => []
+    default: () => [],
   },
   dataExtent: {
     type: Array as PropType<[number, number]>,
-    default: () => [0, 100]
-  }
-})
+    default: () => [0, 100],
+  },
+});
 
 defineEmits<{
-  back: []
-  reset: []
-  download: []
-  save: []
-  'show-fullscreen': []
-  'update:chartTitle': [value: string]
-  'update:chartType': [value: ChartType]
-  'update:colors': [value: ChartColors]
-  'update:statisticalOverlays': [value: StatisticalOverlays]
-  updateSeriesColor: [index: number, color: string]
-  regenerateColors: []
-}>()
+  back: [];
+  reset: [];
+  download: [];
+  save: [];
+  "show-fullscreen": [];
+  "update:chartTitle": [value: string];
+  "update:chartType": [value: ChartType];
+  "update:colors": [value: ChartColors];
+  "update:statisticalOverlays": [value: StatisticalOverlays];
+  updateSeriesColor: [index: number, color: string];
+  regenerateColors: [];
+}>();
 </script>
 
 <style scoped>
