@@ -23,6 +23,7 @@ model User {
 
   refreshTokens RefreshToken[]
   charts        Chart[]
+  payments      Payment[]
 
   @@map("users")
 }
@@ -99,4 +100,37 @@ model ErrorLog {
   @@index([severity])
   @@index([resolved])
   @@map("error_logs")
+}
+
+// Payment table (prepared for Stripe/PayPal integration)
+model Payment {
+  id                 String        @id @default(uuid())
+  userId             String        @map("user_id")
+  amount             Decimal       @db.Decimal(10, 2)
+  currency           String        @default("EUR")
+  status             PaymentStatus @default(PENDING)
+  provider           String?
+  providerPaymentId  String?       @map("provider_payment_id")
+  providerCustomerId String?       @map("provider_customer_id")
+  description        String?
+  failureReason      String?       @map("failure_reason")
+  createdAt          DateTime      @default(now()) @map("created_at")
+  updatedAt          DateTime      @updatedAt @map("updated_at")
+  completedAt        DateTime?     @map("completed_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("payments")
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+  CANCELLED
 }
