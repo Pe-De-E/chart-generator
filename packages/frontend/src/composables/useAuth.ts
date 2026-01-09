@@ -11,6 +11,7 @@ const isInitialized = ref(false)
 
 export function useAuth() {
   const isAuthenticated = computed(() => !!currentUser.value)
+  const isAdmin = computed(() => currentUser.value?.isAdmin === true)
 
   /**
    * Initialize auth state by fetching current user if token exists
@@ -132,6 +133,7 @@ export function useAuth() {
     // State
     currentUser: computed(() => currentUser.value),
     isAuthenticated,
+    isAdmin,
     isLoading: computed(() => isLoading.value),
     error: computed(() => error.value),
     isInitialized: computed(() => isInitialized.value),

@@ -4,6 +4,7 @@ export interface User {
   firstName?: string
   lastName?: string
   emailVerified: boolean
+  isAdmin: boolean
   createdAt: string
   updatedAt: string
   lastLoginAt?: string
