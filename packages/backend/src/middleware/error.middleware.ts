@@ -1,4 +1,5 @@
 import { FastifyError, FastifyReply, FastifyRequest } from 'fastify'
+import { prisma } from '../config/database.js'
 
 /**
  * Global error handler
@@ -22,6 +23,27 @@ export async function errorHandler(
   if (statusCode === 404) errorCode = 'NOT_FOUND'
   if (statusCode === 409) errorCode = 'CONFLICT'
   if (statusCode === 429) errorCode = 'RATE_LIMIT_EXCEEDED'
+
+  // Log 5xx errors to database
+  if (statusCode >= 500) {
+    const user = (request as any).user
+    try {
+      await prisma.errorLog.create({
+        data: {
+          errorCode,
+          errorMessage: error.message || 'An unexpected error occurred',
+          stackTrace: process.env.NODE_ENV === 'development' ? error.stack : null,
+          userId: user?.userId || null,
+          userEmail: user?.email || null,
+          path: request.url,
+          method: request.method,
+          severity: 'error',
+        },
+      })
+    } catch (logError) {
+      request.log.error('Failed to log error to database:', logError)
+    }
+  }
 
   // Send error response
   reply.status(statusCode).send({

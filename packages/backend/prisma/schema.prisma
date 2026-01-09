@@ -78,3 +78,25 @@ model RequestLog {
   @@index([statusCode])
   @@map("request_logs")
 }
+
+// Error logging for admin dashboard
+model ErrorLog {
+  id           String    @id @default(uuid())
+  errorCode    String    @map("error_code")
+  errorMessage String    @db.Text @map("error_message")
+  stackTrace   String?   @db.Text @map("stack_trace")
+  userId       String?   @map("user_id")
+  userEmail    String?   @map("user_email")
+  path         String?
+  method       String?
+  severity     String    @default("error")
+  resolved     Boolean   @default(false)
+  resolvedAt   DateTime? @map("resolved_at")
+  resolvedBy   String?   @map("resolved_by")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@index([severity])
+  @@index([resolved])
+  @@map("error_logs")
+}
