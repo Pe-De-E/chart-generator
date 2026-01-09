@@ -112,7 +112,7 @@ export class AuthController {
         return reply.status(401).send({
           error: {
             code: 'NO_REFRESH_TOKEN',
-            message: 'No refresh token provided',
+            message: 'Deine Sitzung ist abgelaufen, daher wurdest du automatisch abgemeldet.',
             statusCode: 401,
           },
         })
@@ -136,7 +136,7 @@ export class AuthController {
       return reply.status(401).send({
         error: {
           code: 'REFRESH_FAILED',
-          message: error.message || 'Token refresh failed',
+          message: 'Deine Sitzung ist abgelaufen, daher wurdest du automatisch abgemeldet.',
           statusCode: 401,
         },
       })

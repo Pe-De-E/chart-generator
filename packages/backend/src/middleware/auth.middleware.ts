@@ -37,7 +37,7 @@ export async function authMiddleware(
     return reply.status(401).send({
       error: {
         code: 'INVALID_TOKEN',
-        message: 'Invalid or expired token',
+        message: 'Deine Sitzung ist abgelaufen, daher wurdest du automatisch abgemeldet.',
         statusCode: 401,
       },
     })
