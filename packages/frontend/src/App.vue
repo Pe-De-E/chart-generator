@@ -62,7 +62,7 @@ const isAuthenticated = computed(() => {
 onMounted(() => {
   const savedTheme = localStorage.getItem('theme')
   if (savedTheme) {
-    theme.global.name.value = savedTheme
+    theme.change(savedTheme)
   }
 
   // Listen for auth logout events (token expiry)
@@ -74,7 +74,7 @@ onMounted(() => {
 
 function toggleTheme() {
   const newTheme = theme.global.current.value.dark ? 'light' : 'dark'
-  theme.global.name.value = newTheme
+  theme.change(newTheme)
   localStorage.setItem('theme', newTheme)
 }
 </script>
