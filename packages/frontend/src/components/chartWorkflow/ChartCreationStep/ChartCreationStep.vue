@@ -3,32 +3,48 @@
     <v-card-text>
       <div class="text-h5 mb-4">Chart erstellen</div>
 
-      <!-- Chart Settings -->
-      <!-- TODO should be collapsable -->
-      <ChartSettingsCard
-        :chart-title="chartTitle"
-        :chart-type="chartType"
-        :colors="colors"
-        :series-config="seriesConfig"
-        @update:chart-title="$emit('update:chartTitle', $event)"
-        @update:chart-type="$emit('update:chartType', $event)"
-        @update:colors="$emit('update:colors', $event)"
-        @update-series-color="
-          (index, color) => $emit('updateSeriesColor', index, color)
-        "
-        @regenerate-colors="$emit('regenerateColors')"
-      />
+      <v-expansion-panels v-model="expandedPanels" multiple class="mb-4">
+        <!-- Chart Settings -->
+        <v-expansion-panel value="settings">
+          <v-expansion-panel-title>
+            <v-icon icon="mdi-cog" class="mr-2"></v-icon>
+            Einstellungen
+          </v-expansion-panel-title>
+          <v-expansion-panel-text>
+            <ChartSettingsCard
+              :chart-title="chartTitle"
+              :chart-type="chartType"
+              :colors="colors"
+              :series-config="seriesConfig"
+              @update:chart-title="$emit('update:chartTitle', $event)"
+              @update:chart-type="$emit('update:chartType', $event)"
+              @update:colors="$emit('update:colors', $event)"
+              @update-series-color="
+                (index, color) => $emit('updateSeriesColor', index, color)
+              "
+              @regenerate-colors="$emit('regenerateColors')"
+            />
+          </v-expansion-panel-text>
+        </v-expansion-panel>
 
-      <!-- Statistical Overlays -->
-      <!-- TODO Should be collapsable -->
-      <StatisticalOverlaysCard
-        :chart-type="chartType"
-        :statistical-overlays="statisticalOverlays"
-        :data-extent="dataExtent"
-        @update:statistical-overlays="
-          $emit('update:statisticalOverlays', $event)
-        "
-      />
+        <!-- Statistical Overlays (not available for pie charts) -->
+        <v-expansion-panel v-if="chartType !== 'pie'" value="overlays">
+          <v-expansion-panel-title>
+            <v-icon icon="mdi-chart-timeline-variant" class="mr-2"></v-icon>
+            Statistische Overlays
+          </v-expansion-panel-title>
+          <v-expansion-panel-text>
+            <StatisticalOverlaysCard
+              :chart-type="chartType"
+              :statistical-overlays="statisticalOverlays"
+              :data-extent="dataExtent"
+              @update:statistical-overlays="
+                $emit('update:statisticalOverlays', $event)
+              "
+            />
+          </v-expansion-panel-text>
+        </v-expansion-panel>
+      </v-expansion-panels>
 
       <!-- Chart Preview -->
       <v-card variant="outlined">
@@ -82,6 +98,7 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from "vue";
 import type { PropType } from "vue";
 import type {
   ChartType,
@@ -93,6 +110,9 @@ import type {
 } from "../../../utils/chartGenerators/types";
 import ChartSettingsCard from "./ChartSettingsCard.vue";
 import StatisticalOverlaysCard from "./StatisticalOverlaysCard.vue";
+
+// Both panels expanded by default
+const expandedPanels = ref(["settings", "overlays"]);
 
 defineProps({
   chartTitle: {

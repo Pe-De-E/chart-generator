@@ -1,11 +1,6 @@
 <template>
-  <v-card variant="outlined" class="mb-4">
-    <v-card-title class="text-subtitle-1 bg-grey-lighten-4">
-      <v-icon icon="mdi-cog" class="mr-2"></v-icon>
-      Einstellungen
-    </v-card-title>
-    <v-card-text>
-      <v-row class="mt-2">
+  <div class="settings-content">
+    <v-row>
         <v-col cols="12" md="4">
           <v-text-field
             :model-value="chartTitle"
@@ -115,9 +110,8 @@
             </v-card>
           </v-menu>
         </v-col>
-      </v-row>
-    </v-card-text>
-  </v-card>
+    </v-row>
+  </div>
 </template>
 
 <script setup lang="ts">

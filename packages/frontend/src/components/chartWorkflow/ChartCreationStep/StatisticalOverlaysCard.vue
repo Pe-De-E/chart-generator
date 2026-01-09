@@ -1,11 +1,6 @@
 <template>
-  <v-card variant="outlined" class="mb-4" v-if="chartType !== 'pie'">
-    <v-card-title class="text-subtitle-1 bg-grey-lighten-4">
-      <v-icon icon="mdi-chart-bell-curve-cumulative" class="mr-2"></v-icon>
-      Statistische Vergleichswerte
-    </v-card-title>
-    <v-card-text>
-      <v-row>
+  <div class="overlays-content">
+    <v-row>
         <v-col cols="12" md="6">
           <!-- TODO couldn't this be a list, with an own component? is this a good idea? -->
           <!-- TODO man sollte die farben für die verschiedenen statistischen mittel einstellen können und nicht komplett für alle, das macht es 
@@ -188,9 +183,8 @@
             strict
           ></v-range-slider>
         </v-col>
-      </v-row>
-    </v-card-text>
-  </v-card>
+    </v-row>
+  </div>
 </template>
 
 <script setup lang="ts">

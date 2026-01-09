@@ -131,14 +131,14 @@ describe('ChartCreationStep.vue', () => {
 
     it('should render statistical overlays section for non-pie charts', () => {
       const wrapper = createWrapper({ chartType: 'bar' })
-      expect(wrapper.text()).toContain('Statistische Vergleichswerte')
+      expect(wrapper.text()).toContain('Statistische Overlays')
       expect(wrapper.text()).toContain('Mittelwert anzeigen')
       expect(wrapper.text()).toContain('Median anzeigen')
     })
 
     it('should not render statistical overlays section for pie charts', () => {
       const wrapper = createWrapper({ chartType: 'pie' })
-      expect(wrapper.text()).not.toContain('Statistische Vergleichswerte')
+      expect(wrapper.text()).not.toContain('Statistische Overlays')
     })
 
     it('should render series color pickers when seriesConfig is provided', () => {
@@ -367,8 +367,8 @@ describe('ChartCreationStep.vue', () => {
       const barWrapper = createWrapper({ chartType: 'bar' })
       const pieWrapper = createWrapper({ chartType: 'pie' })
 
-      expect(barWrapper.text()).toContain('Statistische Vergleichswerte')
-      expect(pieWrapper.text()).not.toContain('Statistische Vergleichswerte')
+      expect(barWrapper.text()).toContain('Statistische Overlays')
+      expect(pieWrapper.text()).not.toContain('Statistische Overlays')
     })
 
     it('should render series configuration section when series exist', () => {
