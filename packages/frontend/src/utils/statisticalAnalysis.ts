@@ -113,7 +113,10 @@ export function calculateAggregateStatistics(
 /**
  * Format statistic value for display
  */
-export function formatStatValue(value: number): string {
+export function formatStatValue(value: number | undefined): string {
+  if (value === undefined || value === null || isNaN(value)) {
+    return '0'
+  }
   if (Math.abs(value) >= 1000000) {
     return (value / 1000000).toFixed(1) + 'M'
   }

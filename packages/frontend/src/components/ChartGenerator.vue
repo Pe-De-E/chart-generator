@@ -619,7 +619,10 @@ const loadChartData = async (chartId: string) => {
       colors.value = savedConfig.colors
     }
     if (savedConfig.statisticalOverlays) {
-      statisticalOverlays.value = savedConfig.statisticalOverlays
+      statisticalOverlays.value = {
+        ...statisticalOverlays.value,
+        ...savedConfig.statisticalOverlays
+      }
     }
 
     // Skip to chart creation step

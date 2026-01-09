@@ -35,6 +35,9 @@ export interface StatisticalOverlays {
   showStdDev: boolean
   showMinMax: boolean
   showQuartiles: boolean
+  showCustomRange: boolean
+  customRangeMin: number
+  customRangeMax: number
   color: string  // Color for statistical lines/areas
 }
 

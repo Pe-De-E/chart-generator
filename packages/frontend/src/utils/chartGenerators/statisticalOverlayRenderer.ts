@@ -216,7 +216,7 @@ export function renderStatisticalOverlays(options: OverlayRenderOptions): string
   }
 
   // Render custom range area
-  if (overlays.showCustomRange) {
+  if (overlays.showCustomRange && overlays.customRangeMin !== undefined && overlays.customRangeMax !== undefined) {
     const customMinY = valueToY(overlays.customRangeMin)
     const customMaxY = valueToY(overlays.customRangeMax)
     const height = customMinY - customMaxY
