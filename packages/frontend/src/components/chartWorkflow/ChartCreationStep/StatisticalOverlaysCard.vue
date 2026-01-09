@@ -81,6 +81,21 @@
             </template>
           </v-checkbox>
 
+          <v-checkbox
+            :model-value="statisticalOverlays.showCustomRange"
+            @update:model-value="$emit('update:statisticalOverlays', { ...statisticalOverlays, showCustomRange: !!$event })"
+            label="Benutzerdefinierten Bereich anzeigen"
+            color="error"
+            density="comfortable"
+            hide-details
+            class="mt-2"
+          >
+            <template v-slot:label>
+              <span>Benutzerdefinierten Bereich anzeigen</span>
+              <v-chip size="x-small" class="ml-2" color="error" variant="tonal">⬌</v-chip>
+            </template>
+          </v-checkbox>
+
           <div class="mt-3">
             <v-label class="text-caption">Farbe der Vergleichswerte</v-label>
             <input
@@ -90,6 +105,25 @@
               class="color-picker-full mt-1"
             />
           </div>
+        </v-col>
+      </v-row>
+
+      <!-- Custom Range Slider -->
+      <v-row v-if="statisticalOverlays.showCustomRange" class="mt-2">
+        <v-col cols="12">
+          <v-label class="text-caption mb-2">
+            Bereich: {{ statisticalOverlays.customRangeMin }} - {{ statisticalOverlays.customRangeMax }}
+          </v-label>
+          <v-range-slider
+            :model-value="[statisticalOverlays.customRangeMin, statisticalOverlays.customRangeMax]"
+            @update:model-value="$emit('update:statisticalOverlays', { ...statisticalOverlays, customRangeMin: $event[0], customRangeMax: $event[1] })"
+            :min="dataExtent[0]"
+            :max="dataExtent[1]"
+            :step="1"
+            color="error"
+            thumb-label="always"
+            strict
+          ></v-range-slider>
         </v-col>
       </v-row>
     </v-card-text>
@@ -109,6 +143,10 @@ defineProps({
   statisticalOverlays: {
     type: Object as PropType<StatisticalOverlays>,
     required: true
+  },
+  dataExtent: {
+    type: Array as PropType<[number, number]>,
+    default: () => [0, 100]
   }
 })
 

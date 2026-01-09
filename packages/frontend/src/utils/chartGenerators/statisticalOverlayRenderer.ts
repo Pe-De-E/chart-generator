@@ -215,6 +215,59 @@ export function renderStatisticalOverlays(options: OverlayRenderOptions): string
     `)
   }
 
+  // Render custom range area
+  if (overlays.showCustomRange) {
+    const customMinY = valueToY(overlays.customRangeMin)
+    const customMaxY = valueToY(overlays.customRangeMax)
+    const height = customMinY - customMaxY
+
+    overlayParts.push(`
+      <rect
+        x="${chartX}"
+        y="${customMaxY}"
+        width="${chartWidth}"
+        height="${height}"
+        fill="${overlays.color}"
+        opacity="0.15"
+        stroke="${overlays.color}"
+        stroke-width="2"
+        stroke-dasharray="6,3"
+      />
+      <line
+        x1="${chartX}"
+        y1="${customMinY}"
+        x2="${chartX + chartWidth}"
+        y2="${customMinY}"
+        stroke="${overlays.color}"
+        stroke-width="2"
+        opacity="0.9"
+      />
+      <line
+        x1="${chartX}"
+        y1="${customMaxY}"
+        x2="${chartX + chartWidth}"
+        y2="${customMaxY}"
+        stroke="${overlays.color}"
+        stroke-width="2"
+        opacity="0.9"
+      />
+      <text
+        x="${chartX + chartWidth + 5}"
+        y="${customMinY + 4}"
+        font-size="11"
+        fill="${overlays.color}"
+        font-weight="600"
+      >${formatStatValue(overlays.customRangeMin)}</text>
+      <text
+        x="${chartX + chartWidth + 5}"
+        y="${customMaxY + 4}"
+        font-size="11"
+        fill="${overlays.color}"
+        font-weight="600"
+      >${formatStatValue(overlays.customRangeMax)}</text>
+    `)
+  }
+
   // Group all overlays
   return `
     <g class="statistical-overlays">
@@ -232,5 +285,6 @@ export function hasAnyOverlayEnabled(overlays?: StatisticalOverlays): boolean {
          overlays.showMedian ||
          overlays.showStdDev ||
          overlays.showMinMax ||
-         overlays.showQuartiles
+         overlays.showQuartiles ||
+         overlays.showCustomRange
 }
