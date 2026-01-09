@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify'
 import { authRoutes } from './auth.routes.js'
 import { userRoutes } from './user.routes.js'
 import { chartRoutes } from './chart.routes.js'
+import { adminRoutes } from './admin.routes.js'
 
 export async function registerRoutes(fastify: FastifyInstance) {
   // Health check endpoint
@@ -15,5 +16,6 @@ export async function registerRoutes(fastify: FastifyInstance) {
     await api.register(authRoutes, { prefix: '/auth' })
     await api.register(userRoutes, { prefix: '/users' })
     await api.register(chartRoutes, { prefix: '/charts' })
+    await api.register(adminRoutes, { prefix: '/admin' })
   }, { prefix: '/api/v1' })
 }

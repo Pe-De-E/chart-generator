@@ -17,6 +17,15 @@
       </v-btn>
 
       <v-btn
+        v-if="isAdmin"
+        variant="text"
+        prepend-icon="mdi-shield-crown"
+        @click="router.push('/admin')"
+      >
+        Admin
+      </v-btn>
+
+      <v-btn
         :icon="theme.global.current.value.dark ? 'mdi-weather-sunny' : 'mdi-weather-night'"
         @click="toggleTheme"
       ></v-btn>
@@ -39,9 +48,11 @@ import { computed, onMounted } from 'vue'
 import { useTheme } from 'vuetify'
 import { useRouter } from 'vue-router'
 import UserMenu from './components/UserMenu.vue'
+import { useAuth } from './composables/useAuth'
 
 const theme = useTheme()
 const router = useRouter()
+const { isAdmin } = useAuth()
 
 const isAuthenticated = computed(() => {
   return !!sessionStorage.getItem('accessToken')

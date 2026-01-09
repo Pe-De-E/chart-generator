@@ -7,6 +7,7 @@ import Home from '../views/Home.vue'
 import ChartGenerator from '../components/ChartGenerator.vue'
 import Login from '../views/Login.vue'
 import Signup from '../views/Signup.vue'
+import AdminDashboard from '../views/AdminDashboard.vue'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -20,6 +21,12 @@ const routes: RouteRecordRaw[] = [
     name: 'Generator',
     component: ChartGenerator,
     meta: { requiresAuth: true },
+  },
+  {
+    path: '/admin',
+    name: 'Admin',
+    component: AdminDashboard,
+    meta: { requiresAuth: true, requiresAdmin: true },
   },
   {
     path: '/login',
@@ -41,8 +48,8 @@ const router = createRouter({
 })
 
 // Navigation guard to protect routes
-router.beforeEach(async (to, from, next) => {
-  const { isAuthenticated, isInitialized, init } = useAuth()
+router.beforeEach(async (to, _from, next) => {
+  const { isAuthenticated, isAdmin, isInitialized, init } = useAuth()
 
   // Wait for auth initialization to complete
   if (!isInitialized.value) {
@@ -52,6 +59,12 @@ router.beforeEach(async (to, from, next) => {
   // Check if route requires authentication
   if (to.meta.requiresAuth && !isAuthenticated.value) {
     next({ name: 'Login' })
+    return
+  }
+
+  // Check if route requires admin
+  if (to.meta.requiresAdmin && !isAdmin.value) {
+    next({ name: 'Home' })
     return
   }
 
