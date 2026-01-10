@@ -60,9 +60,85 @@ export interface ChartOptions {
   // Silhouette mode - pure curve, no axes, labels or background (perfect for social media)
   silhouetteMode?: boolean
 
-  // TODO: Style overrides für interaktive Bearbeitung hinzufügen
-  // styleOverrides?: ChartStyleOverrides
-  // Siehe packages/frontend/src/utils/chartGenerators/types.ts für Interface-Definitionen
+  // Style overrides for interactive editing
+  styleOverrides?: ChartStyleOverrides
+}
+
+// =============================================================================
+// Style Overrides für interaktive Chart-Bearbeitung (Click-to-Edit)
+// =============================================================================
+// Diese Interfaces speichern alle visuellen Anpassungen, die der Benutzer vornimmt.
+// Die Overrides werden getrennt von den Daten gespeichert und beim Rendern angewendet.
+
+export interface ChartStyleOverrides {
+  // Titel-Anpassungen
+  title?: TitleStyleOverride
+
+  // Achsen-Anpassungen
+  xAxis?: AxisStyleOverride
+  yAxis?: AxisStyleOverride
+
+  // Legenden-Anpassungen
+  legend?: LegendStyleOverride
+
+  // Individuelle Datenpunkt-Anpassungen (nach Index oder Label)
+  dataPoints?: Record<string | number, DataPointStyleOverride>
+
+  // Serien-Anpassungen (für Multi-Series Charts)
+  series?: Record<string, SeriesStyleOverride>
+}
+
+export interface TitleStyleOverride {
+  text?: string              // Überschreibt den Titel-Text
+  fontSize?: number          // Standard: 20
+  fontWeight?: 'normal' | 'bold'
+  color?: string             // Standard: #1F2937
+  alignment?: 'left' | 'center' | 'right'
+  offsetY?: number           // Vertikale Position anpassen
+}
+
+export interface AxisStyleOverride {
+  // Label-Anpassungen
+  labels?: {
+    fontSize?: number        // Standard: 10
+    color?: string           // Standard: #6B7280
+    rotation?: number        // Grad (Standard: -45 für X-Achse)
+    show?: boolean           // Labels ein-/ausblenden
+  }
+  // Achsentitel (optional)
+  title?: {
+    text?: string
+    fontSize?: number
+    color?: string
+  }
+  // Grid-Linien
+  gridLines?: {
+    show?: boolean
+    color?: string           // Standard: #E5E7EB
+    dashArray?: string       // z.B. "4" für gestrichelt
+  }
+}
+
+export interface LegendStyleOverride {
+  show?: boolean             // Legende ein-/ausblenden
+  position?: 'top' | 'bottom' | 'left' | 'right'
+  fontSize?: number          // Standard: 11
+  // Individuelle Legenden-Einträge umbenennen
+  labels?: Record<string, string>  // { "Umsatz": "Revenue", ... }
+}
+
+export interface DataPointStyleOverride {
+  color?: string             // Farbe überschreiben
+  label?: string             // Anzeigetext überschreiben
+  showValue?: boolean        // Wert-Label ein-/ausblenden
+  highlight?: boolean        // Hervorheben (z.B. größere Größe, Rahmen)
+}
+
+export interface SeriesStyleOverride {
+  color?: string             // Serienfarbe überschreiben
+  name?: string              // Anzeigename überschreiben
+  lineStyle?: 'solid' | 'dashed' | 'dotted'  // Für Linien-Charts
+  lineWidth?: number         // Linienstärke
 }
 
 // Chart persistence types
