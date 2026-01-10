@@ -17,7 +17,9 @@
               :table-headers="tableHeaders"
               :table-items="tableItems"
               :parse-c-s-v="parseCSV"
+              :parse-g-p-x="parseGPX"
               @next="handleUploadNext"
+              @gpx-loaded="handleGPXLoaded"
             />
           </v-window-item>
 
@@ -375,6 +377,7 @@ const {
   tableItems,
   numericColumnOptions,
   parseCSV,
+  parseGPX,
   resetData
 } = useCSVParser()
 
@@ -492,6 +495,24 @@ const handleUploadNext = () => {
   // Initialize cleaning step when CSV is uploaded
   initializeCleaningStep()
   currentStep.value = 2
+}
+
+const handleGPXLoaded = () => {
+  // Auto-configure for elevation profile
+  // GPX parser sets col_0 = Entfernung (km), col_1 = Höhe (m)
+  selectedLabelColumn.value = 'col_0'
+
+  // Reset series and add elevation column
+  resetSeries()
+  addSeries('col_1')
+
+  // Set chart type to elevation and title
+  chartType.value = 'elevation'
+  chartTitle.value = 'Höhenprofil'
+
+  // Skip to chart creation step (skip cleaning for GPX)
+  skipCleaning()
+  currentStep.value = 3
 }
 
 const handleConfigureNext = () => {

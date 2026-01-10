@@ -10,6 +10,28 @@ export interface TableItem {
   [key: string]: string | number
 }
 
+// Haversine formula to calculate distance between two GPS points in meters
+function haversineDistance(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): number {
+  const R = 6371000 // Earth's radius in meters
+  const toRad = (deg: number) => (deg * Math.PI) / 180
+
+  const dLat = toRad(lat2 - lat1)
+  const dLon = toRad(lon2 - lon1)
+
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2)
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  return R * c
+}
+
 export function useCSVParser() {
   const tableHeaders = ref<TableHeader[]>([
     { title: "Label", key: "col_0", sortable: true },
@@ -110,6 +132,68 @@ export function useCSVParser() {
     tableItems.value = allRows
   }
 
+  function parseGPX(xmlText: string) {
+    const parser = new DOMParser()
+    const doc = parser.parseFromString(xmlText, 'application/xml')
+
+    // Check for parsing errors
+    const parseError = doc.querySelector('parsererror')
+    if (parseError) {
+      console.error('GPX parsing error:', parseError.textContent)
+      return
+    }
+
+    // Extract all trackpoints from <trkpt> elements
+    const trackPoints = doc.querySelectorAll('trkpt')
+
+    if (trackPoints.length === 0) {
+      console.error('No trackpoints found in GPX file')
+      return
+    }
+
+    // Set up headers for elevation profile
+    tableHeaders.value = [
+      { title: 'Entfernung (km)', key: 'col_0', sortable: true },
+      { title: 'Höhe (m)', key: 'col_1', sortable: true },
+    ]
+
+    const rows: TableItem[] = []
+    let cumulativeDistance = 0
+    let prevLat: number | null = null
+    let prevLon: number | null = null
+
+    trackPoints.forEach((point) => {
+      const lat = parseFloat(point.getAttribute('lat') || '0')
+      const lon = parseFloat(point.getAttribute('lon') || '0')
+      const eleElement = point.querySelector('ele')
+      const elevation = eleElement ? parseFloat(eleElement.textContent || '0') : 0
+
+      // Calculate distance from previous point
+      if (prevLat !== null && prevLon !== null) {
+        cumulativeDistance += haversineDistance(prevLat, prevLon, lat, lon)
+      }
+
+      // Convert to kilometers and round to 2 decimal places
+      const distanceKm = Math.round((cumulativeDistance / 1000) * 100) / 100
+
+      rows.push({
+        col_0: distanceKm,
+        col_1: Math.round(elevation)
+      })
+
+      prevLat = lat
+      prevLon = lon
+    })
+
+    // Reduce data points if too many (keep ~500 points max for performance)
+    if (rows.length > 500) {
+      const step = Math.ceil(rows.length / 500)
+      tableItems.value = rows.filter((_, index) => index % step === 0)
+    } else {
+      tableItems.value = rows
+    }
+  }
+
   function resetData() {
     tableHeaders.value = [
       { title: "Label", key: "col_0", sortable: true },
@@ -129,6 +213,7 @@ export function useCSVParser() {
     columnOptions,
     numericColumnOptions,
     parseCSV,
+    parseGPX,
     resetData
   }
 }

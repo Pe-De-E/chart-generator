@@ -1,15 +1,17 @@
 <template>
   <v-card flat>
     <v-card-text>
-      <div class="text-h5 mb-4">CSV-Datei hochladen</div>
+      <div class="text-h5 mb-4">Datei hochladen</div>
 
       <v-file-input
         v-model="uploadedFile"
-        label="CSV-Datei auswählen"
-        accept=".csv"
+        label="CSV- oder GPX-Datei auswählen"
+        accept=".csv,.gpx"
         variant="outlined"
         prepend-icon="mdi-file-delimited"
         show-size
+        :hint="fileTypeHint"
+        persistent-hint
         @update:model-value="handleFileUpload"
         class="mb-4"
       ></v-file-input>
@@ -40,7 +42,7 @@
       <v-card v-else variant="outlined" class="text-center pa-8">
         <v-icon icon="mdi-file-upload-outline" size="64" color="grey"></v-icon>
         <div class="text-h6 mt-4 mb-2">Keine Datei ausgewählt</div>
-        <div class="text-caption text-grey">Wählen Sie eine CSV-Datei aus, um fortzufahren</div>
+        <div class="text-caption text-grey">CSV-Datei für Diagramme oder GPX-Datei für Höhenprofile</div>
       </v-card>
     </v-card-text>
 
@@ -60,7 +62,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, type PropType } from 'vue'
+import { ref, computed, type PropType } from 'vue'
 import type { TableHeader, TableItem } from '../../composables/useCSVParser'
 
 const props = defineProps({
@@ -75,14 +77,28 @@ const props = defineProps({
   parseCSV: {
     type: Function as PropType<(text: string) => void>,
     required: true
+  },
+  parseGPX: {
+    type: Function as PropType<(text: string) => void>,
+    required: true
   }
 })
 
 const emit = defineEmits<{
   next: []
+  'gpx-loaded': []
 }>()
 
 const uploadedFile = ref<File[]>([])
+
+const fileTypeHint = computed(() => {
+  const file = uploadedFile.value?.[0]
+  if (!file) return 'CSV für allgemeine Daten, GPX für GPS-Tracks'
+  if (file.name.toLowerCase().endsWith('.gpx')) {
+    return 'GPX-Datei erkannt - wird als Höhenprofil geladen'
+  }
+  return 'CSV-Datei erkannt'
+})
 
 const handleFileUpload = (files: File | File[] | null) => {
   const file = Array.isArray(files) ? files[0] : files
@@ -92,7 +108,13 @@ const handleFileUpload = (files: File | File[] | null) => {
   reader.onload = (e) => {
     const text = e.target?.result as string
     if (!text) return
-    props.parseCSV(text)
+
+    if (file.name.toLowerCase().endsWith('.gpx')) {
+      props.parseGPX(text)
+      emit('gpx-loaded')
+    } else {
+      props.parseCSV(text)
+    }
   }
   reader.readAsText(file)
 }
