@@ -59,7 +59,7 @@ export interface ChartOptions {
 }
 
 // Chart persistence types
-export type ChartType = 'bar' | 'line' | 'scatter' | 'pie' | 'area'
+export type ChartType = 'bar' | 'line' | 'scatter' | 'pie' | 'area' | 'elevation'
 
 export interface SavedChart {
   id: string

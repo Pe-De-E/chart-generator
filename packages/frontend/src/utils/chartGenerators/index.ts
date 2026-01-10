@@ -3,6 +3,7 @@ export { generateLineChart } from './lineChart'
 export { generateAreaChart } from './areaChart'
 export { generatePieChart } from './pieChart'
 export { generateScatterChart } from './scatterChart'
+export { generateElevationChart } from './elevationChart'
 
 // Re-export types from shared package for backward compatibility
 export type {

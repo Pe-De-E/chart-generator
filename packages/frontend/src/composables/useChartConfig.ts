@@ -5,6 +5,7 @@ import {
   generateAreaChart,
   generatePieChart,
   generateScatterChart,
+  generateElevationChart,
   type SeriesDataPoint,
   type SeriesConfig,
   type DataPoint,
@@ -14,7 +15,7 @@ import {
 // Re-export ChartColors from types (for backward compatibility)
 export type { ChartColors } from '../utils/chartGenerators/types'
 
-export type ChartType = 'bar' | 'line' | 'area' | 'pie' | 'scatter'
+export type ChartType = 'bar' | 'line' | 'area' | 'pie' | 'scatter' | 'elevation'
 
 export function useChartConfig(
   seriesData: Ref<SeriesDataPoint[]>,
@@ -100,6 +101,8 @@ export function useChartConfig(
           return generateScatterChart(config)
         case 'pie':
           return generatePieChart(config)
+        case 'elevation':
+          return generateElevationChart(config)
         default:
           return ''
       }
@@ -128,6 +131,8 @@ export function useChartConfig(
           return generateScatterChart(config)
         case 'pie':
           return generatePieChart(config)
+        case 'elevation':
+          return generateElevationChart(config)
         default:
           return ''
       }

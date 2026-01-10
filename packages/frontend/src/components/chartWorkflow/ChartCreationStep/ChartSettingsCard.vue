@@ -56,6 +56,13 @@
                 </v-btn>
               </template>
             </v-tooltip>
+            <v-tooltip text="Höhenprofil" location="bottom">
+              <template v-slot:activator="{ props }">
+                <v-btn value="elevation" v-bind="props">
+                  <v-icon>mdi-elevation-rise</v-icon>
+                </v-btn>
+              </template>
+            </v-tooltip>
           </v-btn-toggle>
         </v-col>
         <v-col cols="12" md="4">
