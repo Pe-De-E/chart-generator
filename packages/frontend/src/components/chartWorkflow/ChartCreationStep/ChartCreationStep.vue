@@ -16,9 +16,11 @@
               :chart-type="chartType"
               :colors="colors"
               :series-config="seriesConfig"
+              :silhouette-mode="silhouetteMode"
               @update:chart-title="$emit('update:chartTitle', $event)"
               @update:chart-type="$emit('update:chartType', $event)"
               @update:colors="$emit('update:colors', $event)"
+              @update:silhouette-mode="$emit('update:silhouetteMode', $event)"
               @update-series-color="
                 (index, color) => $emit('updateSeriesColor', index, color)
               "
@@ -143,6 +145,10 @@ defineProps({
     type: Array as PropType<[number, number]>,
     default: () => [0, 100],
   },
+  silhouetteMode: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 defineEmits<{
@@ -155,6 +161,7 @@ defineEmits<{
   "update:chartType": [value: ChartType];
   "update:colors": [value: ChartColors];
   "update:statisticalOverlays": [value: StatisticalOverlays];
+  "update:silhouetteMode": [value: boolean];
   updateSeriesColor: [index: number, color: string];
   regenerateColors: [];
 }>();

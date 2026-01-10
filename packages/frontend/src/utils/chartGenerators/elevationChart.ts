@@ -2,7 +2,17 @@ import type { ChartOptions } from '@chart-generator/shared'
 import { renderStatisticalOverlays, hasAnyOverlayEnabled } from './statisticalOverlayRenderer'
 
 export function generateElevationChart(options: ChartOptions): string {
-  const { data, seriesData, seriesConfig } = options
+  const { data, seriesData, seriesConfig, silhouetteMode } = options
+
+  // Silhouette mode: pure curve only, no axes, labels, or background
+  if (silhouetteMode) {
+    const chartData = data || (seriesData ? seriesData.map(d => ({
+      label: d.label,
+      value: Object.values(d.values)[0] || 0
+    })) : [])
+    const color = options.colors.primary || seriesConfig?.[0]?.color || '#2E7D32'
+    return generateSilhouette(chartData, color)
+  }
 
   // Detect mode
   const isSingleSeries = !!data
@@ -14,6 +24,60 @@ export function generateElevationChart(options: ChartOptions): string {
     const { colors, title, statisticalOverlays } = options
     return generateMultiSeriesElevation(seriesData!, seriesConfig!, colors, title, statisticalOverlays)
   }
+}
+
+function generateSilhouette(
+  data: Array<{ label: string, value: number }>,
+  color: string
+): string {
+  if (data.length === 0) return '<svg></svg>'
+
+  const width = 800
+  const height = 200
+  const padding = 10
+
+  const values = data.map(d => d.value)
+  const minValue = Math.min(...values)
+  const maxValue = Math.max(...values)
+  const valueRange = maxValue - minValue || 1
+
+  const chartWidth = width - padding * 2
+  const chartHeight = height - padding * 2
+  const xStep = data.length > 1 ? chartWidth / (data.length - 1) : chartWidth / 2
+
+  // Build the line path
+  const linePoints = data.map((d, i) => {
+    const x = padding + i * xStep
+    const y = padding + chartHeight - ((d.value - minValue) / valueRange) * chartHeight
+    return `${x},${y}`
+  }).join(' ')
+
+  // Build area path (for subtle gradient fill)
+  const areaPoints = data.map((d, i) => {
+    const x = padding + i * xStep
+    const y = padding + chartHeight - ((d.value - minValue) / valueRange) * chartHeight
+    return `${x},${y}`
+  })
+  const lastX = padding + (data.length - 1) * xStep
+  const bottomRight = `${lastX},${height - padding}`
+  const bottomLeft = `${padding},${height - padding}`
+  const fullAreaPath = [bottomLeft, ...areaPoints, bottomRight].join(' ')
+
+  const gradientId = `silhouette-gradient-${Date.now()}`
+
+  return `
+    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="${gradientId}" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" style="stop-color:${color};stop-opacity:0.4"/>
+          <stop offset="100%" style="stop-color:${color};stop-opacity:0.05"/>
+        </linearGradient>
+      </defs>
+      <polygon points="${fullAreaPath}" fill="url(#${gradientId})"/>
+      <polyline points="${linePoints}" fill="none" stroke="${color}"
+                stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+    </svg>
+  `
 }
 
 function generateSingleSeriesElevation(

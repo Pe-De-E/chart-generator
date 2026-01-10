@@ -67,6 +67,9 @@ export function useChartConfig(
     color: '#FF6B6B'
   })
 
+  // Silhouette mode (elevation profile only) - pure curve for social media
+  const silhouetteMode = ref(false)
+
   const svgContent = computed(() => {
     // Detect single-series vs multi-series mode
     const isSingleSeries = seriesConfig.value.length === 1
@@ -86,7 +89,8 @@ export function useChartConfig(
           background: colors.value.background
         },
         title: chartTitle.value,
-        statisticalOverlays: statisticalOverlays.value
+        statisticalOverlays: statisticalOverlays.value,
+        silhouetteMode: silhouetteMode.value
       }
 
       // Call legacy single-series generators
@@ -116,7 +120,8 @@ export function useChartConfig(
           background: colors.value.background
         },
         title: chartTitle.value,
-        statisticalOverlays: statisticalOverlays.value
+        statisticalOverlays: statisticalOverlays.value,
+        silhouetteMode: silhouetteMode.value
       }
 
       // Call multi-series generators (generators will detect multi-series mode)
@@ -168,6 +173,7 @@ export function useChartConfig(
       zScoreThreshold: 2,
       color: '#FF6B6B'
     }
+    silhouetteMode.value = false
   }
 
   return {
@@ -175,6 +181,7 @@ export function useChartConfig(
     chartTitle,
     colors,
     statisticalOverlays,
+    silhouetteMode,
     dataExtent,
     svgContent,
     downloadSVG,

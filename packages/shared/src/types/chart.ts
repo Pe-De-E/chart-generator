@@ -56,6 +56,9 @@ export interface ChartOptions {
 
   // Statistical overlays
   statisticalOverlays?: StatisticalOverlays
+
+  // Silhouette mode - pure curve, no axes, labels or background (perfect for social media)
+  silhouetteMode?: boolean
 }
 
 // Chart persistence types

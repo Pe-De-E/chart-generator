@@ -64,6 +64,19 @@
               </template>
             </v-tooltip>
           </v-btn-toggle>
+
+          <!-- Silhouette Mode Toggle (only for elevation) -->
+          <v-switch
+            v-if="chartType === 'elevation'"
+            :model-value="silhouetteMode"
+            @update:model-value="$emit('update:silhouetteMode', $event ?? false)"
+            label="Silhouette-Modus"
+            hint="Nur Kurve, perfekt für Social Media"
+            persistent-hint
+            density="compact"
+            color="primary"
+            class="mt-3"
+          ></v-switch>
         </v-col>
         <v-col cols="12" md="4">
           <v-menu>
@@ -142,6 +155,10 @@ defineProps({
   seriesConfig: {
     type: Array as PropType<SeriesConfig[]>,
     default: () => []
+  },
+  silhouetteMode: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -149,6 +166,7 @@ defineEmits<{
   'update:chartTitle': [value: string]
   'update:chartType': [value: ChartType]
   'update:colors': [value: ChartColors]
+  'update:silhouetteMode': [value: boolean]
   updateSeriesColor: [index: number, color: string]
   regenerateColors: []
 }>()

@@ -55,6 +55,7 @@
               v-model:chart-type="chartType"
               v-model:colors="colors"
               v-model:statistical-overlays="statisticalOverlays"
+              v-model:silhouette-mode="silhouetteMode"
               :data-extent="dataExtent"
               :svg-content="svgContent"
               :series-config="selectedSeries"
@@ -465,6 +466,7 @@ const {
   chartTitle,
   colors,
   statisticalOverlays,
+  silhouetteMode,
   dataExtent,
   svgContent,
   downloadSVG,
