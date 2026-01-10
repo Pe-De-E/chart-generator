@@ -38,6 +38,8 @@ export interface StatisticalOverlays {
   showCustomRange: boolean
   customRangeMin: number
   customRangeMax: number
+  showZScore: boolean
+  zScoreThreshold: number  // Number of standard deviations (e.g., 2 = ±2σ)
   color: string  // Color for statistical lines/areas
 }
 

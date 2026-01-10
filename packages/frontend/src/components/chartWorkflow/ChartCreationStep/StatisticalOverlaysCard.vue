@@ -144,6 +144,28 @@
             </template>
           </v-checkbox>
 
+          <v-checkbox
+            :model-value="statisticalOverlays.showZScore"
+            @update:model-value="
+              $emit('update:statisticalOverlays', {
+                ...statisticalOverlays,
+                showZScore: !!$event,
+              })
+            "
+            label="Z-Score Grenzwerte anzeigen"
+            color="error"
+            density="comfortable"
+            hide-details
+            class="mt-2"
+          >
+            <template v-slot:label>
+              <span>Z-Score Grenzwerte anzeigen</span>
+              <v-chip size="x-small" class="ml-2" color="error" variant="tonal"
+                >Z</v-chip
+              >
+            </template>
+          </v-checkbox>
+
           <div class="mt-3">
             <v-label class="text-caption">Farbe der Vergleichswerte</v-label>
             <input
@@ -152,6 +174,37 @@
               @input="$emit('update:statisticalOverlays', { ...statisticalOverlays, color: ($event.target as HTMLInputElement).value })"
               class="color-picker-full mt-1"
             />
+          </div>
+        </v-col>
+      </v-row>
+
+      <!-- Z-Score Threshold Slider -->
+      <v-row v-if="statisticalOverlays.showZScore" class="mt-2">
+        <v-col cols="12">
+          <v-label class="text-caption mb-2">
+            Z-Score Grenzwert: ±{{ statisticalOverlays.zScoreThreshold }}σ
+          </v-label>
+          <v-slider
+            :model-value="statisticalOverlays.zScoreThreshold"
+            @update:model-value="
+              $emit('update:statisticalOverlays', {
+                ...statisticalOverlays,
+                zScoreThreshold: $event,
+              })
+            "
+            :min="0.5"
+            :max="4"
+            :step="0.5"
+            color="error"
+            thumb-label="always"
+            :thumb-size="20"
+          >
+            <template v-slot:thumb-label="{ modelValue }">
+              ±{{ modelValue }}σ
+            </template>
+          </v-slider>
+          <div class="text-caption text-grey mt-n2">
+            Werte außerhalb von ±{{ statisticalOverlays.zScoreThreshold }} Standardabweichungen werden als Ausreißer markiert
           </div>
         </v-col>
       </v-row>

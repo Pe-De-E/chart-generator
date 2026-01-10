@@ -61,6 +61,8 @@ export function useChartConfig(
     showCustomRange: false,
     customRangeMin: dataExtent.value[0],
     customRangeMax: dataExtent.value[1],
+    showZScore: false,
+    zScoreThreshold: 2,
     color: '#FF6B6B'
   })
 
@@ -157,6 +159,8 @@ export function useChartConfig(
       showCustomRange: false,
       customRangeMin: dataExtent.value[0],
       customRangeMax: dataExtent.value[1],
+      showZScore: false,
+      zScoreThreshold: 2,
       color: '#FF6B6B'
     }
   }

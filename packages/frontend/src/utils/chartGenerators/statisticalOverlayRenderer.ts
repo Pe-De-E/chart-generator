@@ -215,6 +215,61 @@ export function renderStatisticalOverlays(options: OverlayRenderOptions): string
     `)
   }
 
+  // Render Z-score threshold lines
+  if (overlays.showZScore && overlays.zScoreThreshold !== undefined) {
+    const threshold = overlays.zScoreThreshold
+    const upperBound = stats.mean + (threshold * stats.stdDev)
+    const lowerBound = stats.mean - (threshold * stats.stdDev)
+    const upperY = valueToY(upperBound)
+    const lowerY = valueToY(lowerBound)
+    const height = lowerY - upperY
+
+    overlayParts.push(`
+      <rect
+        x="${chartX}"
+        y="${upperY}"
+        width="${chartWidth}"
+        height="${height}"
+        fill="${overlays.color}"
+        opacity="0.12"
+      />
+      <line
+        x1="${chartX}"
+        y1="${upperY}"
+        x2="${chartX + chartWidth}"
+        y2="${upperY}"
+        stroke="${overlays.color}"
+        stroke-width="2"
+        stroke-dasharray="5,3"
+        opacity="0.8"
+      />
+      <line
+        x1="${chartX}"
+        y1="${lowerY}"
+        x2="${chartX + chartWidth}"
+        y2="${lowerY}"
+        stroke="${overlays.color}"
+        stroke-width="2"
+        stroke-dasharray="5,3"
+        opacity="0.8"
+      />
+      <text
+        x="${chartX + chartWidth + 5}"
+        y="${upperY + 4}"
+        font-size="10"
+        fill="${overlays.color}"
+        font-weight="500"
+      >+${threshold}σ (${formatStatValue(upperBound)})</text>
+      <text
+        x="${chartX + chartWidth + 5}"
+        y="${lowerY + 4}"
+        font-size="10"
+        fill="${overlays.color}"
+        font-weight="500"
+      >-${threshold}σ (${formatStatValue(lowerBound)})</text>
+    `)
+  }
+
   // Render custom range area
   if (overlays.showCustomRange && overlays.customRangeMin !== undefined && overlays.customRangeMax !== undefined) {
     const customMinY = valueToY(overlays.customRangeMin)
@@ -286,5 +341,6 @@ export function hasAnyOverlayEnabled(overlays?: StatisticalOverlays): boolean {
          overlays.showStdDev ||
          overlays.showMinMax ||
          overlays.showQuartiles ||
-         overlays.showCustomRange
+         overlays.showCustomRange ||
+         overlays.showZScore
 }
