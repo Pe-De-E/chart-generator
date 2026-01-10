@@ -9,8 +9,79 @@ import {
   type SeriesDataPoint,
   type SeriesConfig,
   type DataPoint,
-  type StatisticalOverlays
+  type StatisticalOverlays,
+  type ChartStyleOverrides  // TODO [5/6]: Import hinzufügen wenn implementiert
 } from '../utils/chartGenerators'
+
+// =============================================================================
+// TODO [5/6]: State-Management für Style-Overrides
+// =============================================================================
+//
+// Ein neues ref für styleOverrides hinzufügen und an die Generatoren übergeben.
+//
+// 1. Neues ref erstellen:
+//    const styleOverrides = ref<ChartStyleOverrides>({})
+//
+// 2. In svgContent computed property an config übergeben:
+//    const config = {
+//      ...
+//      styleOverrides: styleOverrides.value
+//    }
+//
+// 3. Funktionen zum Aktualisieren der Overrides:
+//
+//    function updateTitleStyle(style: Partial<TitleStyleOverride>) {
+//      styleOverrides.value = {
+//        ...styleOverrides.value,
+//        title: { ...styleOverrides.value.title, ...style }
+//      }
+//    }
+//
+//    function updateDataPointStyle(index: number, style: Partial<DataPointStyleOverride>) {
+//      styleOverrides.value = {
+//        ...styleOverrides.value,
+//        dataPoints: {
+//          ...styleOverrides.value.dataPoints,
+//          [index]: { ...styleOverrides.value.dataPoints?.[index], ...style }
+//        }
+//      }
+//    }
+//
+//    function updateAxisStyle(axis: 'xAxis' | 'yAxis', style: Partial<AxisStyleOverride>) {
+//      styleOverrides.value = {
+//        ...styleOverrides.value,
+//        [axis]: { ...styleOverrides.value[axis], ...style }
+//      }
+//    }
+//
+//    function resetStyleOverrides() {
+//      styleOverrides.value = {}
+//    }
+//
+//    function resetElementStyle(elementType: string, elementId?: string | number) {
+//      // Einzelnes Element zurücksetzen
+//      if (elementType === 'title') {
+//        const { title, ...rest } = styleOverrides.value
+//        styleOverrides.value = rest
+//      } else if (elementType === 'dataPoint' && elementId !== undefined) {
+//        const { [elementId]: removed, ...rest } = styleOverrides.value.dataPoints || {}
+//        styleOverrides.value = { ...styleOverrides.value, dataPoints: rest }
+//      }
+//      // ... weitere Fälle
+//    }
+//
+// 4. Im return-Objekt exportieren:
+//    return {
+//      ...
+//      styleOverrides,
+//      updateTitleStyle,
+//      updateDataPointStyle,
+//      updateAxisStyle,
+//      resetStyleOverrides,
+//      resetElementStyle
+//    }
+//
+// =============================================================================
 
 // Re-export ChartColors from types (for backward compatibility)
 export type { ChartColors } from '../utils/chartGenerators/types'

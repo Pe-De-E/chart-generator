@@ -14,3 +14,13 @@ export type {
   SeriesConfig,
   StatisticalOverlays
 } from '@chart-generator/shared'
+
+// TODO: Nach Implementierung des Features diese Types auch exportieren:
+// export type {
+//   ChartStyleOverrides,
+//   TitleStyleOverride,
+//   AxisStyleOverride,
+//   LegendStyleOverride,
+//   DataPointStyleOverride,
+//   SeriesStyleOverride
+// } from './types'

@@ -118,12 +118,13 @@ describe('ChartCreationStep.vue', () => {
     it('should render all chart type buttons', () => {
       const wrapper = createWrapper()
       const buttons = wrapper.findAll('.v-btn-toggle button')
-      expect(buttons).toHaveLength(5)
+      expect(buttons).toHaveLength(6)
       expect(buttons[0].attributes('data-value')).toBe('bar')
       expect(buttons[1].attributes('data-value')).toBe('line')
       expect(buttons[2].attributes('data-value')).toBe('area')
       expect(buttons[3].attributes('data-value')).toBe('scatter')
       expect(buttons[4].attributes('data-value')).toBe('pie')
+      expect(buttons[5].attributes('data-value')).toBe('elevation')
     })
 
     it('should render SVG content in preview', () => {

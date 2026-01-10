@@ -59,6 +59,10 @@ export interface ChartOptions {
 
   // Silhouette mode - pure curve, no axes, labels or background (perfect for social media)
   silhouetteMode?: boolean
+
+  // TODO: Style overrides für interaktive Bearbeitung hinzufügen
+  // styleOverrides?: ChartStyleOverrides
+  // Siehe packages/frontend/src/utils/chartGenerators/types.ts für Interface-Definitionen
 }
 
 // Chart persistence types

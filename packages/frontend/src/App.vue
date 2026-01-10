@@ -2,7 +2,7 @@
   <v-app>
     <v-app-bar color="primary" elevation="2">
       <v-app-bar-title class="text-h5 font-weight-bold" style="cursor: pointer" @click="router.push('/')">
-        📊 Chart Generator
+        Altavio
       </v-app-bar-title>
 
       <v-spacer></v-spacer>

@@ -136,7 +136,7 @@ describe('App.vue', () => {
 
     it('should display the app title', () => {
       const wrapper = createWrapper()
-      expect(wrapper.text()).toContain('Chart Generator')
+      expect(wrapper.text()).toContain('Altavio')
     })
 
     it('should render UserMenu component', () => {

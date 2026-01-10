@@ -49,6 +49,62 @@
       </v-expansion-panels>
 
       <!-- Chart Preview -->
+      <!-- ===================================================================
+           TODO [3/6]: Click-Handler für interaktive Bearbeitung
+           ===================================================================
+
+           Der Preview-Container braucht einen Click-Handler, der erkennt
+           welches SVG-Element angeklickt wurde und das passende Editor-Panel öffnet.
+
+           Implementierung:
+
+           1. Click-Handler auf dem Container (Event Delegation):
+              @click="handleChartClick"
+
+           2. handleChartClick Funktion:
+              function handleChartClick(event: MouseEvent) {
+                const target = event.target as SVGElement
+                const editableElement = target.closest('[data-editable="true"]')
+
+                if (!editableElement) return
+
+                const elementType = editableElement.getAttribute('data-type')
+                const elementId = editableElement.id
+
+                // Passenden Editor öffnen
+                switch (elementType) {
+                  case 'title':
+                    openTitleEditor()
+                    break
+                  case 'bar':
+                  case 'line':
+                  case 'point':
+                    openDataPointEditor(editableElement)
+                    break
+                  case 'x-label':
+                  case 'y-label':
+                    openLabelEditor(editableElement)
+                    break
+                  case 'legend':
+                    openLegendEditor(editableElement)
+                    break
+                }
+              }
+
+           3. Visuelles Feedback bei Hover:
+              CSS in <style>:
+              .preview-container :deep([data-editable="true"]) {
+                cursor: pointer;
+                transition: opacity 0.2s;
+              }
+              .preview-container :deep([data-editable="true"]:hover) {
+                opacity: 0.7;
+              }
+
+           4. Ausgewähltes Element hervorheben:
+              - Beim Klick: Rahmen oder Glow-Effekt um das Element
+              - selectedElement ref speichert die aktuelle Auswahl
+           =================================================================== -->
       <v-card variant="outlined">
         <v-card-title
           class="text-subtitle-1 bg-grey-lighten-4 d-flex justify-space-between align-center"
@@ -65,9 +121,70 @@
           ></v-btn>
         </v-card-title>
         <v-card-text class="pa-6">
+          <!-- TODO: @click="handleChartClick" hinzufügen -->
           <div class="preview-container" v-html="svgContent"></div>
         </v-card-text>
       </v-card>
+
+      <!-- ===================================================================
+           TODO [4/6]: Editor-Dialog/Popover für angeklickte Elemente
+           ===================================================================
+
+           Ein Vuetify v-menu oder v-dialog, das beim Klick auf ein Element erscheint
+           und die passenden Bearbeitungsoptionen anzeigt.
+
+           Komponenten-Struktur:
+
+           <v-menu v-model="showEditor" :activator="editorActivator" location="top">
+             <v-card min-width="300">
+               <v-card-title>{{ editorTitle }}</v-card-title>
+               <v-card-text>
+
+                 <! Titel-Editor >
+                 <template v-if="selectedElementType === 'title'">
+                   <v-text-field v-model="editingTitle" label="Titel" />
+                   <v-slider v-model="editingFontSize" label="Schriftgröße"
+                             :min="12" :max="32" />
+                   <v-btn-toggle v-model="editingAlignment">
+                     <v-btn value="left"><v-icon>mdi-format-align-left</v-icon></v-btn>
+                     <v-btn value="center"><v-icon>mdi-format-align-center</v-icon></v-btn>
+                     <v-btn value="right"><v-icon>mdi-format-align-right</v-icon></v-btn>
+                   </v-btn-toggle>
+                   <input type="color" v-model="editingColor" />
+                 </template>
+
+                 <! Datenpunkt-Editor (Balken, Linien, Punkte) >
+                 <template v-else-if="['bar', 'line', 'point'].includes(selectedElementType)">
+                   <div class="text-caption mb-2">
+                     {{ selectedElementLabel }}: {{ selectedElementValue }}
+                   </div>
+                   <v-label class="text-caption">Farbe</v-label>
+                   <input type="color" v-model="editingColor" class="color-picker-full" />
+                   <v-switch v-model="editingHighlight" label="Hervorheben" />
+                 </template>
+
+                 <! Label-Editor (Achsenbeschriftungen) >
+                 <template v-else-if="selectedElementType === 'x-label'">
+                   <v-text-field v-model="editingLabelText" label="Beschriftung" />
+                   <v-slider v-model="editingRotation" label="Rotation"
+                             :min="-90" :max="0" />
+                 </template>
+
+                 <! Legenden-Editor >
+                 <template v-else-if="selectedElementType === 'legend'">
+                   <v-text-field v-model="editingLegendLabel" label="Name" />
+                 </template>
+
+               </v-card-text>
+               <v-card-actions>
+                 <v-btn @click="resetElementStyle">Zurücksetzen</v-btn>
+                 <v-spacer />
+                 <v-btn color="primary" @click="applyElementStyle">Anwenden</v-btn>
+               </v-card-actions>
+             </v-card>
+           </v-menu>
+
+           =================================================================== -->
     </v-card-text>
 
     <v-card-actions>

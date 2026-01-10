@@ -1,6 +1,43 @@
 import type { ChartOptions } from '@chart-generator/shared'
 import { renderStatisticalOverlays, hasAnyOverlayEnabled } from './statisticalOverlayRenderer'
 
+// =============================================================================
+// TODO [2/6]: SVG-Elemente mit IDs und data-Attributen versehen
+// =============================================================================
+//
+// Damit Elemente im Chart anklickbar werden, müssen sie identifizierbar sein.
+// Jedes interaktive Element braucht:
+//   - Eine eindeutige ID (z.B. "chart-title", "bar-0", "x-label-3")
+//   - data-* Attribute für Metadaten (z.B. data-type="bar", data-index="0")
+//
+// Beispiel-Transformation:
+//
+// VORHER:
+//   <text x="${width/2}" y="30" ...>${title}</text>
+//
+// NACHHER:
+//   <text id="chart-title" data-type="title" data-editable="true"
+//         x="${width/2}" y="30" ...>${title}</text>
+//
+// VORHER:
+//   <rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}" .../>
+//
+// NACHHER:
+//   <rect id="bar-${i}" data-type="bar" data-index="${i}" data-label="${d.label}"
+//         data-value="${d.value}" data-editable="true"
+//         x="${x}" y="${y}" width="${barWidth}" height="${barHeight}" .../>
+//
+// Elemente die IDs brauchen:
+//   - Titel: id="chart-title"
+//   - Balken: id="bar-{index}" oder id="bar-{seriesName}-{index}"
+//   - X-Achsen-Labels: id="x-label-{index}"
+//   - Y-Achsen-Labels: id="y-label-{index}"
+//   - Legenden-Einträge: id="legend-{seriesName}"
+//   - Grid-Linien: id="grid-line-{index}" (optional)
+//
+// Zusätzlich: CSS-Klasse "editable" für Hover-Effekt hinzufügen
+// =============================================================================
+
 // Helper function to generate legend
 function generateLegend(
   seriesConfig: Array<{ name: string, color: string }>,
@@ -24,6 +61,73 @@ function generateLegend(
     `
   }).join('')
 }
+
+// =============================================================================
+// TODO [6/6]: Style-Overrides in den Generatoren anwenden
+// =============================================================================
+//
+// Die Generatoren müssen die styleOverrides aus den ChartOptions auslesen
+// und beim Rendern berücksichtigen.
+//
+// Beispiel für den Titel:
+//
+//   const { styleOverrides } = options
+//   const titleOverride = styleOverrides?.title
+//
+//   // Werte mit Fallbacks
+//   const titleText = titleOverride?.text ?? title
+//   const titleFontSize = titleOverride?.fontSize ?? 20
+//   const titleColor = titleOverride?.color ?? '#1F2937'
+//   const titleWeight = titleOverride?.fontWeight ?? 'bold'
+//   const titleAlign = titleOverride?.alignment ?? 'center'
+//
+//   // X-Position basierend auf Ausrichtung
+//   const titleX = titleAlign === 'left' ? margin.left
+//                : titleAlign === 'right' ? width - margin.right
+//                : width / 2
+//   const textAnchor = titleAlign === 'left' ? 'start'
+//                    : titleAlign === 'right' ? 'end'
+//                    : 'middle'
+//
+//   // Im SVG:
+//   `<text id="chart-title" data-type="title" data-editable="true"
+//          x="${titleX}" y="${30 + (titleOverride?.offsetY ?? 0)}"
+//          text-anchor="${textAnchor}" font-size="${titleFontSize}"
+//          font-weight="${titleWeight}" fill="${titleColor}">${titleText}</text>`
+//
+// Beispiel für Balken:
+//
+//   const barOverride = styleOverrides?.dataPoints?.[i]
+//   const barColor = barOverride?.color ?? colors.primary ?? '#4F46E5'
+//   const isHighlighted = barOverride?.highlight ?? false
+//
+//   `<rect id="bar-${i}" data-type="bar" data-index="${i}"
+//          data-label="${d.label}" data-value="${d.value}" data-editable="true"
+//          x="${x}" y="${y}" width="${barWidth}" height="${barHeight}"
+//          fill="${barColor}" rx="4"
+//          ${isHighlighted ? 'stroke="#000" stroke-width="2"' : ''}/>`
+//
+// Beispiel für X-Achsen-Labels:
+//
+//   const xAxisOverride = styleOverrides?.xAxis?.labels
+//   const labelFontSize = xAxisOverride?.fontSize ?? fontSize
+//   const labelColor = xAxisOverride?.color ?? '#4B5563'
+//   const labelRotation = xAxisOverride?.rotation ?? -45
+//   const showLabels = xAxisOverride?.show ?? true
+//
+//   // Individuelles Label überschreiben
+//   const labelOverride = styleOverrides?.dataPoints?.[i]?.label
+//   const labelText = labelOverride ?? d.label
+//
+// Hinweis: Diese Logik muss in ALLEN Chart-Generatoren implementiert werden:
+//   - barChart.ts
+//   - lineChart.ts
+//   - areaChart.ts
+//   - scatterChart.ts
+//   - pieChart.ts
+//   - elevationChart.ts
+//
+// =============================================================================
 
 export function generateBarChart(options: ChartOptions): string {
   const { data, seriesData, seriesConfig } = options
