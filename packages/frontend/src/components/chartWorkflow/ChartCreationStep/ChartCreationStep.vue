@@ -72,6 +72,7 @@
             class="preview-container"
             @click="handleChartClick"
             v-html="svgContent"
+            :key="JSON.stringify(styleOverrides)"
           ></div>
         </v-card-text>
       </v-card>
@@ -259,8 +260,6 @@ import type {
   SeriesConfig,
   StatisticalOverlays,
   ChartStyleOverrides,
-  TitleStyleOverride,
-  DataPointStyleOverride,
 } from "../../../utils/chartGenerators/types";
 import ChartSettingsCard from "./ChartSettingsCard.vue";
 import StatisticalOverlaysCard from "./StatisticalOverlaysCard.vue";
@@ -289,8 +288,7 @@ const editingLabelText = ref("");
 const editingRotation = ref(-45);
 const editingLegendLabel = ref("");
 
-// Style overrides (local state, will be passed up via emit)
-const localStyleOverrides = ref<ChartStyleOverrides>({});
+// Use props.styleOverrides directly, emit changes to parent
 
 // Handle chart element click
 function handleChartClick(event: MouseEvent) {
@@ -349,15 +347,15 @@ function highlightElement(element: Element) {
 }
 
 function initializeEditorForm(elementType: string, element: Element) {
-  const overrides = localStyleOverrides.value;
+  const overrides = props.styleOverrides;
 
   switch (elementType) {
     case "title":
       editingTitle.value =
-        overrides.title?.text || element.textContent?.trim() || "";
-      editingFontSize.value = overrides.title?.fontSize || 20;
-      editingAlignment.value = overrides.title?.alignment || "center";
-      editingColor.value = overrides.title?.color || "#1F2937";
+        overrides?.title?.text || element.textContent?.trim() || "";
+      editingFontSize.value = overrides?.title?.fontSize || 20;
+      editingAlignment.value = overrides?.title?.alignment || "center";
+      editingColor.value = overrides?.title?.color || "#1F2937";
       break;
 
     case "bar":
@@ -365,14 +363,28 @@ function initializeEditorForm(elementType: string, element: Element) {
     case "point":
     case "slice":
     case "area":
-      const index = selectedElementIndex.value;
-      const dpOverride = overrides.dataPoints?.[index];
-      editingColor.value =
-        dpOverride?.color ||
-        element.getAttribute("fill") ||
-        element.getAttribute("stroke") ||
-        "#4F46E5";
-      editingHighlight.value = dpOverride?.highlight || false;
+      // Check if this is a multi-series element
+      const seriesNameInit = selectedElementSeries.value;
+      if (seriesNameInit) {
+        // Multi-series mode: read from series[seriesName]
+        const seriesOverride = overrides?.series?.[seriesNameInit];
+        editingColor.value =
+          seriesOverride?.color ||
+          element.getAttribute("fill") ||
+          element.getAttribute("stroke") ||
+          "#4F46E5";
+        editingHighlight.value = false;
+      } else {
+        // Single-series mode: read from dataPoints[index]
+        const index = selectedElementIndex.value;
+        const dpOverride = overrides?.dataPoints?.[index];
+        editingColor.value =
+          dpOverride?.color ||
+          element.getAttribute("fill") ||
+          element.getAttribute("stroke") ||
+          "#4F46E5";
+        editingHighlight.value = dpOverride?.highlight || false;
+      }
       break;
 
     case "x-label":
@@ -384,7 +396,7 @@ function initializeEditorForm(elementType: string, element: Element) {
 
     case "legend":
       editingLegendLabel.value =
-        overrides.legend?.labels?.[selectedElementSeries.value] ||
+        overrides?.legend?.labels?.[selectedElementSeries.value] ||
         selectedElementSeries.value;
       break;
   }
@@ -401,11 +413,13 @@ function closeEditor() {
 
 function applyElementStyle() {
   const elementType = selectedElementType.value;
+  const currentOverrides = props.styleOverrides || {};
+  let newOverrides: ChartStyleOverrides;
 
   switch (elementType) {
     case "title":
-      localStyleOverrides.value = {
-        ...localStyleOverrides.value,
+      newOverrides = {
+        ...currentOverrides,
         title: {
           text: editingTitle.value,
           fontSize: editingFontSize.value,
@@ -420,27 +434,44 @@ function applyElementStyle() {
     case "point":
     case "slice":
     case "area":
-      const index = selectedElementIndex.value;
-      localStyleOverrides.value = {
-        ...localStyleOverrides.value,
-        dataPoints: {
-          ...localStyleOverrides.value.dataPoints,
-          [index]: {
-            ...localStyleOverrides.value.dataPoints?.[index],
-            color: editingColor.value,
-            highlight: editingHighlight.value,
+      // Check if this is a multi-series element (has series name)
+      const seriesName = selectedElementSeries.value;
+      if (seriesName) {
+        // Multi-series mode: store under series[seriesName]
+        newOverrides = {
+          ...currentOverrides,
+          series: {
+            ...currentOverrides.series,
+            [seriesName]: {
+              ...currentOverrides.series?.[seriesName],
+              color: editingColor.value,
+            },
           },
-        },
-      };
+        };
+      } else {
+        // Single-series mode: store under dataPoints[index]
+        const index = selectedElementIndex.value;
+        newOverrides = {
+          ...currentOverrides,
+          dataPoints: {
+            ...currentOverrides.dataPoints,
+            [index]: {
+              ...currentOverrides.dataPoints?.[index],
+              color: editingColor.value,
+              highlight: editingHighlight.value,
+            },
+          },
+        };
+      }
       break;
 
     case "x-label":
-      localStyleOverrides.value = {
-        ...localStyleOverrides.value,
+      newOverrides = {
+        ...currentOverrides,
         xAxis: {
-          ...localStyleOverrides.value.xAxis,
+          ...currentOverrides.xAxis,
           labels: {
-            ...localStyleOverrides.value.xAxis?.labels,
+            ...currentOverrides.xAxis?.labels,
             rotation: editingRotation.value,
           },
         },
@@ -448,32 +479,37 @@ function applyElementStyle() {
       break;
 
     case "legend":
-      localStyleOverrides.value = {
-        ...localStyleOverrides.value,
+      newOverrides = {
+        ...currentOverrides,
         legend: {
-          ...localStyleOverrides.value.legend,
+          ...currentOverrides.legend,
           labels: {
-            ...localStyleOverrides.value.legend?.labels,
+            ...currentOverrides.legend?.labels,
             [selectedElementSeries.value]: editingLegendLabel.value,
           },
         },
       };
       break;
+
+    default:
+      newOverrides = currentOverrides;
   }
 
   // Emit the updated style overrides
-  emit("update:styleOverrides", localStyleOverrides.value);
+  emit("update:styleOverrides", newOverrides);
   closeEditor();
 }
 
 function resetElementStyle() {
   const elementType = selectedElementType.value;
+  const currentOverrides = props.styleOverrides || {};
+  let newOverrides: ChartStyleOverrides;
 
   switch (elementType) {
     case "title":
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { title: _t, ...restWithoutTitle } = localStyleOverrides.value;
-      localStyleOverrides.value = restWithoutTitle;
+      const { title: _t, ...restWithoutTitle } = currentOverrides;
+      newOverrides = restWithoutTitle;
       break;
 
     case "bar":
@@ -482,19 +518,23 @@ function resetElementStyle() {
     case "slice":
     case "area":
       const index = selectedElementIndex.value;
-      if (localStyleOverrides.value.dataPoints) {
+      if (currentOverrides.dataPoints) {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { [index]: _removed, ...restPoints } =
-          localStyleOverrides.value.dataPoints;
-        localStyleOverrides.value = {
-          ...localStyleOverrides.value,
+        const { [index]: _removed, ...restPoints } = currentOverrides.dataPoints;
+        newOverrides = {
+          ...currentOverrides,
           dataPoints: restPoints,
         };
+      } else {
+        newOverrides = currentOverrides;
       }
       break;
+
+    default:
+      newOverrides = currentOverrides;
   }
 
-  emit("update:styleOverrides", localStyleOverrides.value);
+  emit("update:styleOverrides", newOverrides);
   closeEditor();
 }
 
@@ -526,7 +566,7 @@ function getEditorTitle(): string {
   }
 }
 
-defineProps({
+const props = defineProps({
   chartTitle: {
     type: String,
     required: true,
@@ -559,6 +599,10 @@ defineProps({
     type: Boolean,
     default: false,
   },
+  styleOverrides: {
+    type: Object as PropType<ChartStyleOverrides>,
+    default: () => ({}),
+  },
 });
 
 const emit = defineEmits<{
@@ -576,6 +620,7 @@ const emit = defineEmits<{
   updateSeriesColor: [index: number, color: string];
   regenerateColors: [];
 }>();
+
 </script>
 
 <style scoped>

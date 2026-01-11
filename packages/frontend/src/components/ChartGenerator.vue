@@ -59,6 +59,8 @@
               :data-extent="dataExtent"
               :svg-content="svgContent"
               :series-config="selectedSeries"
+              :style-overrides="styleOverrides"
+              @update:styleOverrides="setStyleOverrides"
               @update-series-color="updateSeriesColor"
               @regenerate-colors="regenerateColors"
               @back="handleChartStepBack"
@@ -470,7 +472,9 @@ const {
   dataExtent,
   svgContent,
   downloadSVG,
-  resetConfig
+  resetConfig,
+  styleOverrides,
+  setStyleOverrides
 } = useChartConfig(seriesData, selectedSeries)
 
 // Helper functions

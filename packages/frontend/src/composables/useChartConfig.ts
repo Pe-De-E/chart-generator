@@ -1,4 +1,4 @@
-import { ref, computed, type Ref } from 'vue'
+import { ref, computed, watch, type Ref } from 'vue'
 import {
   generateBarChart,
   generateLineChart,
@@ -141,7 +141,8 @@ export function useChartConfig(
     }
   }
 
-  const svgContent = computed(() => {
+  // Helper function to generate SVG
+  function generateSvg(): string {
     // Detect single-series vs multi-series mode
     const isSingleSeries = seriesConfig.value.length === 1
 
@@ -162,7 +163,7 @@ export function useChartConfig(
         title: chartTitle.value,
         statisticalOverlays: statisticalOverlays.value,
         silhouetteMode: silhouetteMode.value,
-        styleOverrides: styleOverrides.value
+        styleOverrides: { ...styleOverrides.value }
       }
 
       // Call legacy single-series generators
@@ -194,7 +195,7 @@ export function useChartConfig(
         title: chartTitle.value,
         statisticalOverlays: statisticalOverlays.value,
         silhouetteMode: silhouetteMode.value,
-        styleOverrides: styleOverrides.value
+        styleOverrides: { ...styleOverrides.value }
       }
 
       // Call multi-series generators (generators will detect multi-series mode)
@@ -215,7 +216,28 @@ export function useChartConfig(
           return ''
       }
     }
-  })
+  }
+
+  // Use ref instead of computed for better reactivity control
+  const svgContent = ref('')
+
+  // Watch all dependencies and regenerate SVG
+  watch(
+    [
+      () => seriesData.value,
+      () => seriesConfig.value,
+      () => chartType.value,
+      () => chartTitle.value,
+      () => colors.value,
+      () => statisticalOverlays.value,
+      () => silhouetteMode.value,
+      () => JSON.stringify(styleOverrides.value)  // Deep watch via JSON
+    ],
+    () => {
+      svgContent.value = generateSvg()
+    },
+    { immediate: true, deep: true }
+  )
 
   function downloadSVG() {
     const blob = new Blob([svgContent.value], { type: 'image/svg+xml' })
