@@ -176,17 +176,75 @@
                 :max="0"
                 :step="5"
                 thumb-label
+                class="mb-3"
+              />
+              <v-slider
+                v-model="editingXLabelFontSize"
+                label="Schriftgröße"
+                :min="8"
+                :max="16"
+                :step="1"
+                thumb-label
+                class="mb-3"
+              />
+              <v-label class="text-caption mb-1 d-block">Farbe</v-label>
+              <input
+                type="color"
+                v-model="editingXLabelColor"
+                class="color-picker-full"
               />
             </template>
 
-            <!-- Y-Label Editor -->
+            <!-- Y-Label Editor (click on y-axis value) -->
             <template v-else-if="selectedElementType === 'y-label'">
-              <div class="text-body-2">
+              <div class="text-body-2 mb-3">
                 Wert: <strong>{{ selectedElementValue }}</strong>
               </div>
-              <div class="text-caption text-grey mt-2">
-                Y-Achsen-Werte werden automatisch berechnet.
+              <div class="text-caption text-grey">
+                Klicken Sie auf die Y-Achse (links), um den Wertebereich anzupassen.
               </div>
+            </template>
+
+            <!-- Y-Axis Editor (click on y-axis area) -->
+            <template v-else-if="selectedElementType === 'y-axis'">
+              <v-text-field
+                v-model="editingYAxisTitle"
+                label="Y-Achsentitel"
+                variant="outlined"
+                density="comfortable"
+                class="mb-3"
+                placeholder="z.B. Umsatz in €"
+              />
+              <v-text-field
+                v-model.number="editingYRangeMin"
+                label="Minimum"
+                variant="outlined"
+                density="comfortable"
+                type="number"
+                class="mb-3"
+                hint="Leer lassen für automatisch"
+                persistent-hint
+              />
+              <v-text-field
+                v-model.number="editingYRangeMax"
+                label="Maximum"
+                variant="outlined"
+                density="comfortable"
+                type="number"
+                hint="Leer lassen für automatisch"
+                persistent-hint
+              />
+            </template>
+
+            <!-- X-Axis Editor (click on x-axis area) -->
+            <template v-else-if="selectedElementType === 'x-axis'">
+              <v-text-field
+                v-model="editingXAxisTitle"
+                label="X-Achsentitel"
+                variant="outlined"
+                density="comfortable"
+                placeholder="z.B. Monat"
+              />
             </template>
 
             <!-- Legend Editor -->
@@ -288,6 +346,18 @@ const editingLabelText = ref("");
 const editingRotation = ref(-45);
 const editingLegendLabel = ref("");
 
+// X-Achsen-Label Editor state
+const editingXLabelColor = ref("#4B5563");
+const editingXLabelFontSize = ref(10);
+
+// Y-Achsen Editor state
+const editingYRangeMin = ref<number | undefined>(undefined);
+const editingYRangeMax = ref<number | undefined>(undefined);
+
+// Achsentitel Editor state
+const editingXAxisTitle = ref("");
+const editingYAxisTitle = ref("");
+
 // Use props.styleOverrides directly, emit changes to parent
 
 // Handle chart element click
@@ -388,10 +458,26 @@ function initializeEditorForm(elementType: string, element: Element) {
       break;
 
     case "x-label":
+      editingLabelText.value =
+        element.getAttribute("data-label") || element.textContent?.trim() || "";
+      editingRotation.value = overrides?.xAxis?.labels?.rotation ?? -45;
+      editingXLabelFontSize.value = overrides?.xAxis?.labels?.fontSize ?? 10;
+      editingXLabelColor.value = overrides?.xAxis?.labels?.color ?? "#4B5563";
+      break;
+
     case "y-label":
       editingLabelText.value =
         element.getAttribute("data-label") || element.textContent?.trim() || "";
-      editingRotation.value = -45;
+      break;
+
+    case "y-axis":
+      editingYAxisTitle.value = overrides?.yAxis?.title?.text ?? "";
+      editingYRangeMin.value = overrides?.yAxis?.range?.min;
+      editingYRangeMax.value = overrides?.yAxis?.range?.max;
+      break;
+
+    case "x-axis":
+      editingXAxisTitle.value = overrides?.xAxis?.title?.text ?? "";
       break;
 
     case "legend":
@@ -473,7 +559,40 @@ function applyElementStyle() {
           labels: {
             ...currentOverrides.xAxis?.labels,
             rotation: editingRotation.value,
+            fontSize: editingXLabelFontSize.value,
+            color: editingXLabelColor.value,
           },
+        },
+      };
+      break;
+
+    case "y-axis":
+      newOverrides = {
+        ...currentOverrides,
+        yAxis: {
+          ...currentOverrides.yAxis,
+          title: editingYAxisTitle.value
+            ? { ...currentOverrides.yAxis?.title, text: editingYAxisTitle.value }
+            : currentOverrides.yAxis?.title,
+          range:
+            editingYRangeMin.value !== undefined || editingYRangeMax.value !== undefined
+              ? {
+                  min: editingYRangeMin.value,
+                  max: editingYRangeMax.value,
+                }
+              : undefined,
+        },
+      };
+      break;
+
+    case "x-axis":
+      newOverrides = {
+        ...currentOverrides,
+        xAxis: {
+          ...currentOverrides.xAxis,
+          title: editingXAxisTitle.value
+            ? { ...currentOverrides.xAxis?.title, text: editingXAxisTitle.value }
+            : currentOverrides.xAxis?.title,
         },
       };
       break;
@@ -556,7 +675,11 @@ function getEditorTitle(): string {
     case "x-label":
       return "X-Achsen-Label bearbeiten";
     case "y-label":
-      return "Y-Achsen-Label bearbeiten";
+      return "Y-Achsen-Wert";
+    case "y-axis":
+      return "Y-Achse bearbeiten";
+    case "x-axis":
+      return "X-Achse bearbeiten";
     case "legend":
       return "Legende bearbeiten";
     case "background":

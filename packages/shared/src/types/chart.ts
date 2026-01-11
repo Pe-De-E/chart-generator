@@ -117,6 +117,11 @@ export interface AxisStyleOverride {
     color?: string           // Standard: #E5E7EB
     dashArray?: string       // z.B. "4" für gestrichelt
   }
+  // Wertebereich (für Y-Achse)
+  range?: {
+    min?: number             // Minimum überschreiben
+    max?: number             // Maximum überschreiben
+  }
 }
 
 export interface LegendStyleOverride {

@@ -61,19 +61,26 @@ function generateSingleSeriesLine(
   const chartWidth = width - margin.left - margin.right
   const chartHeight = height - margin.top - margin.bottom
 
-  const maxValue = Math.max(...data.map(d => d.value))
+  // Apply Y-axis range overrides
+  const yAxisOverride = styleOverrides?.yAxis
+  const dataMaxValue = Math.max(...data.map(d => d.value), 1)
+  const dataMinValue = Math.min(...data.map(d => d.value), 0)
+  const maxValue = yAxisOverride?.range?.max ?? dataMaxValue
+  const minValue = yAxisOverride?.range?.min ?? Math.min(0, dataMinValue)
+  const valueRange = maxValue - minValue
+
   const xStep = data.length > 1 ? chartWidth / (data.length - 1) : chartWidth / 2
 
   // Show every nth label based on data count to avoid overlap
   const labelInterval = data.length > 20 ? Math.ceil(data.length / 15) : 1
-  const fontSize = data.length > 15 ? 9 : 10
+  const defaultFontSize = data.length > 15 ? 9 : 10
 
   // Y-axis scale - calculate nice round numbers
   const yAxisSteps = 5
-  const stepValue = Math.ceil(maxValue / yAxisSteps)
+  const stepValue = Math.ceil(valueRange / yAxisSteps)
   const yAxisLabels = Array.from({ length: yAxisSteps + 1 }, (_, i) => {
-    const value = i * stepValue
-    const y = margin.top + chartHeight - (value / maxValue) * chartHeight
+    const value = minValue + i * stepValue
+    const y = margin.top + chartHeight - ((value - minValue) / valueRange) * chartHeight
     return { value, y }
   }).filter(item => item.value <= maxValue)
 
@@ -94,6 +101,8 @@ function generateSingleSeriesLine(
   // Apply x-axis label overrides
   const xAxisOverride = styleOverrides?.xAxis?.labels
   const labelRotation = xAxisOverride?.rotation ?? -45
+  const labelFontSize = xAxisOverride?.fontSize ?? defaultFontSize
+  const labelColor = xAxisOverride?.color ?? '#4B5563'
 
   // Apply line style override
   const lineColor = styleOverrides?.series?.['main']?.color ?? colors.primary ?? '#4F46E5'
@@ -126,7 +135,7 @@ function generateSingleSeriesLine(
         <text id="x-label-${i}" class="editable" data-type="x-label" data-index="${i}"
               data-label="${d.label}" data-editable="true"
               x="${x}" y="${labelY}"
-              text-anchor="end" font-size="${fontSize}" fill="#4B5563"
+              text-anchor="end" font-size="${labelFontSize}" fill="${labelColor}"
               transform="rotate(${labelRotation} ${x} ${labelY})">${d.label}</text>
       ` : ''}
       ${data.length <= 15 ? `
@@ -188,6 +197,25 @@ function generateSingleSeriesLine(
       <line id="y-axis" data-type="axis" x1="${margin.left}" y1="${margin.top}"
             x2="${margin.left}" y2="${margin.top + chartHeight}"
             stroke="#E5E7EB" stroke-width="2"/>
+      ${styleOverrides?.xAxis?.title?.text ? `
+        <text id="x-axis-title" class="editable" data-type="x-axis" data-editable="true"
+              x="${width / 2}" y="${height - 10}"
+              text-anchor="middle" font-size="${styleOverrides.xAxis.title.fontSize ?? 12}"
+              fill="${styleOverrides.xAxis.title.color ?? '#4B5563'}">${styleOverrides.xAxis.title.text}</text>
+      ` : ''}
+      ${styleOverrides?.yAxis?.title?.text ? `
+        <text id="y-axis-title" class="editable" data-type="y-axis" data-editable="true"
+              x="15" y="${margin.top + chartHeight / 2}"
+              text-anchor="middle" font-size="${styleOverrides.yAxis.title.fontSize ?? 12}"
+              fill="${styleOverrides.yAxis.title.color ?? '#4B5563'}"
+              transform="rotate(-90 15 ${margin.top + chartHeight / 2})">${styleOverrides.yAxis.title.text}</text>
+      ` : ''}
+      <rect id="y-axis-clickable" class="editable" data-type="y-axis" data-editable="true"
+            x="0" y="${margin.top}" width="${margin.left}" height="${chartHeight}"
+            fill="transparent" style="cursor: pointer;"/>
+      <rect id="x-axis-clickable" class="editable" data-type="x-axis" data-editable="true"
+            x="${margin.left}" y="${margin.top + chartHeight}" width="${chartWidth}" height="${margin.bottom}"
+            fill="transparent" style="cursor: pointer;"/>
     </svg>
   `
 }
@@ -248,6 +276,8 @@ function generateMultiSeriesLine(
   // Apply x-axis label overrides
   const xAxisOverride = styleOverrides?.xAxis?.labels
   const labelRotation = xAxisOverride?.rotation ?? -45
+  const labelFontSize = xAxisOverride?.fontSize ?? fontSize
+  const labelColor = xAxisOverride?.color ?? '#4B5563'
 
   // Generate lines and circles for each series
   let allLines = ''
@@ -299,7 +329,7 @@ function generateMultiSeriesLine(
       <text id="x-label-${i}" class="editable" data-type="x-label"
             data-index="${i}" data-label="${d.label}" data-editable="true"
             x="${x}" y="${labelY}"
-            text-anchor="end" font-size="${fontSize}" fill="#4B5563"
+            text-anchor="end" font-size="${labelFontSize}" fill="${labelColor}"
             transform="rotate(${labelRotation} ${x} ${labelY})">${d.label}</text>
     `
   }).join('')
@@ -357,6 +387,25 @@ function generateMultiSeriesLine(
       <line id="y-axis" data-type="axis" x1="${margin.left}" y1="${margin.top}"
             x2="${margin.left}" y2="${margin.top + chartHeight}"
             stroke="#E5E7EB" stroke-width="2"/>
+      ${styleOverrides?.xAxis?.title?.text ? `
+        <text id="x-axis-title" class="editable" data-type="x-axis" data-editable="true"
+              x="${width / 2}" y="${height - legendHeight - 10}"
+              text-anchor="middle" font-size="${styleOverrides.xAxis.title.fontSize ?? 12}"
+              fill="${styleOverrides.xAxis.title.color ?? '#4B5563'}">${styleOverrides.xAxis.title.text}</text>
+      ` : ''}
+      ${styleOverrides?.yAxis?.title?.text ? `
+        <text id="y-axis-title" class="editable" data-type="y-axis" data-editable="true"
+              x="15" y="${margin.top + chartHeight / 2}"
+              text-anchor="middle" font-size="${styleOverrides.yAxis.title.fontSize ?? 12}"
+              fill="${styleOverrides.yAxis.title.color ?? '#4B5563'}"
+              transform="rotate(-90 15 ${margin.top + chartHeight / 2})">${styleOverrides.yAxis.title.text}</text>
+      ` : ''}
+      <rect id="y-axis-clickable" class="editable" data-type="y-axis" data-editable="true"
+            x="0" y="${margin.top}" width="${margin.left}" height="${chartHeight}"
+            fill="transparent" style="cursor: pointer;"/>
+      <rect id="x-axis-clickable" class="editable" data-type="x-axis" data-editable="true"
+            x="${margin.left}" y="${margin.top + chartHeight}" width="${chartWidth}" height="${margin.bottom - legendHeight}"
+            fill="transparent" style="cursor: pointer;"/>
       ${legend}
     </svg>
   `
