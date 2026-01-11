@@ -10,78 +10,12 @@ import {
   type SeriesConfig,
   type DataPoint,
   type StatisticalOverlays,
-  type ChartStyleOverrides  // TODO [5/6]: Import hinzufügen wenn implementiert
+  type ChartStyleOverrides,
+  type TitleStyleOverride,
+  type AxisStyleOverride,
+  type DataPointStyleOverride,
+  type SeriesStyleOverride,
 } from '../utils/chartGenerators'
-
-// =============================================================================
-// TODO [5/6]: State-Management für Style-Overrides
-// =============================================================================
-//
-// Ein neues ref für styleOverrides hinzufügen und an die Generatoren übergeben.
-//
-// 1. Neues ref erstellen:
-//    const styleOverrides = ref<ChartStyleOverrides>({})
-//
-// 2. In svgContent computed property an config übergeben:
-//    const config = {
-//      ...
-//      styleOverrides: styleOverrides.value
-//    }
-//
-// 3. Funktionen zum Aktualisieren der Overrides:
-//
-//    function updateTitleStyle(style: Partial<TitleStyleOverride>) {
-//      styleOverrides.value = {
-//        ...styleOverrides.value,
-//        title: { ...styleOverrides.value.title, ...style }
-//      }
-//    }
-//
-//    function updateDataPointStyle(index: number, style: Partial<DataPointStyleOverride>) {
-//      styleOverrides.value = {
-//        ...styleOverrides.value,
-//        dataPoints: {
-//          ...styleOverrides.value.dataPoints,
-//          [index]: { ...styleOverrides.value.dataPoints?.[index], ...style }
-//        }
-//      }
-//    }
-//
-//    function updateAxisStyle(axis: 'xAxis' | 'yAxis', style: Partial<AxisStyleOverride>) {
-//      styleOverrides.value = {
-//        ...styleOverrides.value,
-//        [axis]: { ...styleOverrides.value[axis], ...style }
-//      }
-//    }
-//
-//    function resetStyleOverrides() {
-//      styleOverrides.value = {}
-//    }
-//
-//    function resetElementStyle(elementType: string, elementId?: string | number) {
-//      // Einzelnes Element zurücksetzen
-//      if (elementType === 'title') {
-//        const { title, ...rest } = styleOverrides.value
-//        styleOverrides.value = rest
-//      } else if (elementType === 'dataPoint' && elementId !== undefined) {
-//        const { [elementId]: removed, ...rest } = styleOverrides.value.dataPoints || {}
-//        styleOverrides.value = { ...styleOverrides.value, dataPoints: rest }
-//      }
-//      // ... weitere Fälle
-//    }
-//
-// 4. Im return-Objekt exportieren:
-//    return {
-//      ...
-//      styleOverrides,
-//      updateTitleStyle,
-//      updateDataPointStyle,
-//      updateAxisStyle,
-//      resetStyleOverrides,
-//      resetElementStyle
-//    }
-//
-// =============================================================================
 
 // Re-export ChartColors from types (for backward compatibility)
 export type { ChartColors } from '../utils/chartGenerators/types'
@@ -141,6 +75,72 @@ export function useChartConfig(
   // Silhouette mode (elevation profile only) - pure curve for social media
   const silhouetteMode = ref(false)
 
+  // Style overrides for interactive editing
+  const styleOverrides = ref<ChartStyleOverrides>({})
+
+  // Functions to update style overrides
+  function updateTitleStyle(style: Partial<TitleStyleOverride>) {
+    styleOverrides.value = {
+      ...styleOverrides.value,
+      title: { ...styleOverrides.value.title, ...style }
+    }
+  }
+
+  function updateDataPointStyle(index: number | string, style: Partial<DataPointStyleOverride>) {
+    styleOverrides.value = {
+      ...styleOverrides.value,
+      dataPoints: {
+        ...styleOverrides.value.dataPoints,
+        [index]: { ...styleOverrides.value.dataPoints?.[index], ...style }
+      }
+    }
+  }
+
+  function updateAxisStyle(axis: 'xAxis' | 'yAxis', style: Partial<AxisStyleOverride>) {
+    styleOverrides.value = {
+      ...styleOverrides.value,
+      [axis]: { ...styleOverrides.value[axis], ...style }
+    }
+  }
+
+  function updateSeriesStyle(seriesName: string, style: Partial<SeriesStyleOverride>) {
+    styleOverrides.value = {
+      ...styleOverrides.value,
+      series: {
+        ...styleOverrides.value.series,
+        [seriesName]: { ...styleOverrides.value.series?.[seriesName], ...style }
+      }
+    }
+  }
+
+  function setStyleOverrides(overrides: ChartStyleOverrides) {
+    styleOverrides.value = overrides
+  }
+
+  function resetStyleOverrides() {
+    styleOverrides.value = {}
+  }
+
+  function resetElementStyle(elementType: string, elementId?: string | number) {
+    if (elementType === 'title') {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { title: _t, ...rest } = styleOverrides.value
+      styleOverrides.value = rest
+    } else if ((elementType === 'bar' || elementType === 'point' || elementType === 'line' || elementType === 'slice') && elementId !== undefined) {
+      if (styleOverrides.value.dataPoints) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { [elementId]: _removed, ...restPoints } = styleOverrides.value.dataPoints
+        styleOverrides.value = { ...styleOverrides.value, dataPoints: restPoints }
+      }
+    } else if (elementType === 'series' && elementId !== undefined) {
+      if (styleOverrides.value.series) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { [elementId]: _removed, ...restSeries } = styleOverrides.value.series
+        styleOverrides.value = { ...styleOverrides.value, series: restSeries }
+      }
+    }
+  }
+
   const svgContent = computed(() => {
     // Detect single-series vs multi-series mode
     const isSingleSeries = seriesConfig.value.length === 1
@@ -161,7 +161,8 @@ export function useChartConfig(
         },
         title: chartTitle.value,
         statisticalOverlays: statisticalOverlays.value,
-        silhouetteMode: silhouetteMode.value
+        silhouetteMode: silhouetteMode.value,
+        styleOverrides: styleOverrides.value
       }
 
       // Call legacy single-series generators
@@ -192,7 +193,8 @@ export function useChartConfig(
         },
         title: chartTitle.value,
         statisticalOverlays: statisticalOverlays.value,
-        silhouetteMode: silhouetteMode.value
+        silhouetteMode: silhouetteMode.value,
+        styleOverrides: styleOverrides.value
       }
 
       // Call multi-series generators (generators will detect multi-series mode)
@@ -245,6 +247,7 @@ export function useChartConfig(
       color: '#FF6B6B'
     }
     silhouetteMode.value = false
+    styleOverrides.value = {}
   }
 
   return {
@@ -256,6 +259,15 @@ export function useChartConfig(
     dataExtent,
     svgContent,
     downloadSVG,
-    resetConfig
+    resetConfig,
+    // Style overrides state and functions
+    styleOverrides,
+    updateTitleStyle,
+    updateDataPointStyle,
+    updateAxisStyle,
+    updateSeriesStyle,
+    setStyleOverrides,
+    resetStyleOverrides,
+    resetElementStyle
   }
 }

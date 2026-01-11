@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { generateLineChart } from './lineChart'
-import type { DataPoint } from './types'
+import { generateAreaChart } from './areaChart'
+import type { DataPoint } from '../types'
 
-describe('generateLineChart', () => {
+describe('generateAreaChart', () => {
   const mockData: DataPoint[] = [
     { label: 'Jan', value: 30 },
     { label: 'Feb', value: 45 },
@@ -18,10 +18,10 @@ describe('generateLineChart', () => {
   }
 
   it('should generate valid SVG string', () => {
-    const result = generateLineChart({
+    const result = generateAreaChart({
       data: mockData,
       colors: mockColors,
-      title: 'Test Line Chart'
+      title: 'Test Area Chart'
     })
 
     expect(result).toContain('<svg')
@@ -29,28 +29,38 @@ describe('generateLineChart', () => {
   })
 
   it('should include chart title', () => {
-    const result = generateLineChart({
+    const result = generateAreaChart({
       data: mockData,
       colors: mockColors,
-      title: 'Monthly Sales'
+      title: 'Sales Over Time'
     })
 
-    expect(result).toContain('Monthly Sales')
+    expect(result).toContain('Sales Over Time')
   })
 
-  it('should render polyline for connecting points', () => {
-    const result = generateLineChart({
+  it('should render polygon for filled area', () => {
+    const result = generateAreaChart({
+      data: mockData,
+      colors: mockColors,
+      title: 'Test'
+    })
+
+    expect(result).toContain('<polygon')
+    expect(result).toContain('points=')
+  })
+
+  it('should render polyline for top edge', () => {
+    const result = generateAreaChart({
       data: mockData,
       colors: mockColors,
       title: 'Test'
     })
 
     expect(result).toContain('<polyline')
-    expect(result).toContain('points=')
   })
 
   it('should render circles for data points', () => {
-    const result = generateLineChart({
+    const result = generateAreaChart({
       data: mockData,
       colors: mockColors,
       title: 'Test'
@@ -67,7 +77,7 @@ describe('generateLineChart', () => {
       background: '#3357FF'
     }
 
-    const result = generateLineChart({
+    const result = generateAreaChart({
       data: mockData,
       colors: customColors,
       title: 'Test'
@@ -78,13 +88,23 @@ describe('generateLineChart', () => {
     expect(result).toContain(customColors.background)
   })
 
+  it('should apply opacity to filled area', () => {
+    const result = generateAreaChart({
+      data: mockData,
+      colors: mockColors,
+      title: 'Test'
+    })
+
+    expect(result).toContain('opacity="0.3"')
+  })
+
   it('should handle large datasets with dynamic width', () => {
     const largeData: DataPoint[] = Array.from({ length: 365 }, (_, i) => ({
       label: `Day ${i + 1}`,
       value: Math.sin(i / 10) * 50 + 50
     }))
 
-    const result = generateLineChart({
+    const result = generateAreaChart({
       data: largeData,
       colors: mockColors,
       title: 'Year Data'
@@ -100,13 +120,14 @@ describe('generateLineChart', () => {
   })
 
   it('should handle single data point', () => {
-    const result = generateLineChart({
+    const result = generateAreaChart({
       data: [{ label: 'Single', value: 42 }],
       colors: mockColors,
       title: 'Single Point'
     })
 
     expect(result).toContain('<svg')
+    expect(result).toContain('<polygon')
     expect(result).toContain('<circle')
   })
 
@@ -116,32 +137,33 @@ describe('generateLineChart', () => {
       { label: 'End', value: 90 }
     ]
 
-    const result = generateLineChart({
+    const result = generateAreaChart({
       data: twoPoints,
       colors: mockColors,
       title: 'Two Points'
     })
 
-    expect(result).toContain('<polyline')
+    expect(result).toContain('<polygon')
     const circleCount = (result.match(/<circle/g) || []).length
     expect(circleCount).toBe(2)
   })
 
   it('should include axis labels and gridlines', () => {
-    const result = generateLineChart({
+    const result = generateAreaChart({
       data: mockData,
       colors: mockColors,
       title: 'Test'
     })
 
     expect(result).toContain('<line')
+    expect(result).toContain('stroke-dasharray')
     mockData.forEach(d => {
       expect(result).toContain(d.label)
     })
   })
 
   it('should show value labels for small datasets', () => {
-    const result = generateLineChart({
+    const result = generateAreaChart({
       data: mockData,
       colors: mockColors,
       title: 'Test'
@@ -152,14 +174,67 @@ describe('generateLineChart', () => {
     })
   })
 
-  it('should not use rounded stroke caps', () => {
-    const result = generateLineChart({
+  it('should handle zero values', () => {
+    const dataWithZero: DataPoint[] = [
+      { label: 'A', value: 10 },
+      { label: 'B', value: 0 },
+      { label: 'C', value: 20 }
+    ]
+
+    const result = generateAreaChart({
+      data: dataWithZero,
+      colors: mockColors,
+      title: 'With Zero'
+    })
+
+    expect(result).toContain('<svg')
+    expect(result).toContain('<polygon')
+  })
+
+  it('should handle varying value ranges', () => {
+    const wideRangeData: DataPoint[] = [
+      { label: 'Min', value: 1 },
+      { label: 'Mid', value: 500 },
+      { label: 'Max', value: 1000 }
+    ]
+
+    const result = generateAreaChart({
+      data: wideRangeData,
+      colors: mockColors,
+      title: 'Wide Range'
+    })
+
+    expect(result).toContain('<svg')
+    expect(result).toContain('<polygon')
+  })
+
+  it('should create closed polygon path', () => {
+    const result = generateAreaChart({
       data: mockData,
       colors: mockColors,
       title: 'Test'
     })
 
-    expect(result).not.toContain('stroke-linecap="round"')
-    expect(result).not.toContain('stroke-linejoin="round"')
+    // Polygon should have points attribute
+    expect(result).toContain('points="')
+    // Should contain polygon element with fill
+    expect(result).toMatch(/<polygon[^>]*fill="[^"]*"/)
+  })
+
+  it('should have line on top of filled area', () => {
+    const result = generateAreaChart({
+      data: mockData,
+      colors: mockColors,
+      title: 'Test'
+    })
+
+    // Both polygon and polyline should be present
+    expect(result).toContain('<polygon')
+    expect(result).toContain('<polyline')
+
+    // Polyline should appear after polygon in the SVG
+    const polygonIndex = result.indexOf('<polygon')
+    const polylineIndex = result.indexOf('<polyline')
+    expect(polylineIndex).toBeGreaterThan(polygonIndex)
   })
 })

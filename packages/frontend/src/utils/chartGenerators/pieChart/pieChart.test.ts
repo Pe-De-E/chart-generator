@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { generatePieChart } from './pieChart'
-import type { DataPoint } from './types'
+import type { DataPoint } from '../types'
 
 describe('generatePieChart', () => {
   const mockData: DataPoint[] = [

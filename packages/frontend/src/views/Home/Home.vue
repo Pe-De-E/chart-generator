@@ -151,7 +151,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { chartService } from '../services/chart.service'
+import { chartService } from '../../services/chart.service'
 import type { SavedChart } from '@chart-generator/shared'
 
 const router = useRouter()

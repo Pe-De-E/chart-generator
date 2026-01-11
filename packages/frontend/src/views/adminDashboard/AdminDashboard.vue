@@ -147,8 +147,9 @@
 </template>
 
 <script setup lang="ts">
+// TODO Tests schreiben
 import { ref, onMounted, watch } from 'vue'
-import { adminService } from '../services/admin.service'
+import { adminService } from '../../services/admin.service'
 
 const loading = ref(false)
 const activeTab = ref('users')

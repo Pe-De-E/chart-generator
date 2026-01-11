@@ -1,7 +1,8 @@
 <template>
   <v-app>
     <v-app-bar color="primary" elevation="2">
-      <v-app-bar-title class="text-h5 font-weight-bold" style="cursor: pointer" @click="router.push('/')">
+      <v-app-bar-title class="text-h5 font-weight-bold d-flex align-center" style="cursor: pointer" @click="router.push('/')">
+        <img src="/Logo.png" alt="Altavio" height="32" class="mr-2" />
         Altavio
       </v-app-bar-title>
 

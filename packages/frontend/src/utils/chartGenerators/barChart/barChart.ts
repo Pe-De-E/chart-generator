@@ -1,44 +1,7 @@
 import type { ChartOptions } from '@chart-generator/shared'
-import { renderStatisticalOverlays, hasAnyOverlayEnabled } from './statisticalOverlayRenderer'
+import { renderStatisticalOverlays, hasAnyOverlayEnabled } from '../statisticalOverlayRenderer'
 
-// =============================================================================
-// TODO [2/6]: SVG-Elemente mit IDs und data-Attributen versehen
-// =============================================================================
-//
-// Damit Elemente im Chart anklickbar werden, müssen sie identifizierbar sein.
-// Jedes interaktive Element braucht:
-//   - Eine eindeutige ID (z.B. "chart-title", "bar-0", "x-label-3")
-//   - data-* Attribute für Metadaten (z.B. data-type="bar", data-index="0")
-//
-// Beispiel-Transformation:
-//
-// VORHER:
-//   <text x="${width/2}" y="30" ...>${title}</text>
-//
-// NACHHER:
-//   <text id="chart-title" data-type="title" data-editable="true"
-//         x="${width/2}" y="30" ...>${title}</text>
-//
-// VORHER:
-//   <rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}" .../>
-//
-// NACHHER:
-//   <rect id="bar-${i}" data-type="bar" data-index="${i}" data-label="${d.label}"
-//         data-value="${d.value}" data-editable="true"
-//         x="${x}" y="${y}" width="${barWidth}" height="${barHeight}" .../>
-//
-// Elemente die IDs brauchen:
-//   - Titel: id="chart-title"
-//   - Balken: id="bar-{index}" oder id="bar-{seriesName}-{index}"
-//   - X-Achsen-Labels: id="x-label-{index}"
-//   - Y-Achsen-Labels: id="y-label-{index}"
-//   - Legenden-Einträge: id="legend-{seriesName}"
-//   - Grid-Linien: id="grid-line-{index}" (optional)
-//
-// Zusätzlich: CSS-Klasse "editable" für Hover-Effekt hinzufügen
-// =============================================================================
-
-// Helper function to generate legend
+// Helper function to generate legend with editable attributes
 function generateLegend(
   seriesConfig: Array<{ name: string, color: string }>,
   y: number,
@@ -54,10 +17,12 @@ function generateLegend(
     const legendY = y + row * 25
 
     return `
-      <rect x="${x}" y="${legendY}" width="15" height="15" fill="${series.color}" />
-      <text x="${x + 20}" y="${legendY + 12}" font-size="11" fill="#4B5563">
-        ${series.name}
-      </text>
+      <g id="legend-${series.name}" class="editable" data-type="legend" data-series="${series.name}" data-editable="true">
+        <rect x="${x}" y="${legendY}" width="15" height="15" fill="${series.color}" />
+        <text x="${x + 20}" y="${legendY + 12}" font-size="11" fill="#4B5563">
+          ${series.name}
+        </text>
+      </g>
     `
   }).join('')
 }
@@ -130,7 +95,7 @@ function generateLegend(
 // =============================================================================
 
 export function generateBarChart(options: ChartOptions): string {
-  const { data, seriesData, seriesConfig } = options
+  const { data, seriesData, seriesConfig, styleOverrides } = options
 
   // Detect mode
   const isSingleSeries = !!data
@@ -138,11 +103,11 @@ export function generateBarChart(options: ChartOptions): string {
   if (isSingleSeries) {
     // Legacy single-series mode
     const { colors, title, statisticalOverlays } = options
-    return generateSingleSeriesBar(data!, colors, title, statisticalOverlays)
+    return generateSingleSeriesBar(data!, colors, title, statisticalOverlays, styleOverrides)
   } else {
     // Multi-series mode
     const { colors, title, statisticalOverlays } = options
-    return generateMultiSeriesBar(seriesData!, seriesConfig!, colors, title, statisticalOverlays)
+    return generateMultiSeriesBar(seriesData!, seriesConfig!, colors, title, statisticalOverlays, styleOverrides)
   }
 }
 
@@ -150,7 +115,8 @@ function generateSingleSeriesBar(
   data: Array<{ label: string, value: number }>,
   colors: { primary?: string, secondary?: string, background: string },
   title: string,
-  overlays?: ChartOptions['statisticalOverlays']
+  overlays?: ChartOptions['statisticalOverlays'],
+  styleOverrides?: ChartOptions['styleOverrides']
 ): string {
   // Dynamic width based on data count to ensure bars are visible
   const minBarWidth = 8
@@ -179,10 +145,34 @@ function generateSingleSeriesBar(
     return { value, y }
   }).filter(item => item.value <= maxValue)
 
+  // Apply title style overrides
+  const titleOverride = styleOverrides?.title
+  const titleText = titleOverride?.text ?? title
+  const titleFontSize = titleOverride?.fontSize ?? 20
+  const titleColor = titleOverride?.color ?? '#1F2937'
+  const titleWeight = titleOverride?.fontWeight ?? 'bold'
+  const titleAlign = titleOverride?.alignment ?? 'center'
+  const titleX = titleAlign === 'left' ? margin.left
+               : titleAlign === 'right' ? width - margin.right
+               : width / 2
+  const titleAnchor = titleAlign === 'left' ? 'start'
+                    : titleAlign === 'right' ? 'end'
+                    : 'middle'
+
+  // Apply x-axis label overrides
+  const xAxisOverride = styleOverrides?.xAxis?.labels
+  const labelRotation = xAxisOverride?.rotation ?? -45
+
   const bars = data.map((d, i) => {
     const barHeight = (d.value / maxValue) * chartHeight
     const x = margin.left + i * barSpacing + (barSpacing - barWidth) / 2
     const y = margin.top + chartHeight - barHeight
+
+    // Apply data point style overrides
+    const dpOverride = styleOverrides?.dataPoints?.[i]
+    const barColor = dpOverride?.color ?? colors.primary ?? '#4F46E5'
+    const isHighlighted = dpOverride?.highlight ?? false
+    const highlightAttr = isHighlighted ? 'stroke="#1F2937" stroke-width="2"' : ''
 
     // Only show label for every nth item
     const showLabel = i % labelInterval === 0
@@ -190,27 +180,36 @@ function generateSingleSeriesBar(
     const labelY = margin.top + chartHeight + 15
 
     return `
-      <rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}"
-            fill="${colors.primary || '#4F46E5'}" rx="4"/>
+      <rect id="bar-${i}" class="editable" data-type="bar" data-index="${i}"
+            data-label="${d.label}" data-value="${d.value}" data-editable="true"
+            x="${x}" y="${y}" width="${barWidth}" height="${barHeight}"
+            fill="${barColor}" rx="4" ${highlightAttr}/>
       ${showLabel ? `
-        <text x="${labelX}" y="${labelY}"
+        <text id="x-label-${i}" class="editable" data-type="x-label" data-index="${i}"
+              data-label="${d.label}" data-editable="true"
+              x="${labelX}" y="${labelY}"
               text-anchor="end" font-size="${fontSize}" fill="#4B5563"
-              transform="rotate(-45 ${labelX} ${labelY})">${d.label}</text>
+              transform="rotate(${labelRotation} ${labelX} ${labelY})">${d.label}</text>
       ` : ''}
       ${data.length <= 15 ? `
-        <text x="${x + barWidth/2}" y="${y - 5}"
+        <text id="value-label-${i}" class="editable" data-type="value-label" data-index="${i}"
+              data-value="${d.value}" data-editable="true"
+              x="${x + barWidth/2}" y="${y - 5}"
               text-anchor="middle" font-size="10" font-weight="bold" fill="#1F2937">${d.value}</text>
       ` : ''}
     `
   }).join('')
 
   // Y-axis labels and grid lines
-  const yAxis = yAxisLabels.map(({ value, y }) => `
+  const yAxis = yAxisLabels.map(({ value, y }, i) => `
+    <line id="grid-line-${i}" data-type="grid-line" data-index="${i}" data-value="${value}"
+          x1="${margin.left}" y1="${y}" x2="${width - margin.right}" y2="${y}"
+          stroke="#E5E7EB" stroke-width="1" stroke-dasharray="4"/>
     <line x1="${margin.left - 5}" y1="${y}" x2="${margin.left}" y2="${y}"
           stroke="#9CA3AF" stroke-width="1"/>
-    <line x1="${margin.left}" y1="${y}" x2="${width - margin.right}" y2="${y}"
-          stroke="#E5E7EB" stroke-width="1" stroke-dasharray="4"/>
-    <text x="${margin.left - 10}" y="${y + 4}"
+    <text id="y-label-${i}" class="editable" data-type="y-label" data-index="${i}"
+          data-value="${value}" data-editable="true"
+          x="${margin.left - 10}" y="${y + 4}"
           text-anchor="end" font-size="10" fill="#6B7280">${value}</text>
   `).join('')
 
@@ -230,28 +229,36 @@ function generateSingleSeriesBar(
 
   return `
     <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-      <rect width="${width}" height="${height}" fill="${colors.background}"/>
-      <text x="${width/2}" y="30" text-anchor="middle" font-size="20"
-            font-weight="bold" fill="#1F2937">${title}</text>
+      <style>
+        .editable { cursor: pointer; }
+        .editable:hover { opacity: 0.8; }
+      </style>
+      <rect id="chart-background" data-type="background" data-editable="true"
+            width="${width}" height="${height}" fill="${colors.background}"/>
+      <text id="chart-title" class="editable" data-type="title" data-editable="true"
+            x="${titleX}" y="${30 + (titleOverride?.offsetY ?? 0)}" text-anchor="${titleAnchor}"
+            font-size="${titleFontSize}" font-weight="${titleWeight}" fill="${titleColor}">${titleText}</text>
       ${yAxis}
       ${bars}
       ${statisticalOverlay}
-      <line x1="${margin.left}" y1="${margin.top + chartHeight}"
+      <line id="x-axis" data-type="axis" x1="${margin.left}" y1="${margin.top + chartHeight}"
             x2="${width - margin.right}" y2="${margin.top + chartHeight}"
             stroke="#E5E7EB" stroke-width="2"/>
-      <line x1="${margin.left}" y1="${margin.top}"
+      <line id="y-axis" data-type="axis" x1="${margin.left}" y1="${margin.top}"
             x2="${margin.left}" y2="${margin.top + chartHeight}"
             stroke="#E5E7EB" stroke-width="2"/>
     </svg>
   `
 }
 
+
 function generateMultiSeriesBar(
   seriesData: Array<{ label: string, values: Record<string, number> }>,
   seriesConfig: Array<{ name: string, columnKey: string, color: string }>,
   colors: { series?: string[], background: string },
   title: string,
-  overlays?: ChartOptions['statisticalOverlays']
+  overlays?: ChartOptions['statisticalOverlays'],
+  styleOverrides?: ChartOptions['styleOverrides']
 ): string {
   const seriesCount = seriesConfig.length
 
@@ -289,11 +296,33 @@ function generateMultiSeriesBar(
     return { value, y }
   }).filter(item => item.value <= maxValue)
 
+  // Apply title style overrides
+  const titleOverride = styleOverrides?.title
+  const titleText = titleOverride?.text ?? title
+  const titleFontSize = titleOverride?.fontSize ?? 20
+  const titleColor = titleOverride?.color ?? '#1F2937'
+  const titleWeight = titleOverride?.fontWeight ?? 'bold'
+  const titleAlign = titleOverride?.alignment ?? 'center'
+  const titleX = titleAlign === 'left' ? margin.left
+               : titleAlign === 'right' ? width - margin.right
+               : width / 2
+  const titleAnchor = titleAlign === 'left' ? 'start'
+                    : titleAlign === 'right' ? 'end'
+                    : 'middle'
+
+  // Apply x-axis label overrides
+  const xAxisOverride = styleOverrides?.xAxis?.labels
+  const labelRotation = xAxisOverride?.rotation ?? -45
+
   // Generate grouped bars
   let allBars = ''
 
   seriesData.forEach((dataPoint, labelIndex) => {
     seriesConfig.forEach((series, seriesIndex) => {
+      // Apply series style override
+      const seriesOverride = styleOverrides?.series?.[series.name]
+      const barColor = seriesOverride?.color ?? series.color
+
       const value = dataPoint.values[series.name] || 0
       const barHeight = (value / maxValue) * chartHeight
 
@@ -303,8 +332,11 @@ function generateMultiSeriesBar(
       const barY = margin.top + chartHeight - barHeight
 
       allBars += `
-        <rect x="${barX}" y="${barY}" width="${barWidth}" height="${barHeight}"
-              fill="${series.color}" rx="2"/>
+        <rect id="bar-${series.name}-${labelIndex}" class="editable" data-type="bar"
+              data-series="${series.name}" data-index="${labelIndex}"
+              data-label="${dataPoint.label}" data-value="${value}" data-editable="true"
+              x="${barX}" y="${barY}" width="${barWidth}" height="${barHeight}"
+              fill="${barColor}" rx="2"/>
       `
     })
 
@@ -315,20 +347,25 @@ function generateMultiSeriesBar(
       const labelY = margin.top + chartHeight + 15
 
       allBars += `
-        <text x="${labelX}" y="${labelY}"
+        <text id="x-label-${labelIndex}" class="editable" data-type="x-label"
+              data-index="${labelIndex}" data-label="${dataPoint.label}" data-editable="true"
+              x="${labelX}" y="${labelY}"
               text-anchor="end" font-size="${fontSize}" fill="#4B5563"
-              transform="rotate(-45 ${labelX} ${labelY})">${dataPoint.label}</text>
+              transform="rotate(${labelRotation} ${labelX} ${labelY})">${dataPoint.label}</text>
       `
     }
   })
 
   // Y-axis
-  const yAxis = yAxisLabels.map(({ value, y }) => `
+  const yAxis = yAxisLabels.map(({ value, y }, i) => `
+    <line id="grid-line-${i}" data-type="grid-line" data-index="${i}" data-value="${value}"
+          x1="${margin.left}" y1="${y}" x2="${width - margin.right}" y2="${y}"
+          stroke="#E5E7EB" stroke-width="1" stroke-dasharray="4"/>
     <line x1="${margin.left - 5}" y1="${y}" x2="${margin.left}" y2="${y}"
           stroke="#9CA3AF" stroke-width="1"/>
-    <line x1="${margin.left}" y1="${y}" x2="${width - margin.right}" y2="${y}"
-          stroke="#E5E7EB" stroke-width="1" stroke-dasharray="4"/>
-    <text x="${margin.left - 10}" y="${y + 4}"
+    <text id="y-label-${i}" class="editable" data-type="y-label" data-index="${i}"
+          data-value="${value}" data-editable="true"
+          x="${margin.left - 10}" y="${y + 4}"
           text-anchor="end" font-size="10" fill="#6B7280">${value}</text>
   `).join('')
 
@@ -352,16 +389,22 @@ function generateMultiSeriesBar(
 
   return `
     <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-      <rect width="${width}" height="${height}" fill="${colors.background}"/>
-      <text x="${width/2}" y="30" text-anchor="middle" font-size="20"
-            font-weight="bold" fill="#1F2937">${title}</text>
+      <style>
+        .editable { cursor: pointer; }
+        .editable:hover { opacity: 0.8; }
+      </style>
+      <rect id="chart-background" data-type="background" data-editable="true"
+            width="${width}" height="${height}" fill="${colors.background}"/>
+      <text id="chart-title" class="editable" data-type="title" data-editable="true"
+            x="${titleX}" y="${30 + (titleOverride?.offsetY ?? 0)}" text-anchor="${titleAnchor}"
+            font-size="${titleFontSize}" font-weight="${titleWeight}" fill="${titleColor}">${titleText}</text>
       ${yAxis}
       ${allBars}
       ${statisticalOverlay}
-      <line x1="${margin.left}" y1="${margin.top + chartHeight}"
+      <line id="x-axis" data-type="axis" x1="${margin.left}" y1="${margin.top + chartHeight}"
             x2="${width - margin.right}" y2="${margin.top + chartHeight}"
             stroke="#E5E7EB" stroke-width="2"/>
-      <line x1="${margin.left}" y1="${margin.top}"
+      <line id="y-axis" data-type="axis" x1="${margin.left}" y1="${margin.top}"
             x2="${margin.left}" y2="${margin.top + chartHeight}"
             stroke="#E5E7EB" stroke-width="2"/>
       ${legend}

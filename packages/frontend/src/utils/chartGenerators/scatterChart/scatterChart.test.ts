@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { generateScatterChart } from './scatterChart'
-import type { DataPoint } from './types'
+import type { DataPoint } from '../types'
 
 describe('generateScatterChart', () => {
   const mockData: DataPoint[] = [

@@ -4,7 +4,7 @@ import { createVuetify } from 'vuetify'
 import Home from './Home.vue'
 import type { SavedChart } from '@chart-generator/shared'
 import { useRouter } from 'vue-router'
-import { chartService } from '../services/chart.service'
+import { chartService } from '../../services/chart.service'
 
 // Create a shared push mock
 const pushMock = vi.fn()

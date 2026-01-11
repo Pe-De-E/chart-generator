@@ -17,6 +17,7 @@
     "db:reset": "pnpm --filter @chart-generator/backend db:reset"
   },
   "devDependencies": {
-    "concurrently": "^8.2.0"
+    "concurrently": "^8.2.0",
+    "sharp": "^0.34.5"
   }
 }
