@@ -1,12 +1,12 @@
 // Re-export all chart types from shared package
 // This ensures consistency between frontend and backend
 
-// TODO ist das nicht identisch mit index.ts?
 export type {
   DataPoint,
   SeriesDataPoint,
   SeriesConfig,
   ChartColors,
+  StatisticalOverlayColors,
   StatisticalOverlays,
   ChartOptions,
   ChartStyleOverrides,

@@ -29,6 +29,17 @@ export interface ChartColors {
   background: string
 }
 
+// Individual colors for each statistical overlay type
+export interface StatisticalOverlayColors {
+  mean: string
+  median: string
+  stdDev: string
+  minMax: string
+  quartiles: string
+  customRange: string
+  zScore: string
+}
+
 export interface StatisticalOverlays {
   showMean: boolean
   showMedian: boolean
@@ -40,7 +51,8 @@ export interface StatisticalOverlays {
   customRangeMax: number
   showZScore: boolean
   zScoreThreshold: number  // Number of standard deviations (e.g., 2 = ±2σ)
-  color: string  // Color for statistical lines/areas
+  color: string  // Legacy: fallback color for all overlays
+  colors: StatisticalOverlayColors  // Individual colors per overlay type
 }
 
 export interface ChartOptions {

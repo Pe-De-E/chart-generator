@@ -2,177 +2,207 @@
   <div class="overlays-content">
     <v-row>
         <v-col cols="12" md="6">
-          <!-- TODO couldn't this be a list, with an own component? is this a good idea? -->
-          <!-- TODO man sollte die farben für die verschiedenen statistischen mittel einstellen können und nicht komplett für alle, das macht es 
-           übersichtlicher, wenn man mehrere einsetzt -->
-          <v-checkbox
-            :model-value="statisticalOverlays.showMean"
-            @update:model-value="
-              $emit('update:statisticalOverlays', {
-                ...statisticalOverlays,
-                showMean: !!$event,
-              })
-            "
-            label="Mittelwert anzeigen"
-            color="error"
-            density="comfortable"
-            hide-details
-          >
-            <template v-slot:label>
-              <span>Mittelwert anzeigen</span>
-              <v-chip size="x-small" class="ml-2" color="error" variant="flat"
-                >━━━</v-chip
-              >
-            </template>
-          </v-checkbox>
+          <!-- Mittelwert -->
+          <div class="overlay-item">
+            <v-checkbox
+              :model-value="statisticalOverlays.showMean"
+              @update:model-value="
+                $emit('update:statisticalOverlays', {
+                  ...statisticalOverlays,
+                  showMean: !!$event,
+                })
+              "
+              label="Mittelwert anzeigen"
+              density="comfortable"
+              hide-details
+            >
+              <template v-slot:label>
+                <span>Mittelwert anzeigen</span>
+                <span class="color-chip ml-2" :style="{ backgroundColor: statisticalOverlays.colors.mean }">━━━</span>
+              </template>
+            </v-checkbox>
+            <input
+              v-if="statisticalOverlays.showMean"
+              type="color"
+              :value="statisticalOverlays.colors.mean"
+              @input="updateColor('mean', ($event.target as HTMLInputElement).value)"
+              class="color-picker-inline"
+              title="Farbe anpassen"
+            />
+          </div>
 
-          <v-checkbox
-            :model-value="statisticalOverlays.showMedian"
-            @update:model-value="
-              $emit('update:statisticalOverlays', {
-                ...statisticalOverlays,
-                showMedian: !!$event,
-              })
-            "
-            label="Median anzeigen"
-            color="error"
-            density="comfortable"
-            hide-details
-            class="mt-2"
-          >
-            <template v-slot:label>
-              <span>Median anzeigen</span>
-              <v-chip size="x-small" class="ml-2" color="error" variant="flat"
-                >- - -</v-chip
-              >
-            </template>
-          </v-checkbox>
+          <!-- Median -->
+          <div class="overlay-item mt-2">
+            <v-checkbox
+              :model-value="statisticalOverlays.showMedian"
+              @update:model-value="
+                $emit('update:statisticalOverlays', {
+                  ...statisticalOverlays,
+                  showMedian: !!$event,
+                })
+              "
+              label="Median anzeigen"
+              density="comfortable"
+              hide-details
+            >
+              <template v-slot:label>
+                <span>Median anzeigen</span>
+                <span class="color-chip ml-2" :style="{ backgroundColor: statisticalOverlays.colors.median }">- - -</span>
+              </template>
+            </v-checkbox>
+            <input
+              v-if="statisticalOverlays.showMedian"
+              type="color"
+              :value="statisticalOverlays.colors.median"
+              @input="updateColor('median', ($event.target as HTMLInputElement).value)"
+              class="color-picker-inline"
+              title="Farbe anpassen"
+            />
+          </div>
 
-          <v-checkbox
-            :model-value="statisticalOverlays.showStdDev"
-            @update:model-value="
-              $emit('update:statisticalOverlays', {
-                ...statisticalOverlays,
-                showStdDev: !!$event,
-              })
-            "
-            label="Standardabweichung anzeigen"
-            color="error"
-            density="comfortable"
-            hide-details
-            class="mt-2"
-          >
-            <template v-slot:label>
-              <span>Standardabweichung anzeigen</span>
-              <v-chip
-                size="x-small"
-                class="ml-2"
-                color="error"
-                variant="outlined"
-                >±σ</v-chip
-              >
-            </template>
-          </v-checkbox>
+          <!-- Standardabweichung -->
+          <div class="overlay-item mt-2">
+            <v-checkbox
+              :model-value="statisticalOverlays.showStdDev"
+              @update:model-value="
+                $emit('update:statisticalOverlays', {
+                  ...statisticalOverlays,
+                  showStdDev: !!$event,
+                })
+              "
+              label="Standardabweichung anzeigen"
+              density="comfortable"
+              hide-details
+            >
+              <template v-slot:label>
+                <span>Standardabweichung anzeigen</span>
+                <span class="color-chip color-chip-outlined ml-2" :style="{ borderColor: statisticalOverlays.colors.stdDev, color: statisticalOverlays.colors.stdDev }">±σ</span>
+              </template>
+            </v-checkbox>
+            <input
+              v-if="statisticalOverlays.showStdDev"
+              type="color"
+              :value="statisticalOverlays.colors.stdDev"
+              @input="updateColor('stdDev', ($event.target as HTMLInputElement).value)"
+              class="color-picker-inline"
+              title="Farbe anpassen"
+            />
+          </div>
         </v-col>
         <v-col cols="12" md="6">
-          <v-checkbox
-            :model-value="statisticalOverlays.showMinMax"
-            @update:model-value="
-              $emit('update:statisticalOverlays', {
-                ...statisticalOverlays,
-                showMinMax: !!$event,
-              })
-            "
-            label="Min/Max anzeigen"
-            color="error"
-            density="comfortable"
-            hide-details
-          >
-            <template v-slot:label>
-              <span>Min/Max anzeigen</span>
-              <v-chip
-                size="x-small"
-                class="ml-2"
-                color="error"
-                variant="outlined"
-                >↕</v-chip
-              >
-            </template>
-          </v-checkbox>
-
-          <v-checkbox
-            :model-value="statisticalOverlays.showQuartiles"
-            @update:model-value="
-              $emit('update:statisticalOverlays', {
-                ...statisticalOverlays,
-                showQuartiles: !!$event,
-              })
-            "
-            label="Quartile anzeigen (Q1/Q3)"
-            color="error"
-            density="comfortable"
-            hide-details
-            class="mt-2"
-          >
-            <template v-slot:label>
-              <span>Quartile anzeigen (Q1/Q3)</span>
-              <v-chip size="x-small" class="ml-2" color="error" variant="tonal"
-                >Q</v-chip
-              >
-            </template>
-          </v-checkbox>
-
-          <v-checkbox
-            :model-value="statisticalOverlays.showCustomRange"
-            @update:model-value="
-              $emit('update:statisticalOverlays', {
-                ...statisticalOverlays,
-                showCustomRange: !!$event,
-              })
-            "
-            label="Benutzerdefinierten Bereich anzeigen"
-            color="error"
-            density="comfortable"
-            hide-details
-            class="mt-2"
-          >
-            <template v-slot:label>
-              <span>Benutzerdefinierten Bereich anzeigen</span>
-              <v-chip size="x-small" class="ml-2" color="error" variant="tonal"
-                >⬌</v-chip
-              >
-            </template>
-          </v-checkbox>
-
-          <v-checkbox
-            :model-value="statisticalOverlays.showZScore"
-            @update:model-value="
-              $emit('update:statisticalOverlays', {
-                ...statisticalOverlays,
-                showZScore: !!$event,
-              })
-            "
-            label="Z-Score Grenzwerte anzeigen"
-            color="error"
-            density="comfortable"
-            hide-details
-            class="mt-2"
-          >
-            <template v-slot:label>
-              <span>Z-Score Grenzwerte anzeigen</span>
-              <v-chip size="x-small" class="ml-2" color="error" variant="tonal"
-                >Z</v-chip
-              >
-            </template>
-          </v-checkbox>
-
-          <div class="mt-3">
-            <v-label class="text-caption">Farbe der Vergleichswerte</v-label>
+          <!-- Min/Max -->
+          <div class="overlay-item">
+            <v-checkbox
+              :model-value="statisticalOverlays.showMinMax"
+              @update:model-value="
+                $emit('update:statisticalOverlays', {
+                  ...statisticalOverlays,
+                  showMinMax: !!$event,
+                })
+              "
+              label="Min/Max anzeigen"
+              density="comfortable"
+              hide-details
+            >
+              <template v-slot:label>
+                <span>Min/Max anzeigen</span>
+                <span class="color-chip color-chip-outlined ml-2" :style="{ borderColor: statisticalOverlays.colors.minMax, color: statisticalOverlays.colors.minMax }">↕</span>
+              </template>
+            </v-checkbox>
             <input
+              v-if="statisticalOverlays.showMinMax"
               type="color"
-              :value="statisticalOverlays.color"
-              @input="$emit('update:statisticalOverlays', { ...statisticalOverlays, color: ($event.target as HTMLInputElement).value })"
-              class="color-picker-full mt-1"
+              :value="statisticalOverlays.colors.minMax"
+              @input="updateColor('minMax', ($event.target as HTMLInputElement).value)"
+              class="color-picker-inline"
+              title="Farbe anpassen"
+            />
+          </div>
+
+          <!-- Quartile -->
+          <div class="overlay-item mt-2">
+            <v-checkbox
+              :model-value="statisticalOverlays.showQuartiles"
+              @update:model-value="
+                $emit('update:statisticalOverlays', {
+                  ...statisticalOverlays,
+                  showQuartiles: !!$event,
+                })
+              "
+              label="Quartile anzeigen (Q1/Q3)"
+              density="comfortable"
+              hide-details
+            >
+              <template v-slot:label>
+                <span>Quartile anzeigen (Q1/Q3)</span>
+                <span class="color-chip color-chip-tonal ml-2" :style="{ backgroundColor: statisticalOverlays.colors.quartiles + '30', color: statisticalOverlays.colors.quartiles }">Q</span>
+              </template>
+            </v-checkbox>
+            <input
+              v-if="statisticalOverlays.showQuartiles"
+              type="color"
+              :value="statisticalOverlays.colors.quartiles"
+              @input="updateColor('quartiles', ($event.target as HTMLInputElement).value)"
+              class="color-picker-inline"
+              title="Farbe anpassen"
+            />
+          </div>
+
+          <!-- Benutzerdefinierter Bereich -->
+          <div class="overlay-item mt-2">
+            <v-checkbox
+              :model-value="statisticalOverlays.showCustomRange"
+              @update:model-value="
+                $emit('update:statisticalOverlays', {
+                  ...statisticalOverlays,
+                  showCustomRange: !!$event,
+                })
+              "
+              label="Benutzerdefinierten Bereich anzeigen"
+              density="comfortable"
+              hide-details
+            >
+              <template v-slot:label>
+                <span>Benutzerdefinierten Bereich anzeigen</span>
+                <span class="color-chip color-chip-tonal ml-2" :style="{ backgroundColor: statisticalOverlays.colors.customRange + '30', color: statisticalOverlays.colors.customRange }">⬌</span>
+              </template>
+            </v-checkbox>
+            <input
+              v-if="statisticalOverlays.showCustomRange"
+              type="color"
+              :value="statisticalOverlays.colors.customRange"
+              @input="updateColor('customRange', ($event.target as HTMLInputElement).value)"
+              class="color-picker-inline"
+              title="Farbe anpassen"
+            />
+          </div>
+
+          <!-- Z-Score -->
+          <div class="overlay-item mt-2">
+            <v-checkbox
+              :model-value="statisticalOverlays.showZScore"
+              @update:model-value="
+                $emit('update:statisticalOverlays', {
+                  ...statisticalOverlays,
+                  showZScore: !!$event,
+                })
+              "
+              label="Z-Score Grenzwerte anzeigen"
+              density="comfortable"
+              hide-details
+            >
+              <template v-slot:label>
+                <span>Z-Score Grenzwerte anzeigen</span>
+                <span class="color-chip color-chip-tonal ml-2" :style="{ backgroundColor: statisticalOverlays.colors.zScore + '30', color: statisticalOverlays.colors.zScore }">Z</span>
+              </template>
+            </v-checkbox>
+            <input
+              v-if="statisticalOverlays.showZScore"
+              type="color"
+              :value="statisticalOverlays.colors.zScore"
+              @input="updateColor('zScore', ($event.target as HTMLInputElement).value)"
+              class="color-picker-inline"
+              title="Farbe anpassen"
             />
           </div>
         </v-col>
@@ -243,9 +273,9 @@
 <script setup lang="ts">
 import type { PropType } from "vue";
 import type { ChartType } from "../../../composables/useChartConfig";
-import type { StatisticalOverlays } from "../../../utils/chartGenerators/types";
+import type { StatisticalOverlays, StatisticalOverlayColors } from "../../../utils/chartGenerators/types";
 
-defineProps({
+const props = defineProps({
   chartType: {
     type: String as PropType<ChartType>,
     required: true,
@@ -260,17 +290,60 @@ defineProps({
   },
 });
 
-defineEmits<{
+const emit = defineEmits<{
   "update:statisticalOverlays": [value: StatisticalOverlays];
 }>();
+
+function updateColor(colorKey: keyof StatisticalOverlayColors, value: string) {
+  emit("update:statisticalOverlays", {
+    ...props.statisticalOverlays,
+    colors: {
+      ...props.statisticalOverlays.colors,
+      [colorKey]: value,
+    },
+  });
+}
 </script>
 
 <style scoped>
-.color-picker-full {
-  width: 100%;
-  height: 40px;
+.overlay-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.color-picker-inline {
+  width: 28px;
+  height: 28px;
   border: 1px solid #ccc;
   border-radius: 4px;
   cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.color-picker-inline:hover {
+  border-color: #888;
+}
+
+.color-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  color: white;
+  min-width: 32px;
+}
+
+.color-chip-outlined {
+  background: transparent !important;
+  border: 1px solid;
+}
+
+.color-chip-tonal {
+  border: none;
 }
 </style>

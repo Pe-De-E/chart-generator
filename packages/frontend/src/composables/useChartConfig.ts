@@ -69,7 +69,16 @@ export function useChartConfig(
     customRangeMax: dataExtent.value[1],
     showZScore: false,
     zScoreThreshold: 2,
-    color: '#FF6B6B'
+    color: '#FF6B6B',  // Legacy fallback
+    colors: {
+      mean: '#E53935',      // Red
+      median: '#8E24AA',    // Purple
+      stdDev: '#FB8C00',    // Orange
+      minMax: '#43A047',    // Green
+      quartiles: '#1E88E5', // Blue
+      customRange: '#00ACC1', // Cyan
+      zScore: '#F4511E'     // Deep Orange
+    }
   })
 
   // Silhouette mode (elevation profile only) - pure curve for social media
@@ -266,7 +275,16 @@ export function useChartConfig(
       customRangeMax: dataExtent.value[1],
       showZScore: false,
       zScoreThreshold: 2,
-      color: '#FF6B6B'
+      color: '#FF6B6B',
+      colors: {
+        mean: '#E53935',
+        median: '#8E24AA',
+        stdDev: '#FB8C00',
+        minMax: '#43A047',
+        quartiles: '#1E88E5',
+        customRange: '#00ACC1',
+        zScore: '#F4511E'
+      }
     }
     silhouetteMode.value = false
     styleOverrides.value = {}
