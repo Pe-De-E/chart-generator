@@ -12,12 +12,13 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    css: {
-      modules: {
-        classNameStrategy: 'non-scoped'
+    css: true,
+    server: {
+      deps: {
+        inline: ['vuetify']
       }
     },
-    setupFiles: [],
+    setupFiles: ['./vitest.setup.ts'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
