@@ -12,7 +12,7 @@
         v-if="isAuthenticated"
         variant="text"
         prepend-icon="mdi-plus-circle"
-        @click="router.push('/generator')"
+        @click="handleNewChart"
       >
         New Chart
       </v-btn>
@@ -77,5 +77,14 @@ function toggleTheme() {
   const newTheme = theme.global.current.value.dark ? 'light' : 'dark'
   theme.change(newTheme)
   localStorage.setItem('theme', newTheme)
+}
+
+function handleNewChart() {
+  if (router.currentRoute.value.path === '/generator') {
+    // Already on generator page - dispatch reset event
+    window.dispatchEvent(new CustomEvent('chart:new'))
+  } else {
+    router.push('/generator')
+  }
 }
 </script>

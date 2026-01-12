@@ -260,7 +260,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import StepNavigation from './StepNavigation.vue'
 import FileUploadStep from './chartWorkflow/FileUploadStep.vue'
@@ -542,12 +542,19 @@ const handleChartStepBack = () => {
 const resetWizard = () => {
   currentStep.value = 1
   selectedLabelColumn.value = 'col_0'
+  loadedChartId.value = null // Clear loaded chart ID so saving creates a new chart
   resetSeries()
   resetData()
   resetGrouping()
   resetConfig()
   skipCleaning() // Reset cleaning state
 }
+
+// Listen for "New Chart" event from App.vue (when already on generator page)
+window.addEventListener('chart:new', resetWizard)
+onUnmounted(() => {
+  window.removeEventListener('chart:new', resetWizard)
+})
 
 const saveChart = async () => {
   try {
