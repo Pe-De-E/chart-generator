@@ -1,33 +1,6 @@
 <template>
   <v-container fluid>
-    <!-- Header Section -->
-    <v-row>
-      <v-col cols="12">
-        <v-card class="pa-6" elevation="2">
-          <div class="d-flex align-center justify-space-between">
-            <div>
-              <h1 class="text-h4 font-weight-bold mb-2">
-                <v-icon size="40" color="primary" class="mr-2">
-                  mdi-chart-box-multiple-outline
-                </v-icon>
-                Meine Charts
-              </h1>
-              <p class="text-subtitle-1 text-medium-emphasis">
-                Transform your CSV data into beautiful, interactive charts
-              </p>
-            </div>
-            <v-btn
-              color="primary"
-              size="large"
-              prepend-icon="mdi-plus-circle"
-              @click="createChart"
-            >
-              Create New Chart
-            </v-btn>
-          </div>
-        </v-card>
-      </v-col>
-    </v-row>
+    <!-- TODO Home braucht eine eigene Route, weil ich später ja noch eine Landingpage brauche -->
 
     <!-- Loading State -->
     <v-row v-if="loading">
@@ -37,7 +10,7 @@
       </v-col>
     </v-row>
 
-    <!-- Empty State -->
+    <!-- Empty State - No Charts yet -->
     <v-row v-else-if="charts.length === 0">
       <v-col cols="12">
         <v-card class="pa-12 text-center" variant="outlined">
@@ -70,51 +43,11 @@
         md="4"
         lg="3"
       >
-        <v-card elevation="2" class="chart-card">
-          <v-img
-            v-if="chart.svgContent"
-            :src="'data:image/svg+xml;base64,' + encodeSvg(chart.svgContent)"
-            height="200"
-            cover
-            class="chart-preview"
-          ></v-img>
-          <div v-else class="chart-preview-placeholder">
-            <v-icon size="64" color="grey-lighten-1">
-              {{ getChartIcon(chart.type) }}
-            </v-icon>
-          </div>
-
-          <v-card-title class="text-h6">
-            {{ chart.title }}
-          </v-card-title>
-
-          <v-card-subtitle>
-            <v-chip size="small" :color="getChartColor(chart.type)" class="mr-2">
-              {{ chart.type.toUpperCase() }}
-            </v-chip>
-            <span class="text-caption">
-              {{ formatDate(chart.updatedAt) }}
-            </span>
-          </v-card-subtitle>
-
-          <v-card-actions>
-            <v-btn
-              color="primary"
-              variant="text"
-              prepend-icon="mdi-pencil"
-              @click="loadChart(chart.id)"
-            >
-              Edit
-            </v-btn>
-            <v-spacer></v-spacer>
-            <v-btn
-              color="error"
-              variant="text"
-              icon="mdi-delete"
-              @click="confirmDelete(chart)"
-            ></v-btn>
-          </v-card-actions>
-        </v-card>
+        <ChartCard
+          :chart="chart"
+          @edit="loadChart"
+          @delete="confirmDelete"
+        />
       </v-col>
     </v-row>
 
@@ -153,6 +86,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { chartService } from '../../services/chart.service'
 import type { SavedChart } from '@chart-generator/shared'
+import ChartCard from './ChartCard.vue'
 
 const router = useRouter()
 
@@ -203,58 +137,4 @@ async function deleteChart() {
   }
 }
 
-function getChartIcon(type: string): string {
-  const icons: Record<string, string> = {
-    bar: 'mdi-chart-bar',
-    line: 'mdi-chart-line',
-    scatter: 'mdi-chart-scatter-plot',
-    pie: 'mdi-chart-pie',
-    area: 'mdi-chart-areaspline',
-  }
-  return icons[type] || 'mdi-chart-box'
-}
-
-function getChartColor(type: string): string {
-  const colors: Record<string, string> = {
-    bar: 'blue',
-    line: 'green',
-    scatter: 'orange',
-    pie: 'purple',
-    area: 'teal',
-  }
-  return colors[type] || 'grey'
-}
-
-function formatDate(dateString: string): string {
-  const date = new Date(dateString)
-  return new Intl.DateTimeFormat('de-DE', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).format(date)
-}
-
-function encodeSvg(svgContent: string): string {
-  return window.btoa(svgContent)
-}
 </script>
-
-<style scoped>
-.chart-card {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.chart-preview {
-  background: #f5f5f5;
-}
-
-.chart-preview-placeholder {
-  height: 200px;
-  background: #f5f5f5;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-</style>
