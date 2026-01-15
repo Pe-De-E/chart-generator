@@ -86,7 +86,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { chartService } from '../../services/chart.service'
 import type { SavedChart } from '@chart-generator/shared'
-import ChartCard from './ChartCard.vue'
+import ChartCard from '../../components/ChartCard.vue'
 
 const router = useRouter()
 
