@@ -56,6 +56,28 @@ export interface ChartArea {
 }
 
 /**
+ * Visual normalization options for elevation data
+ * Ensures flat routes don't look boring and steep routes don't explode the scale
+ */
+export interface VisualNormalizationOptions {
+  /** Enable visual normalization (default: true) */
+  enabled: boolean
+  /** Minimum visual elevation range in meters (default: 100m) */
+  minVisualRange: number
+  /** Maximum visual elevation range in meters (default: 2000m) */
+  maxVisualRange: number
+  /** Visual exaggeration factor 1.0 = accurate, 1.5 = 50% steeper looking (default: 1.0) */
+  exaggeration: number
+}
+
+export const DEFAULT_VISUAL_NORMALIZATION: VisualNormalizationOptions = {
+  enabled: true,
+  minVisualRange: 100,  // Flat routes get at least 100m visual range
+  maxVisualRange: 2000, // Very mountainous routes get compressed to 2000m
+  exaggeration: 1.0     // No exaggeration by default
+}
+
+/**
  * Calculate bounds from GPX points
  */
 export function calculateBounds(points: GPXPoint[]): DataBounds {
@@ -101,6 +123,145 @@ export function padBounds(bounds: DataBounds, paddingPercent: number = 0.1): Dat
     minElevation: bounds.minElevation - elevationPadding,
     maxElevation: bounds.maxElevation + elevationPadding,
     elevationRange: bounds.elevationRange + elevationPadding * 2
+  }
+}
+
+/**
+ * Apply visual normalization to bounds
+ * - Expands flat routes (< minVisualRange) for visual interest
+ * - Compresses extreme routes (> maxVisualRange) to fit nicely
+ * - Optionally applies exaggeration factor
+ *
+ * @param bounds Original calculated bounds
+ * @param options Visual normalization settings
+ * @returns Adjusted bounds with visual normalization applied
+ */
+export function applyVisualNormalization(
+  bounds: DataBounds,
+  options: VisualNormalizationOptions = DEFAULT_VISUAL_NORMALIZATION
+): DataBounds & { wasNormalized: boolean; normalizationType: 'expanded' | 'compressed' | 'none' } {
+  if (!options.enabled) {
+    return { ...bounds, wasNormalized: false, normalizationType: 'none' }
+  }
+
+  const actualRange = bounds.elevationRange
+  let adjustedMin = bounds.minElevation
+  let adjustedMax = bounds.maxElevation
+  let normalizationType: 'expanded' | 'compressed' | 'none' = 'none'
+
+  // Flat route: expand to minimum visual range
+  if (actualRange < options.minVisualRange) {
+    const expansion = (options.minVisualRange - actualRange) / 2
+    const midPoint = (bounds.minElevation + bounds.maxElevation) / 2
+    adjustedMin = midPoint - options.minVisualRange / 2
+    adjustedMax = midPoint + options.minVisualRange / 2
+    normalizationType = 'expanded'
+  }
+  // Extreme route: compress to maximum visual range
+  else if (actualRange > options.maxVisualRange) {
+    const compression = (actualRange - options.maxVisualRange) / 2
+    const midPoint = (bounds.minElevation + bounds.maxElevation) / 2
+    adjustedMin = midPoint - options.maxVisualRange / 2
+    adjustedMax = midPoint + options.maxVisualRange / 2
+    normalizationType = 'compressed'
+  }
+
+  // Apply exaggeration (makes curves look steeper without changing actual values)
+  // This works by shrinking the visual range, making the same elevation change
+  // appear larger relative to the chart height
+  if (options.exaggeration !== 1.0 && options.exaggeration > 0) {
+    const currentRange = adjustedMax - adjustedMin
+    const exaggeratedRange = currentRange / options.exaggeration
+    const midPoint = (adjustedMin + adjustedMax) / 2
+    adjustedMin = midPoint - exaggeratedRange / 2
+    adjustedMax = midPoint + exaggeratedRange / 2
+    if (normalizationType === 'none') {
+      normalizationType = options.exaggeration > 1 ? 'compressed' : 'expanded'
+    }
+  }
+
+  return {
+    ...bounds,
+    minElevation: adjustedMin,
+    maxElevation: adjustedMax,
+    elevationRange: adjustedMax - adjustedMin,
+    wasNormalized: normalizationType !== 'none',
+    normalizationType
+  }
+}
+
+/**
+ * Analyze elevation profile and suggest visual settings
+ * Useful for auto-configuration based on route characteristics
+ */
+export function analyzeElevationProfile(points: GPXPoint[]): {
+  totalAscent: number
+  totalDescent: number
+  maxGradient: number
+  averageGradient: number
+  profileType: 'flat' | 'rolling' | 'hilly' | 'mountainous'
+  suggestedExaggeration: number
+} {
+  if (points.length < 2) {
+    return {
+      totalAscent: 0,
+      totalDescent: 0,
+      maxGradient: 0,
+      averageGradient: 0,
+      profileType: 'flat',
+      suggestedExaggeration: 1.5
+    }
+  }
+
+  let totalAscent = 0
+  let totalDescent = 0
+  let maxGradient = 0
+  let totalGradient = 0
+
+  for (let i = 1; i < points.length; i++) {
+    const elevDiff = points[i].elevation - points[i - 1].elevation
+    const distDiff = (points[i].distance - points[i - 1].distance) * 1000 // km to m
+
+    if (elevDiff > 0) totalAscent += elevDiff
+    else totalDescent += Math.abs(elevDiff)
+
+    if (distDiff > 0) {
+      const gradient = Math.abs(elevDiff / distDiff) * 100 // as percentage
+      maxGradient = Math.max(maxGradient, gradient)
+      totalGradient += gradient
+    }
+  }
+
+  const averageGradient = totalGradient / (points.length - 1)
+
+  // Classify profile type based on total elevation gain per km
+  const totalDistance = points[points.length - 1].distance - points[0].distance
+  const ascentPerKm = totalDistance > 0 ? totalAscent / totalDistance : 0
+
+  let profileType: 'flat' | 'rolling' | 'hilly' | 'mountainous'
+  let suggestedExaggeration: number
+
+  if (ascentPerKm < 10) {
+    profileType = 'flat'
+    suggestedExaggeration = 2.0 // Exaggerate flat routes more
+  } else if (ascentPerKm < 30) {
+    profileType = 'rolling'
+    suggestedExaggeration = 1.3
+  } else if (ascentPerKm < 60) {
+    profileType = 'hilly'
+    suggestedExaggeration = 1.0 // No exaggeration needed
+  } else {
+    profileType = 'mountainous'
+    suggestedExaggeration = 0.8 // Slight compression for extreme routes
+  }
+
+  return {
+    totalAscent,
+    totalDescent,
+    maxGradient,
+    averageGradient,
+    profileType,
+    suggestedExaggeration
   }
 }
 
@@ -170,14 +331,45 @@ export function gpxToViewBox(
   options: {
     paddingPercent?: number
     bounds?: DataBounds
+    visualNormalization?: VisualNormalizationOptions | boolean
   } = {}
 ): {
   viewBoxPoints: ViewBoxPoint[]
   bounds: DataBounds
   chartArea: ChartArea
+  visualInfo?: {
+    wasNormalized: boolean
+    normalizationType: 'expanded' | 'compressed' | 'none'
+    originalRange: number
+    visualRange: number
+  }
 } {
   let bounds = options.bounds || calculateBounds(points)
+  const originalRange = bounds.elevationRange
 
+  // Apply visual normalization if enabled
+  let visualInfo: {
+    wasNormalized: boolean
+    normalizationType: 'expanded' | 'compressed' | 'none'
+    originalRange: number
+    visualRange: number
+  } | undefined
+
+  if (options.visualNormalization !== undefined && options.visualNormalization !== false) {
+    const normOptions = options.visualNormalization === true
+      ? DEFAULT_VISUAL_NORMALIZATION
+      : options.visualNormalization
+    const normalized = applyVisualNormalization(bounds, normOptions)
+    bounds = normalized
+    visualInfo = {
+      wasNormalized: normalized.wasNormalized,
+      normalizationType: normalized.normalizationType,
+      originalRange,
+      visualRange: normalized.elevationRange
+    }
+  }
+
+  // Apply padding after visual normalization
   if (options.paddingPercent !== undefined && options.paddingPercent > 0) {
     bounds = padBounds(bounds, options.paddingPercent)
   }
@@ -189,7 +381,8 @@ export function gpxToViewBox(
   return {
     viewBoxPoints,
     bounds,
-    chartArea
+    chartArea,
+    visualInfo
   }
 }
 

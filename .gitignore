@@ -4,6 +4,7 @@ coverage
 .idea
 *.log
 .DS_Store
+roadmap.mp
 
 # Environment variables
 .env
@@ -16,3 +17,7 @@ coverage
 
 # Docker
 docker-compose.override.yml
+
+# Claude 
+
+.claude/settings.local.json

@@ -55,6 +55,16 @@ export interface StatisticalOverlays {
   colors: StatisticalOverlayColors  // Individual colors per overlay type
 }
 
+// Chart dimensions configuration
+export interface ChartDimensions {
+  // Width in pixels, or 'auto' for responsive (100% of container)
+  // Default: 600
+  width?: number | 'auto'
+  // Height in pixels
+  // Default: 400 (varies by chart type)
+  height?: number
+}
+
 export interface ChartOptions {
   // Single-series mode (legacy)
   data?: DataPoint[]
@@ -65,6 +75,9 @@ export interface ChartOptions {
 
   colors: ChartColors
   title: string
+
+  // Chart dimensions (width/height)
+  dimensions?: ChartDimensions
 
   // Statistical overlays
   statisticalOverlays?: StatisticalOverlays

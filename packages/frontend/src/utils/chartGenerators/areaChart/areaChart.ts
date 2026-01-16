@@ -51,11 +51,8 @@ function generateSingleSeriesArea(
   overlays?: ChartOptions['statisticalOverlays'],
   styleOverrides?: ChartOptions['styleOverrides']
 ): string {
-  // Dynamic width based on data count for better visibility
-  const minPointSpacing = 4
-  const baseWidth = 600
-  const calculatedWidth = Math.max(baseWidth, data.length * minPointSpacing)
-  const width = calculatedWidth
+  // Fixed width - points scale to fit within the chart area
+  const width = 600
   const height = 400
   const margin = { top: 60, right: 40, bottom: 80, left: 60 }
   const chartWidth = width - margin.left - margin.right
@@ -243,11 +240,8 @@ function generateMultiSeriesArea(
   overlays?: ChartOptions['statisticalOverlays'],
   styleOverrides?: ChartOptions['styleOverrides']
 ): string {
-  // Dynamic width based on data count
-  const minPointSpacing = 4
-  const baseWidth = 600
-  const calculatedWidth = Math.max(baseWidth, seriesData.length * minPointSpacing)
-  const width = calculatedWidth
+  // Fixed width - points scale to fit within the chart area
+  const width = 600
   const legendRows = Math.ceil(seriesConfig.length / Math.floor((width - 100) / 120))
   const legendHeight = legendRows * 25 + 20
   const height = 400 + legendHeight

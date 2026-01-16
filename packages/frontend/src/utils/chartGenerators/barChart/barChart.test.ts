@@ -78,12 +78,12 @@ describe('generateBarChart', () => {
     })
 
     expect(result).toContain('<svg')
-    // Should have dynamic width for large datasets
+    // Width should remain fixed at 600px - bars scale to fit
     const widthMatch = result.match(/width="(\d+)"/)
     expect(widthMatch).toBeTruthy()
     if (widthMatch) {
       const width = parseInt(widthMatch[1])
-      expect(width).toBeGreaterThan(600) // Should be larger than base width
+      expect(width).toBe(600) // Fixed width, bars scale to fit
     }
   })
 

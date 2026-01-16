@@ -3,7 +3,8 @@
     "allow": [
       "Bash(pnpm install:*)",
       "Bash(pnpm db:generate:*)",
-      "Bash(tasklist:*)"
+      "Bash(tasklist:*)",
+      "Bash(git push:*)"
     ]
   }
 }

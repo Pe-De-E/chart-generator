@@ -79,11 +79,12 @@ describe('generateScatterChart', () => {
     })
 
     expect(result).toContain('<svg')
+    // Width should remain fixed at 600px - points scale to fit
     const widthMatch = result.match(/width="(\d+)"/)
     expect(widthMatch).toBeTruthy()
     if (widthMatch) {
       const width = parseInt(widthMatch[1])
-      expect(width).toBeGreaterThan(600)
+      expect(width).toBe(600) // Fixed width, points scale to fit
     }
   })
 

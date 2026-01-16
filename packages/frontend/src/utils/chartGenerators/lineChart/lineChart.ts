@@ -1,5 +1,28 @@
-import type { ChartOptions } from '@chart-generator/shared'
+import type { ChartOptions, ChartDimensions } from '@chart-generator/shared'
 import { renderStatisticalOverlays, hasAnyOverlayEnabled } from '../statisticalOverlayRenderer'
+
+// TODO hier weiter machen um die breite der grafiken variabel zu halten
+
+// Default dimensions
+const DEFAULT_WIDTH = 600
+const DEFAULT_HEIGHT = 400
+
+// Helper to get SVG dimension attributes
+function getSvgDimensions(dimensions?: ChartDimensions, defaultHeight = DEFAULT_HEIGHT): {
+  width: number
+  height: number
+  svgWidth: string
+  svgHeight: string
+} {
+  const width = typeof dimensions?.width === 'number' ? dimensions.width : DEFAULT_WIDTH
+  const height = dimensions?.height ?? defaultHeight
+
+  // For 'auto' width, use 100% but keep internal calculations at DEFAULT_WIDTH
+  const svgWidth = dimensions?.width === 'auto' ? '100%' : String(width)
+  const svgHeight = String(height)
+
+  return { width, height, svgWidth, svgHeight }
+}
 
 // Helper function to generate legend with editable attributes
 function generateLegend(
@@ -28,7 +51,7 @@ function generateLegend(
 }
 
 export function generateLineChart(options: ChartOptions): string {
-  const { data, seriesData, seriesConfig, styleOverrides } = options
+  const { data, seriesData, seriesConfig, styleOverrides, dimensions } = options
 
   // Detect mode
   const isSingleSeries = !!data
@@ -36,11 +59,11 @@ export function generateLineChart(options: ChartOptions): string {
   if (isSingleSeries) {
     // Legacy single-series mode
     const { colors, title, statisticalOverlays } = options
-    return generateSingleSeriesLine(data!, colors, title, statisticalOverlays, styleOverrides)
+    return generateSingleSeriesLine(data!, colors, title, statisticalOverlays, styleOverrides, dimensions)
   } else {
     // Multi-series mode
     const { colors, title, statisticalOverlays } = options
-    return generateMultiSeriesLine(seriesData!, seriesConfig!, colors, title, statisticalOverlays, styleOverrides)
+    return generateMultiSeriesLine(seriesData!, seriesConfig!, colors, title, statisticalOverlays, styleOverrides, dimensions)
   }
 }
 
@@ -49,14 +72,11 @@ function generateSingleSeriesLine(
   colors: { primary?: string, secondary?: string, background: string },
   title: string,
   overlays?: ChartOptions['statisticalOverlays'],
-  styleOverrides?: ChartOptions['styleOverrides']
+  styleOverrides?: ChartOptions['styleOverrides'],
+  dimensions?: ChartDimensions
 ): string {
-  // Dynamic width based on data count for better visibility
-  const minPointSpacing = 4
-  const baseWidth = 600
-  const calculatedWidth = Math.max(baseWidth, data.length * minPointSpacing)
-  const width = calculatedWidth
-  const height = 400
+  // Get dimensions - supports fixed width, 'auto' (100%), or custom values
+  const { width, height, svgWidth, svgHeight } = getSvgDimensions(dimensions, DEFAULT_HEIGHT)
   const margin = { top: 60, right: 40, bottom: 80, left: 60 }
   const chartWidth = width - margin.left - margin.right
   const chartHeight = height - margin.top - margin.bottom
@@ -228,11 +248,8 @@ function generateMultiSeriesLine(
   overlays?: ChartOptions['statisticalOverlays'],
   styleOverrides?: ChartOptions['styleOverrides']
 ): string {
-  // Dynamic width based on data count
-  const minPointSpacing = 4
-  const baseWidth = 600
-  const calculatedWidth = Math.max(baseWidth, seriesData.length * minPointSpacing)
-  const width = calculatedWidth
+  // Fixed width - points scale to fit within the chart area
+  const width = 600
   const legendRows = Math.ceil(seriesConfig.length / Math.floor((width - 100) / 120))
   const legendHeight = legendRows * 25 + 20
   const height = 400 + legendHeight

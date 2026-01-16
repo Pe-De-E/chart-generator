@@ -11,6 +11,7 @@
     </v-row>
 
     <!-- Empty State - No Charts yet -->
+     <!-- TODO bitte in eine eigene komponente auslagern -->
     <v-row v-else-if="charts.length === 0">
       <v-col cols="12">
         <v-card class="pa-12 text-center" variant="outlined">
@@ -52,6 +53,7 @@
     </v-row>
 
     <!-- Delete Confirmation Dialog -->
+     <!-- TODO sollte in eine eigene komponente -->
     <v-dialog v-model="deleteDialog" max-width="500">
       <v-card>
         <v-card-title class="text-h5">
@@ -100,6 +102,7 @@ onMounted(async () => {
 })
 
 async function loadCharts() {
+  // TODO sollte ein composable sein
   try {
     loading.value = true
     charts.value = await chartService.getUserCharts()

@@ -6,7 +6,7 @@ import {
   DEFAULT_DOWNSAMPLE_OPTIONS,
   PREMIUM_DOWNSAMPLE_OPTIONS,
   downsampleGPX
-} from '@/utils/downsampling'
+} from '../utils/downsampling'
 
 // Re-export downsampling types and constants for convenience
 export {

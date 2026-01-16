@@ -10,9 +10,12 @@ import {
   distanceToX,
   pointsToPolyline,
   pointsToAreaPolygon,
+  applyVisualNormalization,
+  analyzeElevationProfile,
   VIEW_BOX_PRESETS,
   type GPXPoint,
-  type ViewBoxConfig
+  type ViewBoxConfig,
+  type DataBounds
 } from './coordinateContract'
 
 describe('calculateBounds', () => {
@@ -197,6 +200,176 @@ describe('gpxToViewBox', () => {
     // With 10% padding, min elevation becomes 450, max becomes 1050
     expect(result.bounds.minElevation).toBe(450)
     expect(result.bounds.maxElevation).toBe(1050)
+  })
+
+  it('should apply visual normalization when enabled', () => {
+    // Flat route with only 20m elevation difference
+    const points: GPXPoint[] = [
+      { distance: 0, elevation: 100 },
+      { distance: 10, elevation: 120 }
+    ]
+
+    const config: ViewBoxConfig = {
+      width: 100,
+      height: 100,
+      padding: { top: 0, right: 0, bottom: 0, left: 0 }
+    }
+
+    const result = gpxToViewBox(points, config, { visualNormalization: true })
+
+    // Should expand to minimum visual range (100m default)
+    expect(result.visualInfo?.wasNormalized).toBe(true)
+    expect(result.visualInfo?.normalizationType).toBe('expanded')
+    expect(result.bounds.elevationRange).toBeGreaterThanOrEqual(100)
+  })
+})
+
+describe('applyVisualNormalization', () => {
+  it('should expand flat routes to minimum visual range', () => {
+    const bounds: DataBounds = {
+      minDistance: 0,
+      maxDistance: 10,
+      minElevation: 500,
+      maxElevation: 520, // Only 20m range
+      distanceRange: 10,
+      elevationRange: 20
+    }
+
+    const result = applyVisualNormalization(bounds, {
+      enabled: true,
+      minVisualRange: 100,
+      maxVisualRange: 2000,
+      exaggeration: 1.0
+    })
+
+    expect(result.wasNormalized).toBe(true)
+    expect(result.normalizationType).toBe('expanded')
+    expect(result.elevationRange).toBe(100)
+    // Mid-point should be preserved (510m)
+    expect((result.minElevation + result.maxElevation) / 2).toBe(510)
+  })
+
+  it('should compress extreme routes to maximum visual range', () => {
+    const bounds: DataBounds = {
+      minDistance: 0,
+      maxDistance: 100,
+      minElevation: 0,
+      maxElevation: 3000, // 3000m range - very mountainous
+      distanceRange: 100,
+      elevationRange: 3000
+    }
+
+    const result = applyVisualNormalization(bounds, {
+      enabled: true,
+      minVisualRange: 100,
+      maxVisualRange: 2000,
+      exaggeration: 1.0
+    })
+
+    expect(result.wasNormalized).toBe(true)
+    expect(result.normalizationType).toBe('compressed')
+    expect(result.elevationRange).toBe(2000)
+  })
+
+  it('should not modify bounds within normal range', () => {
+    const bounds: DataBounds = {
+      minDistance: 0,
+      maxDistance: 50,
+      minElevation: 500,
+      maxElevation: 1000, // 500m range - normal
+      distanceRange: 50,
+      elevationRange: 500
+    }
+
+    const result = applyVisualNormalization(bounds, {
+      enabled: true,
+      minVisualRange: 100,
+      maxVisualRange: 2000,
+      exaggeration: 1.0
+    })
+
+    expect(result.wasNormalized).toBe(false)
+    expect(result.normalizationType).toBe('none')
+    expect(result.elevationRange).toBe(500)
+  })
+
+  it('should apply exaggeration factor', () => {
+    const bounds: DataBounds = {
+      minDistance: 0,
+      maxDistance: 50,
+      minElevation: 500,
+      maxElevation: 1000,
+      distanceRange: 50,
+      elevationRange: 500
+    }
+
+    const result = applyVisualNormalization(bounds, {
+      enabled: true,
+      minVisualRange: 100,
+      maxVisualRange: 2000,
+      exaggeration: 2.0 // Make it look 2x steeper
+    })
+
+    expect(result.wasNormalized).toBe(true)
+    expect(result.elevationRange).toBe(250) // 500 / 2.0
+  })
+
+  it('should return unchanged bounds when disabled', () => {
+    const bounds: DataBounds = {
+      minDistance: 0,
+      maxDistance: 10,
+      minElevation: 500,
+      maxElevation: 520,
+      distanceRange: 10,
+      elevationRange: 20
+    }
+
+    const result = applyVisualNormalization(bounds, {
+      enabled: false,
+      minVisualRange: 100,
+      maxVisualRange: 2000,
+      exaggeration: 1.0
+    })
+
+    expect(result.wasNormalized).toBe(false)
+    expect(result.elevationRange).toBe(20)
+  })
+})
+
+describe('analyzeElevationProfile', () => {
+  it('should classify flat route correctly', () => {
+    const points: GPXPoint[] = [
+      { distance: 0, elevation: 100 },
+      { distance: 10, elevation: 105 },
+      { distance: 20, elevation: 100 }
+    ]
+
+    const result = analyzeElevationProfile(points)
+
+    expect(result.profileType).toBe('flat')
+    expect(result.suggestedExaggeration).toBe(2.0)
+    expect(result.totalAscent).toBe(5)
+    expect(result.totalDescent).toBe(5)
+  })
+
+  it('should classify mountainous route correctly', () => {
+    const points: GPXPoint[] = [
+      { distance: 0, elevation: 500 },
+      { distance: 5, elevation: 1500 },
+      { distance: 10, elevation: 500 }
+    ]
+
+    const result = analyzeElevationProfile(points)
+
+    expect(result.profileType).toBe('mountainous')
+    expect(result.suggestedExaggeration).toBeLessThan(1.0)
+    expect(result.totalAscent).toBe(1000)
+    expect(result.totalDescent).toBe(1000)
+  })
+
+  it('should handle empty or single point arrays', () => {
+    expect(analyzeElevationProfile([]).profileType).toBe('flat')
+    expect(analyzeElevationProfile([{ distance: 0, elevation: 100 }]).profileType).toBe('flat')
   })
 })
 
