@@ -1,4 +1,27 @@
 import { ref, computed } from 'vue'
+import {
+  type DownsampleOptions,
+  type GPXPoint,
+  type DownsampleResult,
+  DEFAULT_DOWNSAMPLE_OPTIONS,
+  PREMIUM_DOWNSAMPLE_OPTIONS,
+  downsampleGPX
+} from '@/utils/downsampling'
+
+// Re-export downsampling types and constants for convenience
+export {
+  type DownsampleOptions,
+  type GPXPoint,
+  type DownsampleResult,
+  DEFAULT_DOWNSAMPLE_OPTIONS,
+  PREMIUM_DOWNSAMPLE_OPTIONS
+}
+
+export interface GPXParseResult {
+  headers: TableHeader[]
+  items: TableItem[]
+  downsampling: DownsampleResult
+}
 
 export interface TableHeader {
   title: string
@@ -132,7 +155,10 @@ export function useCSVParser() {
     tableItems.value = allRows
   }
 
-  function parseGPX(xmlText: string) {
+  function parseGPX(
+    xmlText: string,
+    options: DownsampleOptions = DEFAULT_DOWNSAMPLE_OPTIONS
+  ): GPXParseResult | null {
     const parser = new DOMParser()
     const doc = parser.parseFromString(xmlText, 'application/xml')
 
@@ -140,7 +166,7 @@ export function useCSVParser() {
     const parseError = doc.querySelector('parsererror')
     if (parseError) {
       console.error('GPX parsing error:', parseError.textContent)
-      return
+      return null
     }
 
     // Extract all trackpoints from <trkpt> elements
@@ -148,16 +174,17 @@ export function useCSVParser() {
 
     if (trackPoints.length === 0) {
       console.error('No trackpoints found in GPX file')
-      return
+      return null
     }
 
     // Set up headers for elevation profile
-    tableHeaders.value = [
+    const headers: TableHeader[] = [
       { title: 'Entfernung (km)', key: 'col_0', sortable: true },
       { title: 'Höhe (m)', key: 'col_1', sortable: true },
     ]
 
-    const rows: TableItem[] = []
+    // Extract all points first
+    const allPoints: GPXPoint[] = []
     let cumulativeDistance = 0
     let prevLat: number | null = null
     let prevLon: number | null = null
@@ -176,21 +203,32 @@ export function useCSVParser() {
       // Convert to kilometers and round to 2 decimal places
       const distanceKm = Math.round((cumulativeDistance / 1000) * 100) / 100
 
-      rows.push({
-        col_0: distanceKm,
-        col_1: Math.round(elevation)
+      allPoints.push({
+        distance: distanceKm,
+        elevation: Math.round(elevation)
       })
 
       prevLat = lat
       prevLon = lon
     })
 
-    // Reduce data points if too many (keep ~500 points max for performance)
-    if (rows.length > 500) {
-      const step = Math.ceil(rows.length / 500)
-      tableItems.value = rows.filter((_, index) => index % step === 0)
-    } else {
-      tableItems.value = rows
+    // Apply intelligent downsampling
+    const downsamplingResult = downsampleGPX(allPoints, options)
+
+    // Convert to table format
+    const items: TableItem[] = downsamplingResult.points.map(p => ({
+      col_0: p.distance,
+      col_1: p.elevation
+    }))
+
+    // Update reactive state
+    tableHeaders.value = headers
+    tableItems.value = items
+
+    return {
+      headers,
+      items,
+      downsampling: downsamplingResult
     }
   }
 

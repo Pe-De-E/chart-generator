@@ -35,6 +35,27 @@
           <v-alert type="info" variant="tonal" density="compact">
             {{ tableItems.length }} Zeilen geladen
           </v-alert>
+          <v-alert
+            v-if="downsamplingInfo"
+            type="success"
+            variant="tonal"
+            density="compact"
+            class="mt-2"
+          >
+            <v-icon icon="mdi-chart-timeline-variant-shimmer" class="mr-1"></v-icon>
+            Optimiert: {{ downsamplingInfo.original.toLocaleString() }} → {{ downsamplingInfo.reduced.toLocaleString() }} Punkte
+            <span class="text-caption ml-1">({{ downsamplingInfo.percentage }}% reduziert, Kurvenform erhalten)</span>
+          </v-alert>
+          <v-alert
+            v-if="premiumMode && lastGPXResult && !downsamplingInfo"
+            type="info"
+            variant="tonal"
+            density="compact"
+            class="mt-2"
+          >
+            <v-icon icon="mdi-star" class="mr-1"></v-icon>
+            Premium: Alle {{ tableItems.length.toLocaleString() }} Punkte erhalten
+          </v-alert>
         </v-card-text>
       </v-card>
 
@@ -63,7 +84,8 @@
 
 <script setup lang="ts">
 import { ref, computed, type PropType } from 'vue'
-import type { TableHeader, TableItem } from '../../composables/useCSVParser'
+import type { TableHeader, TableItem, GPXParseResult, DownsampleOptions } from '../../composables/useCSVParser'
+import { DEFAULT_DOWNSAMPLE_OPTIONS, PREMIUM_DOWNSAMPLE_OPTIONS } from '../../composables/useCSVParser'
 
 const props = defineProps({
   tableHeaders: {
@@ -79,8 +101,12 @@ const props = defineProps({
     required: true
   },
   parseGPX: {
-    type: Function as PropType<(text: string) => void>,
+    type: Function as PropType<(text: string, options?: DownsampleOptions) => GPXParseResult | null>,
     required: true
+  },
+  premiumMode: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -90,6 +116,7 @@ const emit = defineEmits<{
 }>()
 
 const uploadedFile = ref<File[]>([])
+const lastGPXResult = ref<GPXParseResult | null>(null)
 
 const fileTypeHint = computed(() => {
   const file = uploadedFile.value?.[0]
@@ -100,9 +127,22 @@ const fileTypeHint = computed(() => {
   return 'CSV-Datei erkannt'
 })
 
+const downsamplingInfo = computed(() => {
+  if (!lastGPXResult.value) return null
+  const { downsampling } = lastGPXResult.value
+  if (!downsampling.wasDownsampled) return null
+  return {
+    original: downsampling.originalCount,
+    reduced: downsampling.downsampledCount,
+    percentage: Math.round((1 - downsampling.downsampledCount / downsampling.originalCount) * 100)
+  }
+})
+
 const handleFileUpload = (files: File | File[] | null) => {
   const file = Array.isArray(files) ? files[0] : files
   if (!file) return
+
+  lastGPXResult.value = null
 
   const reader = new FileReader()
   reader.onload = (e) => {
@@ -110,7 +150,9 @@ const handleFileUpload = (files: File | File[] | null) => {
     if (!text) return
 
     if (file.name.toLowerCase().endsWith('.gpx')) {
-      props.parseGPX(text)
+      const options = props.premiumMode ? PREMIUM_DOWNSAMPLE_OPTIONS : DEFAULT_DOWNSAMPLE_OPTIONS
+      const result = props.parseGPX(text, options)
+      lastGPXResult.value = result
       emit('gpx-loaded')
     } else {
       props.parseCSV(text)

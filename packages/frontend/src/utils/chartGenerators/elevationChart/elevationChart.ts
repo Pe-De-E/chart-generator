@@ -1,7 +1,17 @@
 import type { ChartOptions } from '@chart-generator/shared'
 import { renderStatisticalOverlays, hasAnyOverlayEnabled } from '../statisticalOverlayRenderer'
-
-// TODO hier braucht es noch Tests
+import {
+  gpxToViewBox,
+  pointsToPolyline,
+  pointsToAreaPolygon,
+  elevationToY,
+  getChartArea,
+  calculateBounds,
+  padBounds,
+  VIEW_BOX_PRESETS,
+  type GPXPoint,
+  type ViewBoxConfig
+} from '../../coordinateContract'
 
 export function generateElevationChart(options: ChartOptions): string {
   const { data, seriesData, seriesConfig, silhouetteMode, styleOverrides } = options
@@ -34,48 +44,29 @@ function generateSilhouette(
 ): string {
   if (data.length === 0) return '<svg></svg>'
 
-  const width = 800
-  const height = 200
-  const padding = 10
+  // Convert to GPX format (label as distance index, value as elevation)
+  const gpxPoints: GPXPoint[] = data.map((d, i) => ({
+    distance: i,
+    elevation: d.value
+  }))
 
-  const values = data.map(d => d.value)
-  const minValue = Math.min(...values)
-  const maxValue = Math.max(...values)
-  const valueRange = maxValue - minValue || 1
+  const config = VIEW_BOX_PRESETS.silhouette
+  const { viewBoxPoints, chartArea } = gpxToViewBox(gpxPoints, config)
 
-  const chartWidth = width - padding * 2
-  const chartHeight = height - padding * 2
-  const xStep = data.length > 1 ? chartWidth / (data.length - 1) : chartWidth / 2
-
-  // Build the line path
-  const linePoints = data.map((d, i) => {
-    const x = padding + i * xStep
-    const y = padding + chartHeight - ((d.value - minValue) / valueRange) * chartHeight
-    return `${x},${y}`
-  }).join(' ')
-
-  // Build area path (for subtle gradient fill)
-  const areaPoints = data.map((d, i) => {
-    const x = padding + i * xStep
-    const y = padding + chartHeight - ((d.value - minValue) / valueRange) * chartHeight
-    return `${x},${y}`
-  })
-  const lastX = padding + (data.length - 1) * xStep
-  const bottomRight = `${lastX},${height - padding}`
-  const bottomLeft = `${padding},${height - padding}`
-  const fullAreaPath = [bottomLeft, ...areaPoints, bottomRight].join(' ')
+  const linePoints = pointsToPolyline(viewBoxPoints)
+  const areaPath = pointsToAreaPolygon(viewBoxPoints, chartArea)
 
   const gradientId = `silhouette-gradient-${Date.now()}`
 
   return `
-    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+    <svg width="${config.width}" height="${config.height}" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <linearGradient id="${gradientId}" x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%" style="stop-color:${color};stop-opacity:0.4"/>
           <stop offset="100%" style="stop-color:${color};stop-opacity:0.05"/>
         </linearGradient>
       </defs>
-      <polygon points="${fullAreaPath}" fill="url(#${gradientId})"/>
+      <polygon points="${areaPath}" fill="url(#${gradientId})"/>
       <polyline points="${linePoints}" fill="none" stroke="${color}"
                 stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
     </svg>
@@ -89,27 +80,25 @@ function generateSingleSeriesElevation(
   overlays?: ChartOptions['statisticalOverlays'],
   styleOverrides?: ChartOptions['styleOverrides']
 ): string {
-  // Dynamic width based on data count
-  const minPointSpacing = 4
-  const baseWidth = 600
-  const calculatedWidth = Math.max(baseWidth, data.length * minPointSpacing)
-  const width = calculatedWidth
-  const height = 350
-  const margin = { top: 60, right: 40, bottom: 80, left: 70 }
-  const chartWidth = width - margin.left - margin.right
-  const chartHeight = height - margin.top - margin.bottom
+  // Use standard ViewBox preset
+  const config: ViewBoxConfig = VIEW_BOX_PRESETS.standard
+  const { width, height } = config
 
-  const values = data.map(d => d.value)
-  const minValue = Math.min(...values)
-  const maxValue = Math.max(...values)
+  // Convert data to GPX format for coordinate contract
+  const gpxPoints: GPXPoint[] = data.map((d, i) => ({
+    distance: i,
+    elevation: d.value
+  }))
 
-  // Add padding to Y-axis range
-  const valueRange = maxValue - minValue
-  const yMin = Math.floor(minValue - valueRange * 0.1)
-  const yMax = Math.ceil(maxValue + valueRange * 0.1)
+  // Use coordinate contract for transformation (with 10% padding)
+  const { viewBoxPoints, bounds, chartArea } = gpxToViewBox(gpxPoints, config, {
+    paddingPercent: 0.1
+  })
+
+  // Round bounds for nice Y-axis labels
+  const yMin = Math.floor(bounds.minElevation)
+  const yMax = Math.ceil(bounds.maxElevation)
   const adjustedRange = yMax - yMin
-
-  const xStep = data.length > 1 ? chartWidth / (data.length - 1) : chartWidth / 2
 
   // Show every nth label based on data count
   const labelInterval = data.length > 20 ? Math.ceil(data.length / 15) : 1
@@ -120,7 +109,8 @@ function generateSingleSeriesElevation(
   const stepValue = Math.ceil(adjustedRange / yAxisSteps)
   const yAxisLabels = Array.from({ length: yAxisSteps + 1 }, (_, i) => {
     const value = yMin + i * stepValue
-    const y = margin.top + chartHeight - ((value - yMin) / adjustedRange) * chartHeight
+    const normalizedY = (value - yMin) / adjustedRange
+    const y = chartArea.y + chartArea.height - normalizedY * chartArea.height
     return { value, y }
   }).filter(item => item.value <= yMax)
 
@@ -131,8 +121,8 @@ function generateSingleSeriesElevation(
   const titleColor = titleOverride?.color ?? '#1F2937'
   const titleWeight = titleOverride?.fontWeight ?? 'bold'
   const titleAlign = titleOverride?.alignment ?? 'center'
-  const titleX = titleAlign === 'left' ? margin.left
-               : titleAlign === 'right' ? width - margin.right
+  const titleX = titleAlign === 'left' ? chartArea.x
+               : titleAlign === 'right' ? width - config.padding.right
                : width / 2
   const titleAnchor = titleAlign === 'left' ? 'start'
                     : titleAlign === 'right' ? 'end'
@@ -148,29 +138,17 @@ function generateSingleSeriesElevation(
   // Generate unique gradient ID
   const gradientId = `elevation-gradient-${Date.now()}`
 
-  // Build the area path
-  const areaPoints = data.map((d, i) => {
-    const x = margin.left + i * xStep
-    const y = margin.top + chartHeight - ((d.value - yMin) / adjustedRange) * chartHeight
-    return `${x},${y}`
-  })
+  // Use coordinate contract for line and area paths
+  const linePoints = pointsToPolyline(viewBoxPoints)
+  const fullAreaPath = pointsToAreaPolygon(viewBoxPoints, chartArea)
 
-  // Add bottom corners to close the area
-  const lastX = margin.left + (data.length - 1) * xStep
-  const bottomRight = `${lastX},${margin.top + chartHeight}`
-  const bottomLeft = `${margin.left},${margin.top + chartHeight}`
-  const fullAreaPath = [bottomLeft, ...areaPoints, bottomRight].join(' ')
-
-  // Line path
-  const linePoints = areaPoints.join(' ')
-
-  // X-axis labels (distance)
+  // X-axis labels (distance) - use ViewBox points for x coordinates
   const xLabels = data.map((d, i) => {
     const showLabel = i % labelInterval === 0
     if (!showLabel) return ''
 
-    const x = margin.left + i * xStep
-    const labelY = margin.top + chartHeight + 15
+    const x = viewBoxPoints[i].x
+    const labelY = chartArea.y + chartArea.height + 15
 
     return `
       <text id="x-label-${i}" class="editable" data-type="x-label"
@@ -181,28 +159,28 @@ function generateSingleSeriesElevation(
     `
   }).join('')
 
-  // Y-axis labels and grid lines
+  // Y-axis labels and grid lines - using chartArea from coordinate contract
   const yAxis = yAxisLabels.map(({ value, y }, i) => `
     <line id="grid-line-${i}" data-type="grid-line" data-index="${i}" data-value="${value}"
-          x1="${margin.left}" y1="${y}" x2="${width - margin.right}" y2="${y}"
+          x1="${chartArea.x}" y1="${y}" x2="${chartArea.x + chartArea.width}" y2="${y}"
           stroke="#E5E7EB" stroke-width="1" stroke-dasharray="4"/>
-    <line x1="${margin.left - 5}" y1="${y}" x2="${margin.left}" y2="${y}"
+    <line x1="${chartArea.x - 5}" y1="${y}" x2="${chartArea.x}" y2="${y}"
           stroke="#9CA3AF" stroke-width="1"/>
     <text id="y-label-${i}" class="editable" data-type="y-label" data-index="${i}"
           data-value="${value}" data-editable="true"
-          x="${margin.left - 10}" y="${y + 4}"
+          x="${chartArea.x - 10}" y="${y + 4}"
           text-anchor="end" font-size="10" fill="#6B7280">${value}</text>
   `).join('')
 
-  // Statistical overlays
+  // Statistical overlays - using chartArea from coordinate contract
   const statisticalOverlay = overlays && hasAnyOverlayEnabled(overlays)
     ? renderStatisticalOverlays({
         overlays,
         values: data.map(d => d.value),
-        chartX: margin.left,
-        chartY: margin.top,
-        chartWidth,
-        chartHeight,
+        chartX: chartArea.x,
+        chartY: chartArea.y,
+        chartWidth: chartArea.width,
+        chartHeight: chartArea.height,
         minValue: yMin,
         maxValue: yMax
       })
@@ -239,19 +217,19 @@ function generateSingleSeriesElevation(
       <!-- Ascent/Descent info -->
       <text id="elevation-stats" class="editable" data-type="elevation-stats"
             data-ascent="${totalAscent.toFixed(0)}" data-descent="${totalDescent.toFixed(0)}"
-            data-editable="true" x="${margin.left}" y="45" font-size="11" fill="#4B5563">
+            data-editable="true" x="${chartArea.x}" y="45" font-size="11" fill="#4B5563">
         ↗ ${totalAscent.toFixed(0)} m  ↘ ${totalDescent.toFixed(0)} m
       </text>
 
       <!-- Y-axis label -->
       <text id="y-axis-title" class="editable" data-type="axis-title" data-editable="true"
-            x="15" y="${margin.top + chartHeight / 2}"
+            x="15" y="${chartArea.y + chartArea.height / 2}"
             text-anchor="middle" font-size="11" fill="#6B7280"
-            transform="rotate(-90 15 ${margin.top + chartHeight / 2})">Höhe (m)</text>
+            transform="rotate(-90 15 ${chartArea.y + chartArea.height / 2})">Höhe (m)</text>
 
       <!-- X-axis label -->
       <text id="x-axis-title" class="editable" data-type="axis-title" data-editable="true"
-            x="${margin.left + chartWidth / 2}" y="${height - 10}"
+            x="${chartArea.x + chartArea.width / 2}" y="${height - 10}"
             text-anchor="middle" font-size="11" fill="#6B7280">Entfernung</text>
 
       ${yAxis}
@@ -269,11 +247,11 @@ function generateSingleSeriesElevation(
       ${xLabels}
 
       <!-- Axes -->
-      <line id="x-axis" data-type="axis" x1="${margin.left}" y1="${margin.top + chartHeight}"
-            x2="${width - margin.right}" y2="${margin.top + chartHeight}"
+      <line id="x-axis" data-type="axis" x1="${chartArea.x}" y1="${chartArea.y + chartArea.height}"
+            x2="${chartArea.x + chartArea.width}" y2="${chartArea.y + chartArea.height}"
             stroke="#9CA3AF" stroke-width="2"/>
-      <line id="y-axis" data-type="axis" x1="${margin.left}" y1="${margin.top}"
-            x2="${margin.left}" y2="${margin.top + chartHeight}"
+      <line id="y-axis" data-type="axis" x1="${chartArea.x}" y1="${chartArea.y}"
+            x2="${chartArea.x}" y2="${chartArea.y + chartArea.height}"
             stroke="#9CA3AF" stroke-width="2"/>
     </svg>
   `
@@ -287,19 +265,21 @@ function generateMultiSeriesElevation(
   overlays?: ChartOptions['statisticalOverlays'],
   styleOverrides?: ChartOptions['styleOverrides']
 ): string {
-  // Dynamic width based on data count
-  const minPointSpacing = 4
+  // Calculate legend dimensions
   const baseWidth = 600
-  const calculatedWidth = Math.max(baseWidth, seriesData.length * minPointSpacing)
-  const width = calculatedWidth
-  const legendRows = Math.ceil(seriesConfig.length / Math.floor((width - 100) / 120))
+  const legendRows = Math.ceil(seriesConfig.length / Math.floor((baseWidth - 100) / 120))
   const legendHeight = legendRows * 25 + 20
-  const height = 350 + legendHeight
-  const margin = { top: 60, right: 40, bottom: 80 + legendHeight, left: 70 }
-  const chartWidth = width - margin.left - margin.right
-  const chartHeight = height - margin.top - margin.bottom
 
-  // Find min/max across all series
+  // Create custom ViewBox config with legend space
+  const config: ViewBoxConfig = {
+    width: baseWidth,
+    height: 350 + legendHeight,
+    padding: { top: 60, right: 40, bottom: 80 + legendHeight, left: 70 }
+  }
+  const { width, height } = config
+  const chartArea = getChartArea(config)
+
+  // Find min/max across all series for shared bounds
   let minValue = Infinity
   let maxValue = -Infinity
   seriesData.forEach(d => {
@@ -311,24 +291,23 @@ function generateMultiSeriesElevation(
     })
   })
 
-  // Add padding to Y-axis range
-  const valueRange = maxValue - minValue
+  // Create bounds with padding
+  const valueRange = maxValue - minValue || 1
   const yMin = Math.floor(minValue - valueRange * 0.1)
   const yMax = Math.ceil(maxValue + valueRange * 0.1)
   const adjustedRange = yMax - yMin
-
-  const xStep = seriesData.length > 1 ? chartWidth / (seriesData.length - 1) : chartWidth / 2
 
   // Show every nth label
   const labelInterval = seriesData.length > 20 ? Math.ceil(seriesData.length / 15) : 1
   const fontSize = seriesData.length > 15 ? 9 : 10
 
-  // Y-axis scale
+  // Y-axis scale using chartArea
   const yAxisSteps = 5
   const stepValue = Math.ceil(adjustedRange / yAxisSteps)
   const yAxisLabels = Array.from({ length: yAxisSteps + 1 }, (_, i) => {
     const value = yMin + i * stepValue
-    const y = margin.top + chartHeight - ((value - yMin) / adjustedRange) * chartHeight
+    const normalizedY = (value - yMin) / adjustedRange
+    const y = chartArea.y + chartArea.height - normalizedY * chartArea.height
     return { value, y }
   }).filter(item => item.value <= yMax)
 
@@ -339,8 +318,8 @@ function generateMultiSeriesElevation(
   const titleColor = titleOverride?.color ?? '#1F2937'
   const titleWeight = titleOverride?.fontWeight ?? 'bold'
   const titleAlign = titleOverride?.alignment ?? 'center'
-  const titleX = titleAlign === 'left' ? margin.left
-               : titleAlign === 'right' ? width - margin.right
+  const titleX = titleAlign === 'left' ? chartArea.x
+               : titleAlign === 'right' ? width - config.padding.right
                : width / 2
   const titleAnchor = titleAlign === 'left' ? 'start'
                     : titleAlign === 'right' ? 'end'
@@ -350,7 +329,7 @@ function generateMultiSeriesElevation(
   const xAxisOverride = styleOverrides?.xAxis?.labels
   const labelRotation = xAxisOverride?.rotation ?? -45
 
-  // Generate lines for each series (no stacking for elevation profiles)
+  // Generate lines for each series using coordinate contract
   let allLines = ''
   const timestamp = Date.now()
 
@@ -361,19 +340,25 @@ function generateMultiSeriesElevation(
 
     const gradientId = `elevation-gradient-${timestamp}-${seriesIndex}`
 
-    const points = seriesData.map((d, i) => {
-      const value = d.values[series.name] || 0
-      const x = margin.left + i * xStep
-      const y = margin.top + chartHeight - ((value - yMin) / adjustedRange) * chartHeight
-      return `${x},${y}`
-    })
+    // Convert series data to GPX points
+    const gpxPoints: GPXPoint[] = seriesData.map((d, i) => ({
+      distance: i,
+      elevation: d.values[series.name] || 0
+    }))
 
-    // Build area path
-    const lastX = margin.left + (seriesData.length - 1) * xStep
-    const bottomRight = `${lastX},${margin.top + chartHeight}`
-    const bottomLeft = `${margin.left},${margin.top + chartHeight}`
-    const fullAreaPath = [bottomLeft, ...points, bottomRight].join(' ')
-    const linePoints = points.join(' ')
+    // Use shared bounds for consistent scaling across series
+    const sharedBounds = {
+      minDistance: 0,
+      maxDistance: seriesData.length - 1 || 1,
+      minElevation: yMin,
+      maxElevation: yMax,
+      distanceRange: seriesData.length - 1 || 1,
+      elevationRange: adjustedRange
+    }
+
+    const { viewBoxPoints } = gpxToViewBox(gpxPoints, config, { bounds: sharedBounds })
+    const linePoints = pointsToPolyline(viewBoxPoints)
+    const fullAreaPath = pointsToAreaPolygon(viewBoxPoints, chartArea)
 
     allLines += `
       <defs>
@@ -392,13 +377,16 @@ function generateMultiSeriesElevation(
     `
   })
 
-  // X-axis labels
+  // Calculate X positions for labels (using coordinate contract logic)
+  const xStep = seriesData.length > 1 ? chartArea.width / (seriesData.length - 1) : chartArea.width / 2
+
+  // X-axis labels using chartArea
   const xLabels = seriesData.map((d, i) => {
     const showLabel = i % labelInterval === 0
     if (!showLabel) return ''
 
-    const x = margin.left + i * xStep
-    const labelY = margin.top + chartHeight + 15
+    const x = chartArea.x + i * xStep
+    const labelY = chartArea.y + chartArea.height + 15
 
     return `
       <text id="x-label-${i}" class="editable" data-type="x-label"
@@ -409,21 +397,21 @@ function generateMultiSeriesElevation(
     `
   }).join('')
 
-  // Y-axis
+  // Y-axis using chartArea
   const yAxis = yAxisLabels.map(({ value, y }, i) => `
     <line id="grid-line-${i}" data-type="grid-line" data-index="${i}" data-value="${value}"
-          x1="${margin.left}" y1="${y}" x2="${width - margin.right}" y2="${y}"
+          x1="${chartArea.x}" y1="${y}" x2="${chartArea.x + chartArea.width}" y2="${y}"
           stroke="#E5E7EB" stroke-width="1" stroke-dasharray="4"/>
-    <line x1="${margin.left - 5}" y1="${y}" x2="${margin.left}" y2="${y}"
+    <line x1="${chartArea.x - 5}" y1="${y}" x2="${chartArea.x}" y2="${y}"
           stroke="#9CA3AF" stroke-width="1"/>
     <text id="y-label-${i}" class="editable" data-type="y-label" data-index="${i}"
           data-value="${value}" data-editable="true"
-          x="${margin.left - 10}" y="${y + 4}"
+          x="${chartArea.x - 10}" y="${y + 4}"
           text-anchor="end" font-size="10" fill="#6B7280">${value}</text>
   `).join('')
 
-  // Legend
-  const legendY = margin.top + chartHeight + 50
+  // Legend using chartArea
+  const legendY = chartArea.y + chartArea.height + 50
   const legend = seriesConfig.map((series, i) => {
     const itemWidth = 120
     const itemsPerRow = Math.floor((width - 100) / itemWidth)
@@ -442,7 +430,7 @@ function generateMultiSeriesElevation(
     `
   }).join('')
 
-  // Statistical overlays
+  // Statistical overlays using chartArea
   const allValues: number[] = []
   seriesData.forEach(d => {
     Object.values(d.values).forEach(v => {
@@ -456,10 +444,10 @@ function generateMultiSeriesElevation(
     ? renderStatisticalOverlays({
         overlays,
         values: allValues,
-        chartX: margin.left,
-        chartY: margin.top,
-        chartWidth,
-        chartHeight,
+        chartX: chartArea.x,
+        chartY: chartArea.y,
+        chartWidth: chartArea.width,
+        chartHeight: chartArea.height,
         minValue: yMin,
         maxValue: yMax
       })
@@ -479,13 +467,13 @@ function generateMultiSeriesElevation(
 
       <!-- Y-axis label -->
       <text id="y-axis-title" class="editable" data-type="axis-title" data-editable="true"
-            x="15" y="${margin.top + chartHeight / 2}"
+            x="15" y="${chartArea.y + chartArea.height / 2}"
             text-anchor="middle" font-size="11" fill="#6B7280"
-            transform="rotate(-90 15 ${margin.top + chartHeight / 2})">Höhe (m)</text>
+            transform="rotate(-90 15 ${chartArea.y + chartArea.height / 2})">Höhe (m)</text>
 
       <!-- X-axis label -->
       <text id="x-axis-title" class="editable" data-type="axis-title" data-editable="true"
-            x="${margin.left + chartWidth / 2}" y="${height - legendHeight - 10}"
+            x="${chartArea.x + chartArea.width / 2}" y="${height - legendHeight - 10}"
             text-anchor="middle" font-size="11" fill="#6B7280">Entfernung</text>
 
       ${yAxis}
@@ -494,11 +482,11 @@ function generateMultiSeriesElevation(
       ${xLabels}
 
       <!-- Axes -->
-      <line id="x-axis" data-type="axis" x1="${margin.left}" y1="${margin.top + chartHeight}"
-            x2="${width - margin.right}" y2="${margin.top + chartHeight}"
+      <line id="x-axis" data-type="axis" x1="${chartArea.x}" y1="${chartArea.y + chartArea.height}"
+            x2="${chartArea.x + chartArea.width}" y2="${chartArea.y + chartArea.height}"
             stroke="#9CA3AF" stroke-width="2"/>
-      <line id="y-axis" data-type="axis" x1="${margin.left}" y1="${margin.top}"
-            x2="${margin.left}" y2="${margin.top + chartHeight}"
+      <line id="y-axis" data-type="axis" x1="${chartArea.x}" y1="${chartArea.y}"
+            x2="${chartArea.x}" y2="${chartArea.y + chartArea.height}"
             stroke="#9CA3AF" stroke-width="2"/>
 
       ${legend}
