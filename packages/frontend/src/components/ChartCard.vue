@@ -1,5 +1,5 @@
 <template>
-  <div class="reel-card" @click="$emit('edit', chart.id)">
+  <div class="reel-card" :style="{ background: backgroundColor }" @click="$emit('edit', chart.id)">
     <!-- Chart Preview Background -->
     <div class="reel-background">
       <v-img
@@ -78,6 +78,11 @@ const chartIcon = computed(() => {
     area: 'mdi-chart-areaspline',
   }
   return icons[props.chart.type] || 'mdi-chart-box'
+})
+
+const backgroundColor = computed(() => {
+  const config = props.chart.config as { colors?: { background?: string } }
+  return config?.colors?.background || '#1a1a1a'
 })
 
 const formattedDate = computed(() => {
