@@ -87,7 +87,7 @@
                     class="silhouette-chart"
                     :class="{ 'silhouette-chart--editing': viewMode === 'static' }"
                     @click="viewMode === 'static' ? handleChartClick($event) : null"
-                    v-html="viewMode === 'animate' ? animationSvg : svgContent"
+                    v-html="silhouetteSvg"
                   ></div>
                 </div>
               </template>
@@ -978,6 +978,77 @@ const animationProgress = computed(() => animation.progress.value);
 const playbackSpeed = computed(() => animation.playbackSpeed.value);
 const formattedTime = computed(() => animation.formattedTime.value);
 
+// Silhouette SVG - modified version for silhouette display
+const silhouetteSvg = computed(() => {
+  const baseSvg = viewMode.value === 'animate' ? animationSvg.value : props.svgContent;
+  if (!baseSvg) return '';
+
+  // Parse the SVG and modify it for silhouette display
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(baseSvg, 'image/svg+xml');
+  const svg = doc.querySelector('svg');
+  if (!svg) return baseSvg;
+
+  // Hide elements we don't want in silhouette mode
+  const elementsToHide = [
+    '#x-axis', '#y-axis',
+    '#x-axis-title', '#y-axis-title',
+    '#chart-title', '#elevation-stats', '#chart-background'
+  ];
+
+  elementsToHide.forEach(selector => {
+    const el = svg.querySelector(selector);
+    if (el) el.setAttribute('opacity', '0');
+  });
+
+  // Hide all labels and grid lines
+  svg.querySelectorAll('[id^="x-label"], [id^="y-label"], [id^="grid-line"]').forEach(el => {
+    el.setAttribute('opacity', '0');
+  });
+
+  // Style the elevation curve for silhouette look
+  const elevationArea = svg.querySelector('#elevation-area');
+  if (elevationArea) {
+    elevationArea.setAttribute('fill', 'url(#silhouette-gradient)');
+  }
+
+  const elevationLine = svg.querySelector('#elevation-line');
+  if (elevationLine) {
+    elevationLine.setAttribute('stroke', 'rgba(255, 255, 255, 0.9)');
+    elevationLine.setAttribute('stroke-width', '2');
+  }
+
+  // Add a gradient definition for the silhouette fill
+  const defs = svg.querySelector('defs') || doc.createElementNS('http://www.w3.org/2000/svg', 'defs');
+  if (!svg.querySelector('defs')) {
+    svg.insertBefore(defs, svg.firstChild);
+  }
+
+  // Create silhouette gradient
+  const gradient = doc.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
+  gradient.setAttribute('id', 'silhouette-gradient');
+  gradient.setAttribute('x1', '0%');
+  gradient.setAttribute('y1', '0%');
+  gradient.setAttribute('x2', '0%');
+  gradient.setAttribute('y2', '100%');
+
+  const stop1 = doc.createElementNS('http://www.w3.org/2000/svg', 'stop');
+  stop1.setAttribute('offset', '0%');
+  stop1.setAttribute('stop-color', 'rgba(255, 255, 255, 0.3)');
+
+  const stop2 = doc.createElementNS('http://www.w3.org/2000/svg', 'stop');
+  stop2.setAttribute('offset', '100%');
+  stop2.setAttribute('stop-color', 'rgba(255, 255, 255, 0.05)');
+
+  gradient.appendChild(stop1);
+  gradient.appendChild(stop2);
+  defs.appendChild(gradient);
+
+  // Serialize back to string
+  const serializer = new XMLSerializer();
+  return serializer.serializeToString(svg);
+});
+
 // Sync slider with animation progress
 watch(() => animation.progress.value, (newProgress) => {
   sliderProgress.value = newProgress * 100;
@@ -1073,6 +1144,9 @@ const emit = defineEmits<{
   margin: 2px;
   border-radius: 38px;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
 }
 
 .silhouette-background {
@@ -1087,51 +1161,20 @@ const emit = defineEmits<{
     #302b63 50%,
     #24243e 100%
   );
+  z-index: 0;
 }
 
 .silhouette-chart {
-  position: absolute;
-  bottom: -20%;
-  left: 0;
-  right: 0;
-  width: 100%;
+  position: relative;
   z-index: 1;
-  transform: scaleY(1.5);
-  transform-origin: bottom center;
+  width: 100%;
+  padding: 0;
 }
 
 .silhouette-chart :deep(svg) {
   width: 100% !important;
   height: auto !important;
   display: block;
-}
-
-/* Hide axes and labels in silhouette mode */
-.silhouette-chart :deep(#x-axis),
-.silhouette-chart :deep(#y-axis),
-.silhouette-chart :deep([id^="x-label"]),
-.silhouette-chart :deep([id^="y-label"]),
-.silhouette-chart :deep([id^="grid-line"]),
-.silhouette-chart :deep(#x-axis-title),
-.silhouette-chart :deep(#y-axis-title),
-.silhouette-chart :deep(#chart-title),
-.silhouette-chart :deep(#elevation-stats) {
-  opacity: 0 !important;
-}
-
-/* Make background transparent and curve more visible */
-.silhouette-chart :deep(#chart-background) {
-  fill: transparent !important;
-}
-
-/* Style the elevation curve for silhouette look */
-.silhouette-chart :deep(#elevation-area) {
-  fill: rgba(255, 255, 255, 0.1) !important;
-}
-
-.silhouette-chart :deep(#elevation-line) {
-  stroke: rgba(255, 255, 255, 0.8) !important;
-  stroke-width: 3px !important;
 }
 
 .silhouette-chart--editing :deep([data-editable="true"]) {
