@@ -500,7 +500,7 @@ const viewMode = ref<'animate' | 'static'>('animate');
 const layoutMode = ref<'silhouette' | 'free'>('silhouette');
 
 // Free positioning mode state
-const zoomLevel = ref(0.8);
+const zoomLevel = ref(0.4);
 const panX = ref(0);
 const panY = ref(0);
 const isDragging = ref(false);
@@ -509,8 +509,7 @@ const dragStartY = ref(0);
 
 // Computed style for free chart positioning
 const freeChartStyle = computed(() => ({
-  transform: `translate(${panX.value}px, ${panY.value}px) scale(${zoomLevel.value})`,
-  transformOrigin: 'center center',
+  transform: `scale(${zoomLevel.value}) translate(${panX.value}px, ${panY.value}px)`,
 }));
 
 // Zoom functions
@@ -546,7 +545,7 @@ function onDragEnd() {
 }
 
 function resetTransform() {
-  zoomLevel.value = 0.8;
+  zoomLevel.value = 0.4;
   panX.value = 0;
   panY.value = 0;
 }
@@ -1071,8 +1070,6 @@ const emit = defineEmits<{
 .silhouette-container {
   flex: 1;
   position: relative;
-  display: flex;
-  flex-direction: column;
   margin: 2px;
   border-radius: 38px;
   overflow: hidden;
@@ -1096,17 +1093,19 @@ const emit = defineEmits<{
 .silhouette-chart {
   position: absolute;
   bottom: 0;
-  left: 0;
-  right: 0;
-  height: 50%;
+  left: -10%;
+  right: -10%;
+  width: 120%;
+  height: auto;
   display: flex;
   align-items: flex-end;
+  justify-content: center;
+  z-index: 1;
 }
 
 .silhouette-chart :deep(svg) {
   width: 100% !important;
   height: auto !important;
-  max-height: 100%;
 }
 
 /* Hide axes and labels in silhouette mode */
@@ -1119,7 +1118,7 @@ const emit = defineEmits<{
 .silhouette-chart :deep(#y-axis-title),
 .silhouette-chart :deep(#chart-title),
 .silhouette-chart :deep(#elevation-stats) {
-  display: none !important;
+  opacity: 0 !important;
 }
 
 /* Make background transparent in silhouette */
@@ -1156,10 +1155,14 @@ const emit = defineEmits<{
 .free-chart {
   transition: transform 0.1s ease-out;
   will-change: transform;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .free-chart :deep(svg) {
-  width: 100% !important;
+  max-width: none !important;
+  width: auto !important;
   height: auto !important;
 }
 
