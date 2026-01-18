@@ -58,20 +58,16 @@
 
         <!-- Phone Preview Container -->
         <v-card-text class="d-flex justify-center align-center pa-4 bg-grey-lighten-3">
-          <!-- Phone Frame -->
+          <!-- Phone Frame (iPhone 16 / S25 Style) -->
           <div class="phone-frame">
-            <!-- Phone Notch -->
-            <div class="phone-notch"></div>
+            <!-- Dynamic Island -->
+            <div class="dynamic-island"></div>
 
             <!-- Phone Screen -->
             <div class="phone-screen">
               <!-- Animated View -->
               <template v-if="viewMode === 'animate'">
-                <AnimationPreview
-                  :chart-options="chartOptionsForAnimation"
-                  :animation-options="animationSettings"
-                  class="phone-content"
-                />
+                <div class="phone-content" v-html="animationSvg"></div>
               </template>
 
               <!-- Static View for Editing -->
@@ -84,17 +80,66 @@
                 ></div>
               </template>
             </div>
-
-            <!-- Instagram Label -->
-            <div class="instagram-label">
-              <v-icon size="small" class="mr-1">mdi-instagram</v-icon>
-              Instagram Story Preview
-            </div>
           </div>
         </v-card-text>
 
-        <!-- Animation Controls (below phone) -->
-        <v-card-text v-if="viewMode === 'animate'" class="pt-2">
+        <!-- Playback Controls (outside phone) -->
+        <v-card-text v-if="viewMode === 'animate'" class="pt-0 pb-2">
+          <div class="d-flex align-center justify-center ga-2 mb-3">
+            <!-- Play/Pause -->
+            <v-btn
+              :icon="isPlaying ? 'mdi-pause' : 'mdi-play'"
+              variant="flat"
+              color="primary"
+              size="large"
+              @click="togglePlayback"
+            />
+            <!-- Reset -->
+            <v-btn
+              icon="mdi-replay"
+              variant="text"
+              size="small"
+              @click="resetAnimation"
+              :disabled="animationProgress === 0"
+            />
+            <!-- Progress Slider -->
+            <v-slider
+              v-model="sliderProgress"
+              :min="0"
+              :max="100"
+              :step="0.1"
+              hide-details
+              class="flex-grow-1 mx-2"
+              style="max-width: 300px;"
+              color="primary"
+              track-color="grey-lighten-2"
+              @update:model-value="onSliderChange"
+            />
+            <!-- Time -->
+            <span class="text-caption" style="min-width: 60px; font-family: monospace;">
+              {{ formattedTime }}
+            </span>
+            <!-- Speed -->
+            <v-menu>
+              <template v-slot:activator="{ props: menuProps }">
+                <v-btn v-bind="menuProps" variant="text" size="small" style="min-width: 48px;">
+                  {{ playbackSpeed }}x
+                </v-btn>
+              </template>
+              <v-list density="compact">
+                <v-list-item
+                  v-for="speed in speedOptions"
+                  :key="speed"
+                  :active="playbackSpeed === speed"
+                  @click="setSpeed(speed)"
+                >
+                  <v-list-item-title>{{ speed }}x</v-list-item-title>
+                </v-list-item>
+              </v-list>
+            </v-menu>
+          </div>
+
+          <!-- Animation Settings -->
           <v-row dense>
             <v-col cols="6" sm="3">
               <v-text-field
@@ -148,6 +193,14 @@
             Klicken Sie auf Elemente zum Bearbeiten
           </div>
         </v-card-text>
+
+        <!-- Instagram Label -->
+        <div class="text-center pb-2">
+          <span class="text-caption text-grey d-inline-flex align-center">
+            <v-icon size="small" class="mr-1">mdi-instagram</v-icon>
+            Instagram Story (9:16)
+          </span>
+        </div>
       </v-card>
 
       <!-- Element Editor Dialog -->
@@ -381,7 +434,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, computed } from "vue";
+import { ref, nextTick, computed, watch } from "vue";
 import type { PropType } from "vue";
 import type { ChartColors } from "../../composables/useChartConfig";
 import type {
@@ -389,8 +442,9 @@ import type {
   ChartStyleOverrides,
 } from "../../utils/chartGenerators/types";
 import type { ChartOptions, AnimationOptions } from "@chart-generator/shared";
+import { DEFAULT_ANIMATION_OPTIONS } from "@chart-generator/shared";
 import ChartSettingsCard from "./ChartCreationStep/ChartSettingsCard.vue";
-import AnimationPreview from "../AnimationPreview.vue";
+import { useChartAnimation, type PlaybackSpeed } from "../../composables/useChartAnimation";
 
 // Settings panel expanded by default
 const expandedPanels = ref(["settings"]);
@@ -410,6 +464,12 @@ const easingOptions = [
   { title: 'Ease Out', value: 'ease-out' },
   { title: 'Ease In-Out', value: 'ease-in-out' },
 ];
+
+// Speed options for playback
+const speedOptions: PlaybackSpeed[] = [0.25, 0.5, 1, 1.5, 2];
+
+// Slider progress state
+const sliderProgress = ref(0);
 
 // ===== Interactive Editing State =====
 const showEditor = ref(false);
@@ -797,6 +857,7 @@ const chartOptionsForAnimation = computed<ChartOptions>(() => ({
 }));
 
 const animationSettings = computed<AnimationOptions>(() => ({
+  ...DEFAULT_ANIMATION_OPTIONS,
   enabled: true,
   durationMs: animationDuration.value * 1000,
   fps: 30,
@@ -805,6 +866,40 @@ const animationSettings = computed<AnimationOptions>(() => ({
   markerSize: animationMarkerSize.value,
   markerColor: '#ffffff',
 }));
+
+// Use the animation composable
+const animation = useChartAnimation(
+  chartOptionsForAnimation,
+  animationSettings
+);
+
+// Animation controls
+const animationSvg = computed(() => animation.currentSvg.value);
+const isPlaying = computed(() => animation.isPlaying.value);
+const animationProgress = computed(() => animation.progress.value);
+const playbackSpeed = computed(() => animation.playbackSpeed.value);
+const formattedTime = computed(() => animation.formattedTime.value);
+
+// Sync slider with animation progress
+watch(() => animation.progress.value, (newProgress) => {
+  sliderProgress.value = newProgress * 100;
+});
+
+function togglePlayback() {
+  animation.toggle();
+}
+
+function resetAnimation() {
+  animation.reset();
+}
+
+function onSliderChange(value: number) {
+  animation.seekTo(value / 100);
+}
+
+function setSpeed(speed: PlaybackSpeed) {
+  animation.setSpeed(speed);
+}
 
 const emit = defineEmits<{
   back: [];
@@ -822,49 +917,52 @@ const emit = defineEmits<{
 </script>
 
 <style scoped>
-/* Phone Frame Styles */
+/* iPhone 16 / Samsung S25 Style Phone Frame */
 .phone-frame {
   position: relative;
-  width: 270px; /* Scaled down from 1080px (1:4) */
-  height: 480px; /* 9:16 aspect ratio for Instagram Story */
-  background: #1a1a1a;
-  border-radius: 36px;
-  padding: 8px;
+  width: 240px; /* Scaled for preview */
+  height: 520px; /* ~19.5:9 aspect ratio like modern phones */
+  background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+  border-radius: 44px;
+  padding: 4px;
   box-shadow:
-    0 0 0 2px #333,
-    0 10px 40px rgba(0, 0, 0, 0.3),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+    0 0 0 1px #444,
+    0 20px 60px rgba(0, 0, 0, 0.4),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
-.phone-notch {
+/* Dynamic Island (iPhone 16 style) */
+.dynamic-island {
   position: absolute;
-  top: 12px;
+  top: 10px;
   left: 50%;
   transform: translateX(-50%);
-  width: 80px;
-  height: 24px;
-  background: #1a1a1a;
-  border-radius: 12px;
+  width: 90px;
+  height: 28px;
+  background: #000;
+  border-radius: 20px;
   z-index: 10;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
 }
 
-.phone-notch::before {
+.dynamic-island::before {
   content: '';
   position: absolute;
   top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  right: 20px;
+  transform: translateY(-50%);
   width: 8px;
   height: 8px;
-  background: #333;
+  background: radial-gradient(circle, #1a3a1a 0%, #0a1a0a 100%);
   border-radius: 50%;
+  box-shadow: 0 0 2px 1px rgba(0, 100, 0, 0.3);
 }
 
 .phone-screen {
   width: 100%;
   height: 100%;
-  background: #ffffff;
-  border-radius: 28px;
+  background: #000;
+  border-radius: 40px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -876,33 +974,15 @@ const emit = defineEmits<{
   justify-content: center;
   align-items: center;
   overflow: hidden;
+  background: #f5f5f5;
+  margin: 2px;
+  border-radius: 38px;
 }
 
 .phone-content :deep(svg) {
   width: 100% !important;
   height: auto !important;
   max-height: 100%;
-}
-
-.phone-content :deep(.animation-preview) {
-  height: 100%;
-}
-
-.phone-content :deep(.svg-container) {
-  height: 100%;
-  padding: 8px;
-}
-
-.instagram-label {
-  position: absolute;
-  bottom: -28px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  font-size: 11px;
-  color: #666;
-  white-space: nowrap;
 }
 
 /* Preview container inside phone */
