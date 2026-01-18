@@ -110,7 +110,12 @@ function generateSingleSeriesElevation(
 
   // Show every nth label based on data count
   const labelInterval = data.length > 20 ? Math.ceil(data.length / 15) : 1
-  const fontSize = data.length > 15 ? 9 : 10
+
+  // Apply x-axis label overrides (read early for fontSize)
+  const xAxisOverride = styleOverrides?.xAxis?.labels
+  const fontSize = xAxisOverride?.fontSize ?? (data.length > 15 ? 9 : 10)
+  const labelColor = xAxisOverride?.color ?? '#4B5563'
+  const labelRotation = xAxisOverride?.rotation ?? -45
 
   // Y-axis scale with nice round numbers
   const yAxisSteps = 5
@@ -136,10 +141,6 @@ function generateSingleSeriesElevation(
                     : titleAlign === 'right' ? 'end'
                     : 'middle'
 
-  // Apply x-axis label overrides
-  const xAxisOverride = styleOverrides?.xAxis?.labels
-  const labelRotation = xAxisOverride?.rotation ?? -45
-
   // Apply elevation color override
   const primaryColor = styleOverrides?.series?.['main']?.color ?? colors.primary ?? '#2E7D32'
 
@@ -162,7 +163,7 @@ function generateSingleSeriesElevation(
       <text id="x-label-${i}" class="editable" data-type="x-label"
             data-index="${i}" data-label="${d.label}" data-editable="true"
             x="${x}" y="${labelY}"
-            text-anchor="end" font-size="${fontSize}" fill="#4B5563"
+            text-anchor="end" font-size="${fontSize}" fill="${labelColor}"
             transform="rotate(${labelRotation} ${x} ${labelY})">${d.label}</text>
     `
   }).join('')
@@ -307,7 +308,12 @@ function generateMultiSeriesElevation(
 
   // Show every nth label
   const labelInterval = seriesData.length > 20 ? Math.ceil(seriesData.length / 15) : 1
-  const fontSize = seriesData.length > 15 ? 9 : 10
+
+  // Apply x-axis label overrides (read early for fontSize)
+  const xAxisOverride = styleOverrides?.xAxis?.labels
+  const fontSize = xAxisOverride?.fontSize ?? (seriesData.length > 15 ? 9 : 10)
+  const labelColor = xAxisOverride?.color ?? '#4B5563'
+  const labelRotation = xAxisOverride?.rotation ?? -45
 
   // Y-axis scale using chartArea
   const yAxisSteps = 5
@@ -332,10 +338,6 @@ function generateMultiSeriesElevation(
   const titleAnchor = titleAlign === 'left' ? 'start'
                     : titleAlign === 'right' ? 'end'
                     : 'middle'
-
-  // Apply x-axis label overrides
-  const xAxisOverride = styleOverrides?.xAxis?.labels
-  const labelRotation = xAxisOverride?.rotation ?? -45
 
   // Generate lines for each series using coordinate contract
   let allLines = ''
@@ -400,7 +402,7 @@ function generateMultiSeriesElevation(
       <text id="x-label-${i}" class="editable" data-type="x-label"
             data-index="${i}" data-label="${d.label}" data-editable="true"
             x="${x}" y="${labelY}"
-            text-anchor="end" font-size="${fontSize}" fill="#4B5563"
+            text-anchor="end" font-size="${fontSize}" fill="${labelColor}"
             transform="rotate(${labelRotation} ${x} ${labelY})">${d.label}</text>
     `
   }).join('')
@@ -642,7 +644,12 @@ function generateAnimatedSingleSeries(
   const adjustedRange = yMax - yMin
 
   const labelInterval = data.length > 20 ? Math.ceil(data.length / 15) : 1
-  const fontSize = data.length > 15 ? 9 : 10
+
+  // Apply x-axis label overrides (read early for fontSize)
+  const xAxisOverride = styleOverrides?.xAxis?.labels
+  const fontSize = xAxisOverride?.fontSize ?? (data.length > 15 ? 9 : 10)
+  const labelColor = xAxisOverride?.color ?? '#4B5563'
+  const labelRotation = xAxisOverride?.rotation ?? -45
 
   const yAxisSteps = 5
   const stepValue = Math.ceil(adjustedRange / yAxisSteps)
@@ -665,9 +672,6 @@ function generateAnimatedSingleSeries(
   const titleAnchor = titleAlign === 'left' ? 'start'
                     : titleAlign === 'right' ? 'end'
                     : 'middle'
-
-  const xAxisOverride = styleOverrides?.xAxis?.labels
-  const labelRotation = xAxisOverride?.rotation ?? -45
 
   const primaryColor = styleOverrides?.series?.['main']?.color ?? colors.primary ?? '#2E7D32'
 
@@ -697,7 +701,7 @@ function generateAnimatedSingleSeries(
       <text id="x-label-${i}" class="editable" data-type="x-label"
             data-index="${i}" data-label="${d.label}" data-editable="true"
             x="${x}" y="${labelY}"
-            text-anchor="end" font-size="${fontSize}" fill="#4B5563"
+            text-anchor="end" font-size="${fontSize}" fill="${labelColor}"
             transform="rotate(${labelRotation} ${x} ${labelY})">${d.label}</text>
     `
   }).join('')
