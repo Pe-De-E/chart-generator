@@ -37,35 +37,35 @@ Die folgenden 8 Punkte wurden als Lücken identifiziert und in die Timeline inte
 
 ## Feb 2026 – Basis & Pipeline
 
-- [ ] 🟢 GPX Import + Downsampling (500–1500 Punkte)
-- [ ] 🟢 **Coordinate-Contract** (saubere Datenraum-Trennung)
+- [x] 🟢 GPX Import + Downsampling (500–1500 Punkte)
+- [x] 🟢 **Coordinate-Contract** (saubere Datenraum-Trennung)
   - `normalizeElevation(points)` → 0..1 (GPX → Chart-Datenraum)
   - `scaleToViewBox(normalizedPoints, width, height, padding)` → SVG-Pixel
   - Klare Trennung: GPX-Raum (m, km) → normiert (0–1) → ViewBox (px)
   - Ohne das wird jedes neue Feature zur Sauerei
-- [ ] 🟢 **Visuelle Normalisierung** (Wahrnehmung, nicht Performance)
+- [x] 🟢 **Visuelle Normalisierung** (Wahrnehmung, nicht Performance)
   - Automatische Y-Axis Compression/Expansion
   - Mindest-Höhenunterschied für visuelle Spannung
   - Optional: "Visuelle Überhöhung" (nicht lügen, aber lesbar machen)
   - Ohne das sehen flache Strecken tot aus, steile sprengen die Skala
 - [ ] 🟢 **SVG-Animation: Stroke-draw + Marker** (Frame-basiert für Video-Export)
-  - [ ] 🟣 1. Animations-Architektur
+  - [x] 🟣 1. Animations-Architektur
     - `generateElevationFrame(options, progress: 0-1)` Funktion erstellen
     - Progress 0 = Start, Progress 1 = Ende
     - Rückgabe: SVG-String für diesen Frame
-  - [ ] 🟣 2. Linie progressiv zeichnen
+  - [x] 🟣 2. Linie progressiv zeichnen
     - Nur Datenpunkte bis `progress * data.length` rendern
     - Oder: clipPath mit `width = progress * chartWidth`
-  - [ ] 🟣 3. Area-Fill synchron zur Linie
+  - [x] 🟣 3. Area-Fill synchron zur Linie
     - Polygon nur bis zum aktuellen Fortschritt aufbauen
     - Gleicher clipPath-Ansatz wie Linie
-  - [ ] 🟣 4. Marker-Punkt am aktuellen Ende
+  - [x] 🟣 4. Marker-Punkt am aktuellen Ende
     - Position = letzter sichtbarer Punkt der Kurve
     - Kreis mit konfigurierbarer Größe/Farbe
-  - [ ] 🟣 5. Animations-Optionen in ChartOptions
+  - [x] 🟣 5. Animations-Optionen in ChartOptions
     - `animation?: { enabled: boolean, durationMs: number, fps: number, easing: 'linear' | 'ease-in-out' }`
     - Easing-Funktion auf Progress anwenden
-  - [ ] 🟣 6. Frame-Generator Utility
+  - [x] 🟣 6. Frame-Generator Utility
     - `generateAnimationFrames(options)` → Array von SVG-Strings
     - Berechnet alle Frames basierend auf fps + duration
     - z.B. 30fps × 5s = 150 Frames
@@ -76,7 +76,7 @@ Die folgenden 8 Punkte wurden als Lücken identifiziert und in die Timeline inte
     - Performance mit 500+ Datenpunkten
     - Smooth Easing testen
     - Memory-Verbrauch bei vielen Frames
-- [ ] 🟢 **Frame-Truth** (deterministische Frame-Erzeugung)
+- [x] 🟢 **Frame-Truth** (deterministische Frame-Erzeugung)
   - SVG ist die Single Source of Truth
   - Gleiche Frames im Preview wie im Export (pixelgenau)
   - Kein "Warum sieht mein Video anders aus als die Vorschau?"
