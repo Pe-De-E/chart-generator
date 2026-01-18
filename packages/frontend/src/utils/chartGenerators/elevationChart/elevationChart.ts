@@ -244,11 +244,11 @@ function generateSingleSeriesElevation(
       ${statisticalOverlay}
 
       <!-- Filled area with gradient -->
-      <polygon id="elevation-area" class="editable" data-type="area" data-editable="true"
+      <polygon id="elevation-area" class="editable" data-type="area" data-series="main" data-editable="true"
                points="${fullAreaPath}" fill="url(#${gradientId})"/>
 
       <!-- Line on top -->
-      <polyline id="elevation-line" class="editable" data-type="line" data-editable="true"
+      <polyline id="elevation-line" class="editable" data-type="line" data-series="main" data-editable="true"
                 points="${linePoints}" fill="none" stroke="${primaryColor}"
                 stroke-width="2" stroke-linejoin="round"/>
 
@@ -782,9 +782,9 @@ function generateAnimatedSingleSeries(
 
       <!-- Animated elevation curve with clip-path -->
       <g clip-path="url(#${clipId})">
-        <polygon id="elevation-area" class="editable" data-type="area" data-editable="true"
+        <polygon id="elevation-area" class="editable" data-type="area" data-series="main" data-editable="true"
                  points="${fullAreaPath}" fill="url(#${gradientId})"/>
-        <polyline id="elevation-line" class="editable" data-type="line" data-editable="true"
+        <polyline id="elevation-line" class="editable" data-type="line" data-series="main" data-editable="true"
                   points="${linePoints}" fill="none" stroke="${primaryColor}"
                   stroke-width="2" stroke-linejoin="round"/>
       </g>
