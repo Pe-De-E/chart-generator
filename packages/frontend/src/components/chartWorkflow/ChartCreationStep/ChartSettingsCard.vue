@@ -11,7 +11,8 @@
             prepend-inner-icon="mdi-format-title"
           ></v-text-field>
         </v-col>
-        <v-col cols="12" md="4">
+        <!-- Chart Type selector (hidden in elevation workflow) -->
+        <v-col v-if="chartType !== 'elevation'" cols="12" md="4">
           <div class="text-caption mb-2">Chart-Typ</div>
           <v-btn-toggle
             :model-value="chartType"
@@ -64,10 +65,11 @@
               </template>
             </v-tooltip>
           </v-btn-toggle>
+        </v-col>
 
-          <!-- Silhouette Mode Toggle (only for elevation) -->
+        <!-- Silhouette Mode Toggle (only for elevation) -->
+        <v-col v-if="chartType === 'elevation'" cols="12" md="4">
           <v-switch
-            v-if="chartType === 'elevation'"
             :model-value="silhouetteMode"
             @update:model-value="$emit('update:silhouetteMode', $event ?? false)"
             label="Silhouette-Modus"
@@ -75,7 +77,6 @@
             persistent-hint
             density="compact"
             color="primary"
-            class="mt-3"
           ></v-switch>
         </v-col>
         <v-col cols="12" md="4">

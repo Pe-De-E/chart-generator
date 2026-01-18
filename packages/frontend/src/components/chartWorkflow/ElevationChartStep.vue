@@ -3,8 +3,8 @@
     <v-card-text>
       <div class="text-h5 mb-4">Höhenprofil erstellen</div>
 
+      <!-- Settings Panel -->
       <v-expansion-panels v-model="expandedPanels" multiple class="mb-4">
-        <!-- Chart Settings -->
         <v-expansion-panel value="settings">
           <v-expansion-panel-title>
             <v-icon icon="mdi-cog" class="mr-2"></v-icon>
@@ -27,41 +27,47 @@
             />
           </v-expansion-panel-text>
         </v-expansion-panel>
+      </v-expansion-panels>
 
-        <!-- Statistical Overlays -->
-        <v-expansion-panel value="overlays">
-          <v-expansion-panel-title>
-            <v-icon icon="mdi-chart-timeline-variant" class="mr-2"></v-icon>
-            Statistische Overlays
-          </v-expansion-panel-title>
-          <v-expansion-panel-text>
-            <StatisticalOverlaysCard
-              chart-type="elevation"
-              :statistical-overlays="statisticalOverlays"
-              :data-extent="dataExtent"
-              @update:statistical-overlays="
-                $emit('update:statisticalOverlays', $event)
-              "
-            />
-          </v-expansion-panel-text>
-        </v-expansion-panel>
-
-        <!-- Animation Preview -->
-        <v-expansion-panel value="animation">
-          <v-expansion-panel-title>
+      <!-- Animation Preview - PROMINENT -->
+      <v-card variant="outlined" class="mb-4">
+        <v-card-title class="text-subtitle-1 bg-grey-lighten-4 d-flex justify-space-between align-center">
+          <div class="d-flex align-center">
             <v-icon icon="mdi-movie-play" class="mr-2"></v-icon>
-            Animation Preview
-          </v-expansion-panel-title>
-          <v-expansion-panel-text>
-            <AnimationPreview
-              :chart-options="chartOptionsForAnimation"
-              :animation-options="animationSettings"
-            />
-            <v-row class="mt-4">
-              <v-col cols="6">
+            Vorschau
+          </div>
+          <div class="d-flex align-center">
+            <v-btn-toggle v-model="viewMode" mandatory density="compact" class="mr-2">
+              <v-btn value="animate" size="small">
+                <v-icon start size="small">mdi-play</v-icon>
+                Animation
+              </v-btn>
+              <v-btn value="static" size="small">
+                <v-icon start size="small">mdi-pencil</v-icon>
+                Bearbeiten
+              </v-btn>
+            </v-btn-toggle>
+            <v-btn
+              icon="mdi-fullscreen"
+              size="small"
+              variant="text"
+              @click="$emit('show-fullscreen')"
+            ></v-btn>
+          </div>
+        </v-card-title>
+
+        <!-- Animated View -->
+        <template v-if="viewMode === 'animate'">
+          <AnimationPreview
+            :chart-options="chartOptionsForAnimation"
+            :animation-options="animationSettings"
+          />
+          <v-card-text class="pt-2">
+            <v-row dense>
+              <v-col cols="6" sm="3">
                 <v-text-field
                   v-model.number="animationDuration"
-                  label="Dauer (Sekunden)"
+                  label="Dauer (Sek.)"
                   type="number"
                   :min="1"
                   :max="30"
@@ -70,7 +76,7 @@
                   hide-details
                 />
               </v-col>
-              <v-col cols="6">
+              <v-col cols="6" sm="3">
                 <v-select
                   v-model="animationEasing"
                   label="Easing"
@@ -80,20 +86,17 @@
                   hide-details
                 />
               </v-col>
-            </v-row>
-            <v-row class="mt-2">
-              <v-col cols="6">
+              <v-col cols="6" sm="3">
                 <v-switch
                   v-model="animationShowMarker"
-                  label="Marker anzeigen"
+                  label="Marker"
                   color="primary"
                   hide-details
                   density="compact"
                 />
               </v-col>
-              <v-col cols="6">
+              <v-col cols="6" sm="3" v-if="animationShowMarker">
                 <v-text-field
-                  v-if="animationShowMarker"
                   v-model.number="animationMarkerSize"
                   label="Marker-Größe"
                   type="number"
@@ -105,37 +108,23 @@
                 />
               </v-col>
             </v-row>
-          </v-expansion-panel-text>
-        </v-expansion-panel>
-      </v-expansion-panels>
+          </v-card-text>
+        </template>
 
-      <!-- Chart Preview with Interactive Editing -->
-      <v-card variant="outlined">
-        <v-card-title
-          class="text-subtitle-1 bg-grey-lighten-4 d-flex justify-space-between align-center"
-        >
-          <div>
-            <v-icon icon="mdi-eye" class="mr-2"></v-icon>
-            Vorschau
-            <span class="text-caption ml-2 text-grey"
-              >(Klicken Sie auf Elemente zum Bearbeiten)</span
-            >
-          </div>
-          <v-btn
-            icon="mdi-fullscreen"
-            size="small"
-            variant="text"
-            @click="$emit('show-fullscreen')"
-          ></v-btn>
-        </v-card-title>
-        <v-card-text class="pa-6">
-          <div
-            class="preview-container"
-            @click="handleChartClick"
-            v-html="svgContent"
-            :key="JSON.stringify(styleOverrides)"
-          ></div>
-        </v-card-text>
+        <!-- Static View for Editing -->
+        <template v-else>
+          <v-card-text class="pa-6">
+            <div class="text-caption text-grey mb-2">
+              Klicken Sie auf Elemente zum Bearbeiten
+            </div>
+            <div
+              class="preview-container"
+              @click="handleChartClick"
+              v-html="svgContent"
+              :key="JSON.stringify(styleOverrides)"
+            ></div>
+          </v-card-text>
+        </template>
       </v-card>
 
       <!-- Element Editor Dialog -->
@@ -374,16 +363,17 @@ import type { PropType } from "vue";
 import type { ChartColors } from "../../composables/useChartConfig";
 import type {
   SeriesConfig,
-  StatisticalOverlays,
   ChartStyleOverrides,
 } from "../../utils/chartGenerators/types";
 import type { ChartOptions, AnimationOptions } from "@chart-generator/shared";
 import ChartSettingsCard from "./ChartCreationStep/ChartSettingsCard.vue";
-import StatisticalOverlaysCard from "./ChartCreationStep/StatisticalOverlaysCard.vue";
 import AnimationPreview from "../AnimationPreview.vue";
 
-// All panels expanded by default
-const expandedPanels = ref(["settings", "overlays", "animation"]);
+// Settings panel expanded by default
+const expandedPanels = ref(["settings"]);
+
+// View mode: 'animate' or 'static'
+const viewMode = ref<'animate' | 'static'>('animate');
 
 // Animation settings state
 const animationDuration = ref(5);
@@ -752,10 +742,6 @@ const props = defineProps({
     type: Object as PropType<ChartColors>,
     required: true,
   },
-  statisticalOverlays: {
-    type: Object as PropType<StatisticalOverlays>,
-    required: true,
-  },
   svgContent: {
     type: String,
     required: true,
@@ -763,10 +749,6 @@ const props = defineProps({
   seriesConfig: {
     type: Array as PropType<SeriesConfig[]>,
     default: () => [],
-  },
-  dataExtent: {
-    type: Array as PropType<[number, number]>,
-    default: () => [0, 100],
   },
   silhouetteMode: {
     type: Boolean,
@@ -789,7 +771,6 @@ const chartOptionsForAnimation = computed<ChartOptions>(() => ({
   title: props.chartTitle,
   silhouetteMode: props.silhouetteMode,
   styleOverrides: props.styleOverrides,
-  statisticalOverlays: props.statisticalOverlays,
 }));
 
 const animationSettings = computed<AnimationOptions>(() => ({
@@ -810,7 +791,6 @@ const emit = defineEmits<{
   "show-fullscreen": [];
   "update:chartTitle": [value: string];
   "update:colors": [value: ChartColors];
-  "update:statisticalOverlays": [value: StatisticalOverlays];
   "update:silhouetteMode": [value: boolean];
   "update:styleOverrides": [value: ChartStyleOverrides];
   updateSeriesColor: [index: number, color: string];

@@ -95,9 +95,7 @@
             <ElevationChartStep
               v-model:chart-title="chartTitle"
               v-model:colors="colors"
-              v-model:statistical-overlays="statisticalOverlays"
               v-model:silhouette-mode="silhouetteMode"
-              :data-extent="dataExtent"
               :svg-content="svgContent"
               :series-config="selectedSeries"
               :style-overrides="styleOverrides"
@@ -213,17 +211,19 @@ const {
 
 // Chart Config composable - fixed to 'elevation' type
 const {
+  chartType,
   chartTitle,
   colors,
-  statisticalOverlays,
   silhouetteMode,
-  dataExtent,
   svgContent,
   downloadSVG,
   resetConfig,
   styleOverrides,
   setStyleOverrides
-} = useChartConfig(seriesData, selectedSeries, 'elevation')
+} = useChartConfig(seriesData, selectedSeries)
+
+// Set chart type to 'elevation' immediately
+chartType.value = 'elevation'
 
 // Chart data for animation
 const chartDataForAnimation = computed(() => {
@@ -340,7 +340,6 @@ async function saveChart() {
         config: {
           seriesConfig: selectedSeries.value,
           colors: colors.value,
-          statisticalOverlays: statisticalOverlays.value,
           selectedLabelColumn: selectedLabelColumn.value,
           selectedValueColumns: ['col_1'],
           silhouetteMode: silhouetteMode.value,
@@ -359,7 +358,6 @@ async function saveChart() {
         config: {
           seriesConfig: selectedSeries.value,
           colors: colors.value,
-          statisticalOverlays: statisticalOverlays.value,
           selectedLabelColumn: selectedLabelColumn.value,
           selectedValueColumns: ['col_1'],
           silhouetteMode: silhouetteMode.value,
@@ -420,12 +418,6 @@ async function loadChartData(chartId: string) {
     }
     if (savedConfig.colors) {
       colors.value = savedConfig.colors
-    }
-    if (savedConfig.statisticalOverlays) {
-      statisticalOverlays.value = {
-        ...statisticalOverlays.value,
-        ...savedConfig.statisticalOverlays
-      }
     }
     if (savedConfig.silhouetteMode !== undefined) {
       silhouetteMode.value = savedConfig.silhouetteMode
