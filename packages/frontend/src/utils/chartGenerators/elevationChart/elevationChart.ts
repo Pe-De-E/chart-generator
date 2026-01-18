@@ -230,13 +230,13 @@ function generateSingleSeriesElevation(
       </text>
 
       <!-- Y-axis label -->
-      <text id="y-axis-title" class="editable" data-type="axis-title" data-editable="true"
+      <text id="y-axis-title" class="editable" data-type="y-axis" data-editable="true"
             x="15" y="${chartArea.y + chartArea.height / 2}"
             text-anchor="middle" font-size="11" fill="#6B7280"
             transform="rotate(-90 15 ${chartArea.y + chartArea.height / 2})">Höhe (m)</text>
 
       <!-- X-axis label -->
-      <text id="x-axis-title" class="editable" data-type="axis-title" data-editable="true"
+      <text id="x-axis-title" class="editable" data-type="x-axis" data-editable="true"
             x="${chartArea.x + chartArea.width / 2}" y="${height - 10}"
             text-anchor="middle" font-size="11" fill="#6B7280">Entfernung</text>
 
@@ -474,13 +474,13 @@ function generateMultiSeriesElevation(
             font-size="${titleFontSize}" font-weight="${titleWeight}" fill="${titleColor}">${titleText}</text>
 
       <!-- Y-axis label -->
-      <text id="y-axis-title" class="editable" data-type="axis-title" data-editable="true"
+      <text id="y-axis-title" class="editable" data-type="y-axis" data-editable="true"
             x="15" y="${chartArea.y + chartArea.height / 2}"
             text-anchor="middle" font-size="11" fill="#6B7280"
             transform="rotate(-90 15 ${chartArea.y + chartArea.height / 2})">Höhe (m)</text>
 
       <!-- X-axis label -->
-      <text id="x-axis-title" class="editable" data-type="axis-title" data-editable="true"
+      <text id="x-axis-title" class="editable" data-type="x-axis" data-editable="true"
             x="${chartArea.x + chartArea.width / 2}" y="${height - legendHeight - 10}"
             text-anchor="middle" font-size="11" fill="#6B7280">Entfernung</text>
 
@@ -767,13 +767,13 @@ function generateAnimatedSingleSeries(
       </text>
 
       <!-- Y-axis label -->
-      <text id="y-axis-title" class="editable" data-type="axis-title" data-editable="true"
+      <text id="y-axis-title" class="editable" data-type="y-axis" data-editable="true"
             x="15" y="${chartArea.y + chartArea.height / 2}"
             text-anchor="middle" font-size="11" fill="#6B7280"
             transform="rotate(-90 15 ${chartArea.y + chartArea.height / 2})">Höhe (m)</text>
 
       <!-- X-axis label -->
-      <text id="x-axis-title" class="editable" data-type="axis-title" data-editable="true"
+      <text id="x-axis-title" class="editable" data-type="x-axis" data-editable="true"
             x="${chartArea.x + chartArea.width / 2}" y="${height - 10}"
             text-anchor="middle" font-size="11" fill="#6B7280">Entfernung</text>
 
