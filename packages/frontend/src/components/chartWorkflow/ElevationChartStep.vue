@@ -56,75 +56,98 @@
           </div>
         </v-card-title>
 
-        <!-- Animated View -->
-        <template v-if="viewMode === 'animate'">
-          <AnimationPreview
-            :chart-options="chartOptionsForAnimation"
-            :animation-options="animationSettings"
-          />
-          <v-card-text class="pt-2">
-            <v-row dense>
-              <v-col cols="6" sm="3">
-                <v-text-field
-                  v-model.number="animationDuration"
-                  label="Dauer (Sek.)"
-                  type="number"
-                  :min="1"
-                  :max="30"
-                  variant="outlined"
-                  density="compact"
-                  hide-details
-                />
-              </v-col>
-              <v-col cols="6" sm="3">
-                <v-select
-                  v-model="animationEasing"
-                  label="Easing"
-                  :items="easingOptions"
-                  variant="outlined"
-                  density="compact"
-                  hide-details
-                />
-              </v-col>
-              <v-col cols="6" sm="3">
-                <v-switch
-                  v-model="animationShowMarker"
-                  label="Marker"
-                  color="primary"
-                  hide-details
-                  density="compact"
-                />
-              </v-col>
-              <v-col cols="6" sm="3" v-if="animationShowMarker">
-                <v-text-field
-                  v-model.number="animationMarkerSize"
-                  label="Marker-Größe"
-                  type="number"
-                  :min="2"
-                  :max="20"
-                  variant="outlined"
-                  density="compact"
-                  hide-details
-                />
-              </v-col>
-            </v-row>
-          </v-card-text>
-        </template>
+        <!-- Phone Preview Container -->
+        <v-card-text class="d-flex justify-center align-center pa-4 bg-grey-lighten-3">
+          <!-- Phone Frame -->
+          <div class="phone-frame">
+            <!-- Phone Notch -->
+            <div class="phone-notch"></div>
 
-        <!-- Static View for Editing -->
-        <template v-else>
-          <v-card-text class="pa-6">
-            <div class="text-caption text-grey mb-2">
-              Klicken Sie auf Elemente zum Bearbeiten
+            <!-- Phone Screen -->
+            <div class="phone-screen">
+              <!-- Animated View -->
+              <template v-if="viewMode === 'animate'">
+                <AnimationPreview
+                  :chart-options="chartOptionsForAnimation"
+                  :animation-options="animationSettings"
+                  class="phone-content"
+                />
+              </template>
+
+              <!-- Static View for Editing -->
+              <template v-else>
+                <div
+                  class="phone-content preview-container"
+                  @click="handleChartClick"
+                  v-html="svgContent"
+                  :key="JSON.stringify(styleOverrides)"
+                ></div>
+              </template>
             </div>
-            <div
-              class="preview-container"
-              @click="handleChartClick"
-              v-html="svgContent"
-              :key="JSON.stringify(styleOverrides)"
-            ></div>
-          </v-card-text>
-        </template>
+
+            <!-- Instagram Label -->
+            <div class="instagram-label">
+              <v-icon size="small" class="mr-1">mdi-instagram</v-icon>
+              Instagram Story Preview
+            </div>
+          </div>
+        </v-card-text>
+
+        <!-- Animation Controls (below phone) -->
+        <v-card-text v-if="viewMode === 'animate'" class="pt-2">
+          <v-row dense>
+            <v-col cols="6" sm="3">
+              <v-text-field
+                v-model.number="animationDuration"
+                label="Dauer (Sek.)"
+                type="number"
+                :min="1"
+                :max="30"
+                variant="outlined"
+                density="compact"
+                hide-details
+              />
+            </v-col>
+            <v-col cols="6" sm="3">
+              <v-select
+                v-model="animationEasing"
+                label="Easing"
+                :items="easingOptions"
+                variant="outlined"
+                density="compact"
+                hide-details
+              />
+            </v-col>
+            <v-col cols="6" sm="3">
+              <v-switch
+                v-model="animationShowMarker"
+                label="Marker"
+                color="primary"
+                hide-details
+                density="compact"
+              />
+            </v-col>
+            <v-col cols="6" sm="3" v-if="animationShowMarker">
+              <v-text-field
+                v-model.number="animationMarkerSize"
+                label="Marker-Größe"
+                type="number"
+                :min="2"
+                :max="20"
+                variant="outlined"
+                density="compact"
+                hide-details
+              />
+            </v-col>
+          </v-row>
+        </v-card-text>
+
+        <!-- Edit Mode Hint -->
+        <v-card-text v-else class="pt-0 text-center">
+          <div class="text-caption text-grey">
+            Klicken Sie auf Elemente zum Bearbeiten
+          </div>
+        </v-card-text>
       </v-card>
 
       <!-- Element Editor Dialog -->
@@ -799,16 +822,104 @@ const emit = defineEmits<{
 </script>
 
 <style scoped>
-.preview-container {
+/* Phone Frame Styles */
+.phone-frame {
+  position: relative;
+  width: 270px; /* Scaled down from 1080px (1:4) */
+  height: 480px; /* 9:16 aspect ratio for Instagram Story */
+  background: #1a1a1a;
+  border-radius: 36px;
+  padding: 8px;
+  box-shadow:
+    0 0 0 2px #333,
+    0 10px 40px rgba(0, 0, 0, 0.3),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.phone-notch {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 24px;
+  background: #1a1a1a;
+  border-radius: 12px;
+  z-index: 10;
+}
+
+.phone-notch::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 8px;
+  height: 8px;
+  background: #333;
+  border-radius: 50%;
+}
+
+.phone-screen {
+  width: 100%;
+  height: 100%;
+  background: #ffffff;
+  border-radius: 28px;
+  overflow: hidden;
   display: flex;
-  justify-content: flex-start;
+  flex-direction: column;
+}
+
+.phone-content {
+  flex: 1;
+  display: flex;
+  justify-content: center;
   align-items: center;
-  min-height: 400px;
+  overflow: hidden;
+}
+
+.phone-content :deep(svg) {
+  width: 100% !important;
+  height: auto !important;
+  max-height: 100%;
+}
+
+.phone-content :deep(.animation-preview) {
+  height: 100%;
+}
+
+.phone-content :deep(.svg-container) {
+  height: 100%;
+  padding: 8px;
+}
+
+.instagram-label {
+  position: absolute;
+  bottom: -28px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  font-size: 11px;
+  color: #666;
+  white-space: nowrap;
+}
+
+/* Preview container inside phone */
+.preview-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   background: #f5f5f5;
-  border-radius: 8px;
-  padding: 20px;
-  overflow-x: auto;
-  overflow-y: hidden;
+  padding: 8px;
+}
+
+.preview-container :deep(svg) {
+  width: 100% !important;
+  height: auto !important;
+  max-height: 100%;
 }
 
 /* Interactive editing styles */
