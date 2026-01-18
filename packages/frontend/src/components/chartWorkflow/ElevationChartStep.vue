@@ -1,7 +1,7 @@
 <template>
   <v-card flat>
     <v-card-text>
-      <div class="text-h5 mb-4">Chart erstellen</div>
+      <div class="text-h5 mb-4">Höhenprofil erstellen</div>
 
       <v-expansion-panels v-model="expandedPanels" multiple class="mb-4">
         <!-- Chart Settings -->
@@ -13,12 +13,11 @@
           <v-expansion-panel-text>
             <ChartSettingsCard
               :chart-title="chartTitle"
-              :chart-type="chartType"
+              chart-type="elevation"
               :colors="colors"
               :series-config="seriesConfig"
               :silhouette-mode="silhouetteMode"
               @update:chart-title="$emit('update:chartTitle', $event)"
-              @update:chart-type="$emit('update:chartType', $event)"
               @update:colors="$emit('update:colors', $event)"
               @update:silhouette-mode="$emit('update:silhouetteMode', $event)"
               @update-series-color="
@@ -29,15 +28,15 @@
           </v-expansion-panel-text>
         </v-expansion-panel>
 
-        <!-- Statistical Overlays (not available for pie charts) -->
-        <v-expansion-panel v-if="chartType !== 'pie'" value="overlays">
+        <!-- Statistical Overlays -->
+        <v-expansion-panel value="overlays">
           <v-expansion-panel-title>
             <v-icon icon="mdi-chart-timeline-variant" class="mr-2"></v-icon>
             Statistische Overlays
           </v-expansion-panel-title>
           <v-expansion-panel-text>
             <StatisticalOverlaysCard
-              :chart-type="chartType"
+              chart-type="elevation"
               :statistical-overlays="statisticalOverlays"
               :data-extent="dataExtent"
               @update:statistical-overlays="
@@ -47,8 +46,8 @@
           </v-expansion-panel-text>
         </v-expansion-panel>
 
-        <!-- Animation Preview (only for elevation charts) -->
-        <v-expansion-panel v-if="chartType === 'elevation'" value="animation">
+        <!-- Animation Preview -->
+        <v-expansion-panel value="animation">
           <v-expansion-panel-title>
             <v-icon icon="mdi-movie-play" class="mr-2"></v-icon>
             Animation Preview
@@ -191,7 +190,7 @@
               />
             </template>
 
-            <!-- Data Point Editor (Bars, Lines, Points, Slices) -->
+            <!-- Data Point Editor (Area for elevation) -->
             <template
               v-else-if="
                 ['bar', 'line', 'point', 'slice', 'area'].includes(
@@ -257,7 +256,7 @@
               />
             </template>
 
-            <!-- Y-Label Editor (click on y-axis value) -->
+            <!-- Y-Label Editor -->
             <template v-else-if="selectedElementType === 'y-label'">
               <div class="text-body-2 mb-3">
                 Wert: <strong>{{ selectedElementValue }}</strong>
@@ -267,7 +266,7 @@
               </div>
             </template>
 
-            <!-- Y-Axis Editor (click on y-axis area) -->
+            <!-- Y-Axis Editor -->
             <template v-else-if="selectedElementType === 'y-axis'">
               <v-text-field
                 v-model="editingYAxisTitle"
@@ -275,7 +274,7 @@
                 variant="outlined"
                 density="comfortable"
                 class="mb-3"
-                placeholder="z.B. Umsatz in €"
+                placeholder="z.B. Höhe (m)"
               />
               <v-text-field
                 v-model.number="editingYRangeMin"
@@ -298,14 +297,14 @@
               />
             </template>
 
-            <!-- X-Axis Editor (click on x-axis area) -->
+            <!-- X-Axis Editor -->
             <template v-else-if="selectedElementType === 'x-axis'">
               <v-text-field
                 v-model="editingXAxisTitle"
                 label="X-Achsentitel"
                 variant="outlined"
                 density="comfortable"
-                placeholder="z.B. Monat"
+                placeholder="z.B. Distanz (km)"
               />
             </template>
 
@@ -372,22 +371,19 @@
 <script setup lang="ts">
 import { ref, nextTick, computed } from "vue";
 import type { PropType } from "vue";
-import type {
-  ChartType,
-  ChartColors,
-} from "../../../composables/useChartConfig";
+import type { ChartColors } from "../../composables/useChartConfig";
 import type {
   SeriesConfig,
   StatisticalOverlays,
   ChartStyleOverrides,
-} from "../../../utils/chartGenerators/types";
+} from "../../utils/chartGenerators/types";
 import type { ChartOptions, AnimationOptions } from "@chart-generator/shared";
-import ChartSettingsCard from "./ChartSettingsCard.vue";
-import StatisticalOverlaysCard from "./StatisticalOverlaysCard.vue";
-import AnimationPreview from "../../AnimationPreview.vue";
+import ChartSettingsCard from "./ChartCreationStep/ChartSettingsCard.vue";
+import StatisticalOverlaysCard from "./ChartCreationStep/StatisticalOverlaysCard.vue";
+import AnimationPreview from "../AnimationPreview.vue";
 
-// Both panels expanded by default
-const expandedPanels = ref(["settings", "overlays"]);
+// All panels expanded by default
+const expandedPanels = ref(["settings", "overlays", "animation"]);
 
 // Animation settings state
 const animationDuration = ref(5);
@@ -404,7 +400,6 @@ const easingOptions = [
 
 // ===== Interactive Editing State =====
 const showEditor = ref(false);
-const editorPosition = ref({ x: 0, y: 0 });
 const selectedElement = ref<Element | null>(null);
 const selectedElementType = ref<string>("");
 const selectedElementId = ref<string>("");
@@ -434,8 +429,6 @@ const editingYRangeMax = ref<number | undefined>(undefined);
 // Achsentitel Editor state
 const editingXAxisTitle = ref("");
 const editingYAxisTitle = ref("");
-
-// Use props.styleOverrides directly, emit changes to parent
 
 // Handle chart element click
 function handleChartClick(event: MouseEvent) {
@@ -472,13 +465,6 @@ function handleChartClick(event: MouseEvent) {
   // Initialize editor form based on element type
   initializeEditorForm(elementType, editableElement);
 
-  // Position and show editor
-  const rect = editableElement.getBoundingClientRect();
-  editorPosition.value = {
-    x: rect.left + rect.width / 2,
-    y: rect.top,
-  };
-
   nextTick(() => {
     showEditor.value = true;
   });
@@ -510,10 +496,8 @@ function initializeEditorForm(elementType: string, element: Element) {
     case "point":
     case "slice":
     case "area":
-      // Check if this is a multi-series element
       const seriesNameInit = selectedElementSeries.value;
       if (seriesNameInit) {
-        // Multi-series mode: read from series[seriesName]
         const seriesOverride = overrides?.series?.[seriesNameInit];
         editingColor.value =
           seriesOverride?.color ||
@@ -522,7 +506,6 @@ function initializeEditorForm(elementType: string, element: Element) {
           "#4F46E5";
         editingHighlight.value = false;
       } else {
-        // Single-series mode: read from dataPoints[index]
         const index = selectedElementIndex.value;
         const dpOverride = overrides?.dataPoints?.[index];
         editingColor.value =
@@ -567,7 +550,6 @@ function initializeEditorForm(elementType: string, element: Element) {
 
 function closeEditor() {
   showEditor.value = false;
-  // Remove highlight
   document.querySelectorAll(".chart-element-selected").forEach((el) => {
     el.classList.remove("chart-element-selected");
   });
@@ -597,10 +579,8 @@ function applyElementStyle() {
     case "point":
     case "slice":
     case "area":
-      // Check if this is a multi-series element (has series name)
       const seriesName = selectedElementSeries.value;
       if (seriesName) {
-        // Multi-series mode: store under series[seriesName]
         newOverrides = {
           ...currentOverrides,
           series: {
@@ -612,7 +592,6 @@ function applyElementStyle() {
           },
         };
       } else {
-        // Single-series mode: store under dataPoints[index]
         const index = selectedElementIndex.value;
         newOverrides = {
           ...currentOverrides,
@@ -691,7 +670,6 @@ function applyElementStyle() {
       newOverrides = currentOverrides;
   }
 
-  // Emit the updated style overrides
   emit("update:styleOverrides", newOverrides);
   closeEditor();
 }
@@ -734,7 +712,6 @@ function resetElementStyle() {
   closeEditor();
 }
 
-// Get editor title based on element type
 function getEditorTitle(): string {
   switch (selectedElementType.value) {
     case "title":
@@ -769,10 +746,6 @@ function getEditorTitle(): string {
 const props = defineProps({
   chartTitle: {
     type: String,
-    required: true,
-  },
-  chartType: {
-    type: String as PropType<ChartType>,
     required: true,
   },
   colors: {
@@ -836,7 +809,6 @@ const emit = defineEmits<{
   save: [];
   "show-fullscreen": [];
   "update:chartTitle": [value: string];
-  "update:chartType": [value: ChartType];
   "update:colors": [value: ChartColors];
   "update:statisticalOverlays": [value: StatisticalOverlays];
   "update:silhouetteMode": [value: boolean];
@@ -844,7 +816,6 @@ const emit = defineEmits<{
   updateSeriesColor: [index: number, color: string];
   regenerateColors: [];
 }>();
-
 </script>
 
 <style scoped>

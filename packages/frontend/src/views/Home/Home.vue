@@ -94,6 +94,9 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- Chart Type Selection Dialog -->
+    <ChartTypeDialog v-model="showChartTypeDialog" />
   </v-container>
 </template>
 
@@ -103,6 +106,7 @@ import { useRouter } from 'vue-router'
 import { chartService } from '../../services/chart.service'
 import type { SavedChart } from '@chart-generator/shared'
 import ChartCard from '../../components/ChartCard.vue'
+import ChartTypeDialog from '../../components/ChartTypeDialog.vue'
 import { UserCharts } from '../../composables/useUserCharts'
 
 // TODO UserCharts um optimistic delete erweitern (fühlt sich mega schnell an)
@@ -113,6 +117,7 @@ const router = useRouter()
 
 const deleteDialog = ref(false)
 const chartToDelete = ref<SavedChart | null>(null)
+const showChartTypeDialog = ref(false)
   
 const chartsStore = new UserCharts(true)
 const charts = computed(() => {
@@ -121,7 +126,7 @@ const charts = computed(() => {
 })
 
 function createChart() {
-  router.push({ name: 'Generator' })
+  showChartTypeDialog.value = true
 }
 
 function loadChart(chartId: string) {

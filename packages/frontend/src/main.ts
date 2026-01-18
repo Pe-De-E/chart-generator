@@ -9,6 +9,8 @@ const app = createApp(App)
 app.use(vuetify)
 app.use(router)
 
+// TODO root mit @ konfigurieren
+
 // Initialize auth state before mounting
 const { init } = useAuth()
 init().then(() => {

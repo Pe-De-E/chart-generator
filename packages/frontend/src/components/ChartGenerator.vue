@@ -60,6 +60,7 @@
               :svg-content="svgContent"
               :series-config="selectedSeries"
               :style-overrides="styleOverrides"
+              :chart-data="chartDataForAnimation"
               @update:styleOverrides="setStyleOverrides"
               @update-series-color="updateSeriesColor"
               @regenerate-colors="regenerateColors"
@@ -476,6 +477,21 @@ const {
   styleOverrides,
   setStyleOverrides
 } = useChartConfig(seriesData, selectedSeries)
+
+// Convert multi-series data to single-series format for animation
+// Uses the first series if available
+const chartDataForAnimation = computed(() => {
+  if (seriesData.value.length === 0 || selectedSeries.value.length === 0) {
+    return []
+  }
+  const firstSeriesName = selectedSeries.value[0]?.name
+  if (!firstSeriesName) return []
+
+  return seriesData.value.map(d => ({
+    label: d.label,
+    value: d.values[firstSeriesName] ?? 0
+  }))
+})
 
 // Helper functions
 const getQualityColorHex = (score: 'excellent' | 'good' | 'fair' | 'poor'): string => {

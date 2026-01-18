@@ -5,6 +5,7 @@ import { useAuth } from '../composables/useAuth'
 // Import views
 import Home from '../views/Home/Home.vue'
 import ChartGenerator from '../components/ChartGenerator.vue'
+import ElevationGenerator from '../components/ElevationGenerator.vue'
 import Login from '../views/Login/Login.vue'
 import Signup from '../views/Signup.vue'
 import AdminDashboard from '../views/adminDashboard/AdminDashboard.vue'
@@ -20,6 +21,12 @@ const routes: RouteRecordRaw[] = [
     path: '/generator',
     name: 'Generator',
     component: ChartGenerator,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/elevation',
+    name: 'Elevation',
+    component: ElevationGenerator,
     meta: { requiresAuth: true },
   },
   {

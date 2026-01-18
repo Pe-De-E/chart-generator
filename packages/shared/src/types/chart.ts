@@ -65,6 +65,29 @@ export interface ChartDimensions {
   height?: number
 }
 
+// Animation options for frame-based elevation chart animation
+export type EasingType = 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out'
+
+export interface AnimationOptions {
+  enabled: boolean
+  durationMs: number      // e.g. 5000 for 5 seconds
+  fps: number             // e.g. 30 frames per second
+  easing: EasingType
+  showMarker: boolean     // Show moving dot at current position
+  markerSize: number      // Marker radius in pixels
+  markerColor: string     // Marker fill color
+}
+
+export const DEFAULT_ANIMATION_OPTIONS: AnimationOptions = {
+  enabled: false,
+  durationMs: 5000,
+  fps: 30,
+  easing: 'ease-in-out',
+  showMarker: true,
+  markerSize: 6,
+  markerColor: '#ffffff'
+}
+
 export interface ChartOptions {
   // Single-series mode (legacy)
   data?: DataPoint[]
@@ -87,6 +110,9 @@ export interface ChartOptions {
 
   // Style overrides for interactive editing
   styleOverrides?: ChartStyleOverrides
+
+  // Animation options (for elevation charts)
+  animation?: AnimationOptions
 }
 
 // =============================================================================
