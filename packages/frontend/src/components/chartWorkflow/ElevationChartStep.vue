@@ -31,12 +31,24 @@
 
       <!-- Animation Preview - PROMINENT -->
       <v-card variant="outlined" class="mb-4">
-        <v-card-title class="text-subtitle-1 bg-grey-lighten-4 d-flex justify-space-between align-center">
+        <v-card-title class="text-subtitle-1 bg-grey-lighten-4 d-flex justify-space-between align-center flex-wrap ga-2">
           <div class="d-flex align-center">
             <v-icon icon="mdi-movie-play" class="mr-2"></v-icon>
             Vorschau
           </div>
-          <div class="d-flex align-center">
+          <div class="d-flex align-center flex-wrap ga-2">
+            <!-- Layout Mode Toggle -->
+            <v-btn-toggle v-model="layoutMode" mandatory density="compact" class="mr-2">
+              <v-btn value="silhouette" size="small">
+                <v-icon start size="small">mdi-image-filter-hdr</v-icon>
+                Silhouette
+              </v-btn>
+              <v-btn value="free" size="small">
+                <v-icon start size="small">mdi-cursor-move</v-icon>
+                Frei
+              </v-btn>
+            </v-btn-toggle>
+            <!-- View Mode Toggle -->
             <v-btn-toggle v-model="viewMode" mandatory density="compact" class="mr-2">
               <v-btn value="animate" size="small">
                 <v-icon start size="small">mdi-play</v-icon>
@@ -65,21 +77,53 @@
 
             <!-- Phone Screen -->
             <div class="phone-screen">
-              <!-- Animated View -->
-              <template v-if="viewMode === 'animate'">
-                <div class="phone-content" v-html="animationSvg"></div>
+              <!-- Silhouette Mode: Chart at bottom like a horizon -->
+              <template v-if="layoutMode === 'silhouette'">
+                <div class="silhouette-container">
+                  <!-- Gradient background -->
+                  <div class="silhouette-background"></div>
+                  <!-- Chart at bottom -->
+                  <div
+                    class="silhouette-chart"
+                    :class="{ 'silhouette-chart--editing': viewMode === 'static' }"
+                    @click="viewMode === 'static' ? handleChartClick($event) : null"
+                    v-html="viewMode === 'animate' ? animationSvg : svgContent"
+                  ></div>
+                </div>
               </template>
 
-              <!-- Static View for Editing -->
+              <!-- Free Mode: Zoomable and draggable -->
               <template v-else>
                 <div
-                  class="phone-content preview-container"
-                  @click="handleChartClick"
-                  v-html="svgContent"
-                  :key="JSON.stringify(styleOverrides)"
-                ></div>
+                  class="free-container"
+                  @wheel.prevent="onZoom"
+                  @mousedown="onDragStart"
+                  @mousemove="onDrag"
+                  @mouseup="onDragEnd"
+                  @mouseleave="onDragEnd"
+                >
+                  <div
+                    class="free-chart"
+                    :style="freeChartStyle"
+                    :class="{ 'free-chart--editing': viewMode === 'static' }"
+                    @click="viewMode === 'static' ? handleChartClick($event) : null"
+                    v-html="viewMode === 'animate' ? animationSvg : svgContent"
+                  ></div>
+                </div>
               </template>
             </div>
+          </div>
+        </v-card-text>
+
+        <!-- Free Mode Controls -->
+        <v-card-text v-if="layoutMode === 'free'" class="pt-0 pb-2">
+          <div class="d-flex align-center justify-center ga-2">
+            <v-btn icon="mdi-minus" size="small" variant="text" @click="zoomOut" />
+            <span class="text-caption" style="min-width: 50px; text-align: center;">{{ Math.round(zoomLevel * 100) }}%</span>
+            <v-btn icon="mdi-plus" size="small" variant="text" @click="zoomIn" />
+            <v-btn icon="mdi-refresh" size="small" variant="text" @click="resetTransform" class="ml-2">
+              Reset
+            </v-btn>
           </div>
         </v-card-text>
 
@@ -451,6 +495,61 @@ const expandedPanels = ref(["settings"]);
 
 // View mode: 'animate' or 'static'
 const viewMode = ref<'animate' | 'static'>('animate');
+
+// Layout mode: 'silhouette' or 'free'
+const layoutMode = ref<'silhouette' | 'free'>('silhouette');
+
+// Free positioning mode state
+const zoomLevel = ref(0.8);
+const panX = ref(0);
+const panY = ref(0);
+const isDragging = ref(false);
+const dragStartX = ref(0);
+const dragStartY = ref(0);
+
+// Computed style for free chart positioning
+const freeChartStyle = computed(() => ({
+  transform: `translate(${panX.value}px, ${panY.value}px) scale(${zoomLevel.value})`,
+  transformOrigin: 'center center',
+}));
+
+// Zoom functions
+function zoomIn() {
+  zoomLevel.value = Math.min(zoomLevel.value + 0.1, 2);
+}
+
+function zoomOut() {
+  zoomLevel.value = Math.max(zoomLevel.value - 0.1, 0.3);
+}
+
+function onZoom(event: WheelEvent) {
+  const delta = event.deltaY > 0 ? -0.05 : 0.05;
+  zoomLevel.value = Math.max(0.3, Math.min(2, zoomLevel.value + delta));
+}
+
+// Drag functions
+function onDragStart(event: MouseEvent) {
+  if (viewMode.value === 'static') return; // Don't drag in edit mode
+  isDragging.value = true;
+  dragStartX.value = event.clientX - panX.value;
+  dragStartY.value = event.clientY - panY.value;
+}
+
+function onDrag(event: MouseEvent) {
+  if (!isDragging.value) return;
+  panX.value = event.clientX - dragStartX.value;
+  panY.value = event.clientY - dragStartY.value;
+}
+
+function onDragEnd() {
+  isDragging.value = false;
+}
+
+function resetTransform() {
+  zoomLevel.value = 0.8;
+  panX.value = 0;
+  panY.value = 0;
+}
 
 // Animation settings state
 const animationDuration = ref(5);
@@ -968,32 +1067,122 @@ const emit = defineEmits<{
   flex-direction: column;
 }
 
-.phone-content {
+/* ===== Silhouette Mode ===== */
+.silhouette-container {
   flex: 1;
+  position: relative;
   display: flex;
-  justify-content: center;
-  align-items: center;
-  overflow: hidden;
-  background: #f5f5f5;
+  flex-direction: column;
   margin: 2px;
   border-radius: 38px;
+  overflow: hidden;
 }
 
-.phone-content :deep(svg) {
+.silhouette-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    to bottom,
+    #1a1a2e 0%,
+    #16213e 30%,
+    #1a1a2e 60%,
+    #0f0f1a 100%
+  );
+}
+
+.silhouette-chart {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  display: flex;
+  align-items: flex-end;
+}
+
+.silhouette-chart :deep(svg) {
   width: 100% !important;
   height: auto !important;
   max-height: 100%;
 }
 
-/* Preview container inside phone */
+/* Hide axes and labels in silhouette mode */
+.silhouette-chart :deep(#x-axis),
+.silhouette-chart :deep(#y-axis),
+.silhouette-chart :deep([id^="x-label"]),
+.silhouette-chart :deep([id^="y-label"]),
+.silhouette-chart :deep([id^="grid-line"]),
+.silhouette-chart :deep(#x-axis-title),
+.silhouette-chart :deep(#y-axis-title),
+.silhouette-chart :deep(#chart-title),
+.silhouette-chart :deep(#elevation-stats) {
+  display: none !important;
+}
+
+/* Make background transparent in silhouette */
+.silhouette-chart :deep(#chart-background) {
+  fill: transparent !important;
+}
+
+.silhouette-chart--editing :deep([data-editable="true"]) {
+  cursor: pointer;
+}
+
+.silhouette-chart--editing :deep([data-editable="true"]:hover) {
+  opacity: 0.8;
+}
+
+/* ===== Free Mode ===== */
+.free-container {
+  flex: 1;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 2px;
+  border-radius: 38px;
+  overflow: hidden;
+  background: #f5f5f5;
+  cursor: grab;
+}
+
+.free-container:active {
+  cursor: grabbing;
+}
+
+.free-chart {
+  transition: transform 0.1s ease-out;
+  will-change: transform;
+}
+
+.free-chart :deep(svg) {
+  width: 100% !important;
+  height: auto !important;
+}
+
+.free-chart--editing {
+  cursor: default;
+}
+
+.free-chart--editing :deep([data-editable="true"]) {
+  cursor: pointer;
+}
+
+.free-chart--editing :deep([data-editable="true"]:hover) {
+  opacity: 0.8;
+}
+
+/* ===== Legacy Preview Container ===== */
 .preview-container {
   width: 100%;
   height: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
-  background: #f5f5f5;
-  padding: 8px;
+  background: transparent;
 }
 
 .preview-container :deep(svg) {
