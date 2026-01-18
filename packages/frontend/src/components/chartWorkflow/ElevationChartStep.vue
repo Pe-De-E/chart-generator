@@ -1083,29 +1083,27 @@ const emit = defineEmits<{
   bottom: 0;
   background: linear-gradient(
     to bottom,
-    #1a1a2e 0%,
-    #16213e 30%,
-    #1a1a2e 60%,
-    #0f0f1a 100%
+    #0f0c29 0%,
+    #302b63 50%,
+    #24243e 100%
   );
 }
 
 .silhouette-chart {
   position: absolute;
-  bottom: 0;
-  left: -10%;
-  right: -10%;
-  width: 120%;
-  height: auto;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
+  bottom: -20%;
+  left: 0;
+  right: 0;
+  width: 100%;
   z-index: 1;
+  transform: scaleY(1.5);
+  transform-origin: bottom center;
 }
 
 .silhouette-chart :deep(svg) {
   width: 100% !important;
   height: auto !important;
+  display: block;
 }
 
 /* Hide axes and labels in silhouette mode */
@@ -1121,9 +1119,19 @@ const emit = defineEmits<{
   opacity: 0 !important;
 }
 
-/* Make background transparent in silhouette */
+/* Make background transparent and curve more visible */
 .silhouette-chart :deep(#chart-background) {
   fill: transparent !important;
+}
+
+/* Style the elevation curve for silhouette look */
+.silhouette-chart :deep(#elevation-area) {
+  fill: rgba(255, 255, 255, 0.1) !important;
+}
+
+.silhouette-chart :deep(#elevation-line) {
+  stroke: rgba(255, 255, 255, 0.8) !important;
+  stroke-width: 3px !important;
 }
 
 .silhouette-chart--editing :deep([data-editable="true"]) {
