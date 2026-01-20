@@ -946,11 +946,17 @@ const props = defineProps({
 });
 
 // Computed properties for animation
+// Use layoutMode to determine silhouetteMode so animation matches the UI layout
 const chartOptionsForAnimation = computed<ChartOptions>(() => ({
   data: props.chartData,
-  colors: props.colors,
+  colors: {
+    // Include primary color from seriesConfig for the animation curve
+    primary: props.seriesConfig[0]?.color || '#2E7D32',
+    secondary: '#818CF8',
+    background: props.colors.background,
+  },
   title: props.chartTitle,
-  silhouetteMode: props.silhouetteMode,
+  silhouetteMode: layoutMode.value === 'silhouette',
   styleOverrides: props.styleOverrides,
 }));
 
@@ -978,9 +984,17 @@ const animationProgress = computed(() => animation.progress.value);
 const playbackSpeed = computed(() => animation.playbackSpeed.value);
 const formattedTime = computed(() => animation.formattedTime.value);
 
+
 // Silhouette SVG - modified version for silhouette display
 const silhouetteSvg = computed(() => {
-  const baseSvg = viewMode.value === 'animate' ? animationSvg.value : props.svgContent;
+  // In animation mode with silhouette layout, the animation composable already generates
+  // the correct silhouette SVG with clip-path animation - use it directly
+  if (viewMode.value === 'animate') {
+    return animationSvg.value || '';
+  }
+
+  // In static/edit mode, transform the standard SVG for silhouette display
+  const baseSvg = props.svgContent;
   if (!baseSvg) return '';
 
   // Parse the SVG and modify it for silhouette display
@@ -1164,11 +1178,14 @@ const emit = defineEmits<{
   z-index: 0;
 }
 
+
 .silhouette-chart {
   position: relative;
   z-index: 1;
   width: 100%;
   padding: 0;
+  /* Add bottom margin to leave space for Instagram menu */
+  margin-bottom: 40px;
 }
 
 .silhouette-chart :deep(svg) {

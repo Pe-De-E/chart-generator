@@ -589,25 +589,29 @@ function generateAnimatedSilhouette(
   // Find marker position (interpolate between points)
   const markerPoint = getMarkerPosition(viewBoxPoints, progress)
 
+  // Calculate clip width - start from x=0 to include the full chart area
+  const clipX = 0
+  const fullClipWidth = chartArea.x + clipWidth
+
   return `
-    <svg width="${config.width}" height="${config.height}" xmlns="http://www.w3.org/2000/svg">
+    <svg width="${config.width}" height="${config.height}" viewBox="0 0 ${config.width} ${config.height}" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <linearGradient id="${gradientId}" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" style="stop-color:${color};stop-opacity:0.4"/>
-          <stop offset="100%" style="stop-color:${color};stop-opacity:0.05"/>
+          <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.5"/>
+          <stop offset="100%" style="stop-color:#ffffff;stop-opacity:0.1"/>
         </linearGradient>
         <clipPath id="${clipId}">
-          <rect x="${chartArea.x}" y="0" width="${clipWidth}" height="${config.height}"/>
+          <rect x="${clipX}" y="0" width="${fullClipWidth}" height="${config.height}"/>
         </clipPath>
       </defs>
       <g clip-path="url(#${clipId})">
         <polygon points="${areaPath}" fill="url(#${gradientId})"/>
-        <polyline points="${linePoints}" fill="none" stroke="${color}"
+        <polyline points="${linePoints}" fill="none" stroke="#ffffff"
                   stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
       </g>
       ${showMarker && markerPoint ? `
         <circle cx="${markerPoint.x}" cy="${markerPoint.y}" r="${markerSize}"
-                fill="${markerColor}" stroke="${color}" stroke-width="2"/>
+                fill="${markerColor}" stroke="#ffffff" stroke-width="2"/>
       ` : ''}
     </svg>
   `

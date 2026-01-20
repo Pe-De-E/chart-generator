@@ -38,7 +38,9 @@ export function useChartAnimation(
   animationOptions: Ref<AnimationOptions> = ref({ ...DEFAULT_ANIMATION_OPTIONS })
 ): UseChartAnimationReturn {
   // Playback state
-  const progress = ref(0)
+  // Start at progress=1 so the chart is initially visible
+  // When play() is called, it resets to 0 and animates
+  const progress = ref(1)
   const isPlaying = ref(false)
   const playbackSpeed = ref<PlaybackSpeed>(1)
 
