@@ -81,7 +81,24 @@ Die folgenden 8 Punkte wurden als Lücken identifiziert und in die Timeline inte
   - Gleiche Frames im Preview wie im Export (pixelgenau)
   - Kein "Warum sieht mein Video anders aus als die Vorschau?"
   - Vertrauen = Produkt-Qualität
-- [ ] 🟢 MP4 Export 1080×1920
+- [ ] 🟢 **MP4 Export 1080×1920** (ffmpeg.wasm, Client-seitig)
+  - [ ] Setup
+    - [ ] ffmpeg.wasm Packages installieren (`@ffmpeg/ffmpeg`, `@ffmpeg/util`)
+    - [ ] Vite-Config: SharedArrayBuffer Headers hinzufügen (COOP/COEP)
+  - [ ] Composable `useVideoExport`
+    - [ ] FFmpeg laden und initialisieren
+    - [ ] SVG-Frames zu PNG konvertieren (via Canvas)
+    - [ ] PNG-Sequenz an FFmpeg übergeben
+    - [ ] FFmpeg MP4-Encoding ausführen (H.264, 30fps)
+    - [ ] MP4 als Download anbieten
+  - [ ] UI
+    - [ ] Export-Button in ElevationChartStep hinzufügen
+    - [ ] Progress-Anzeige während Export (Ladebalken)
+    - [ ] Export-Einstellungen (Auflösung, FPS, Qualität)
+  - [ ] Qualitätssicherung
+    - [ ] Browser-Kompatibilität prüfen (SharedArrayBuffer Support)
+    - [ ] Testen auf Chrome, Firefox, Edge
+  - [ ] Instagram Reel Specs: 9:16, min 720x1280, 3-90 Sek
 - [ ] 🔵 2–3 eigene GPX-Tracks testen  
 
 ## Mär 2026 – Feedback & erste Monetarisierung
