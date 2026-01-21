@@ -57,20 +57,18 @@
                   variant="outlined"
                   class="mr-2"
                 >
-                  <v-icon start size="small" :color="silhouetteCurveColor">mdi-palette</v-icon>
+                  <div
+                    class="color-swatch mr-2"
+                    :style="{ backgroundColor: silhouetteCurveColor }"
+                  ></div>
                   Farbe
                 </v-btn>
               </template>
-              <v-card min-width="200">
-                <v-card-text class="pa-3">
-                  <v-label class="text-caption mb-2 d-block">Kurvenfarbe</v-label>
-                  <input
-                    type="color"
-                    v-model="silhouetteCurveColor"
-                    class="color-picker-full"
-                  />
-                </v-card-text>
-              </v-card>
+              <v-color-picker
+                v-model="silhouetteCurveColor"
+                mode="hexa"
+                hide-inputs
+              />
             </v-menu>
             <!-- View Mode Toggle -->
             <v-btn-toggle v-model="viewMode" mandatory density="compact" class="mr-2">
@@ -1310,6 +1308,14 @@ const emit = defineEmits<{
 .preview-container :deep(.chart-element-selected) {
   filter: drop-shadow(0 0 4px rgba(33, 150, 243, 0.8));
   opacity: 1 !important;
+}
+
+/* Color swatch in button */
+.color-swatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
 }
 
 /* Color picker styling */
