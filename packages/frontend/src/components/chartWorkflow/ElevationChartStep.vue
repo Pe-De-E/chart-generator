@@ -48,6 +48,30 @@
                 Frei
               </v-btn>
             </v-btn-toggle>
+            <!-- Silhouette Curve Color Picker -->
+            <v-menu v-if="layoutMode === 'silhouette'" :close-on-content-click="false">
+              <template v-slot:activator="{ props: menuProps }">
+                <v-btn
+                  v-bind="menuProps"
+                  size="small"
+                  variant="outlined"
+                  class="mr-2"
+                >
+                  <v-icon start size="small" :color="silhouetteCurveColor">mdi-palette</v-icon>
+                  Farbe
+                </v-btn>
+              </template>
+              <v-card min-width="200">
+                <v-card-text class="pa-3">
+                  <v-label class="text-caption mb-2 d-block">Kurvenfarbe</v-label>
+                  <input
+                    type="color"
+                    v-model="silhouetteCurveColor"
+                    class="color-picker-full"
+                  />
+                </v-card-text>
+              </v-card>
+            </v-menu>
             <!-- View Mode Toggle -->
             <v-btn-toggle v-model="viewMode" mandatory density="compact" class="mr-2">
               <v-btn value="animate" size="small">
@@ -561,6 +585,9 @@ const animationMarkerSize = ref(6);
 // 0 = natural elevation (no stretching), 100 = top of screen
 const curveEndpoint = ref<number>(50);  // Start at middle
 
+// Silhouette curve color
+const silhouetteCurveColor = ref('#ffffff');
+
 const easingOptions = [
   { title: 'Linear', value: 'linear' },
   { title: 'Ease In', value: 'ease-in' },
@@ -955,8 +982,10 @@ const props = defineProps({
 const chartOptionsForAnimation = computed<ChartOptions>(() => ({
   data: props.chartData,
   colors: {
-    // Include primary color from seriesConfig for the animation curve
-    primary: props.seriesConfig[0]?.color || '#2E7D32',
+    // Use silhouette color in silhouette mode, otherwise use series color
+    primary: layoutMode.value === 'silhouette'
+      ? silhouetteCurveColor.value
+      : (props.seriesConfig[0]?.color || '#2E7D32'),
     secondary: '#818CF8',
     background: props.colors.background,
   },

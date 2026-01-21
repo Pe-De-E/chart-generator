@@ -602,8 +602,8 @@ function generateAnimatedSilhouette(
     <svg width="${config.width}" height="${config.height}" viewBox="0 0 ${config.width} ${config.height}" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <linearGradient id="${gradientId}" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.5"/>
-          <stop offset="100%" style="stop-color:#ffffff;stop-opacity:0.1"/>
+          <stop offset="0%" style="stop-color:${color};stop-opacity:0.5"/>
+          <stop offset="100%" style="stop-color:${color};stop-opacity:0.1"/>
         </linearGradient>
         <clipPath id="${clipId}">
           <rect x="${clipX}" y="0" width="${fullClipWidth}" height="${config.height}"/>
@@ -611,12 +611,12 @@ function generateAnimatedSilhouette(
       </defs>
       <g clip-path="url(#${clipId})">
         <polygon points="${areaPath}" fill="url(#${gradientId})"/>
-        <polyline points="${linePoints}" fill="none" stroke="#ffffff"
+        <polyline points="${linePoints}" fill="none" stroke="${color}"
                   stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
       </g>
       ${showMarker && markerPoint ? `
         <circle cx="${markerPoint.x}" cy="${markerPoint.y}" r="${markerSize}"
-                fill="${markerColor}" stroke="#ffffff" stroke-width="2"/>
+                fill="${markerColor}" stroke="${color}" stroke-width="2"/>
       ` : ''}
     </svg>
   `

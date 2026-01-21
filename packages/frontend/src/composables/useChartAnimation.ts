@@ -68,19 +68,21 @@ export function useChartAnimation(
     return `${minutes}:${seconds.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`
   })
 
-  // Track curveEndpoint changes to force re-render
-  const curveEndpointTrigger = ref(0)
+  // Track changes to force re-render
+  const optionsTrigger = ref(0)
   watch(
     () => animationOptions.value.curveEndpoint,
-    () => {
-      curveEndpointTrigger.value++
-    }
+    () => { optionsTrigger.value++ }
+  )
+  watch(
+    () => chartOptions.value.colors?.primary,
+    () => { optionsTrigger.value++ }
   )
 
   // Generate current SVG frame
   const currentSvg = computed(() => {
-    // Include trigger to ensure reactivity when curveEndpoint changes
-    void curveEndpointTrigger.value
+    // Include trigger to ensure reactivity when options change
+    void optionsTrigger.value
 
     const frameOptions: FrameOptions = {
       progress: progress.value,
