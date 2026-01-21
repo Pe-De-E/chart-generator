@@ -68,6 +68,12 @@ export interface ChartDimensions {
 // Animation options for frame-based elevation chart animation
 export type EasingType = 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out'
 
+// Curve endpoint: percentage of screen height where the curve ends (0 = natural/bottom, 100 = top)
+// 0 = natural elevation (no stretching)
+// 50 = middle of screen
+// 100 = top of screen
+export type CurveEndpoint = number
+
 export interface AnimationOptions {
   enabled: boolean
   durationMs: number      // e.g. 5000 for 5 seconds
@@ -76,6 +82,7 @@ export interface AnimationOptions {
   showMarker: boolean     // Show moving dot at current position
   markerSize: number      // Marker radius in pixels
   markerColor: string     // Marker fill color
+  curveEndpoint: CurveEndpoint  // 0-100: percentage of screen height where curve ends (0=natural, 100=top)
 }
 
 export const DEFAULT_ANIMATION_OPTIONS: AnimationOptions = {
@@ -85,7 +92,8 @@ export const DEFAULT_ANIMATION_OPTIONS: AnimationOptions = {
   easing: 'ease-in-out',
   showMarker: true,
   markerSize: 6,
-  markerColor: '#ffffff'
+  markerColor: '#ffffff',
+  curveEndpoint: 0  // 0 = natural elevation, no stretching
 }
 
 export interface ChartOptions {

@@ -229,6 +229,7 @@
               />
             </v-col>
           </v-row>
+
         </v-card-text>
 
         <!-- Edit Mode Hint -->
@@ -490,7 +491,7 @@ import { DEFAULT_ANIMATION_OPTIONS } from "@chart-generator/shared";
 import ChartSettingsCard from "./ChartCreationStep/ChartSettingsCard.vue";
 import { useChartAnimation, type PlaybackSpeed } from "../../composables/useChartAnimation";
 
-// Settings panel expanded by default
+0// Settings panel expanded by default
 const expandedPanels = ref(["settings"]);
 
 // View mode: 'animate' or 'static'
@@ -555,6 +556,10 @@ const animationDuration = ref(5);
 const animationEasing = ref<'linear' | 'ease-in' | 'ease-out' | 'ease-in-out'>('ease-in-out');
 const animationShowMarker = ref(true);
 const animationMarkerSize = ref(6);
+
+// Curve endpoint setting: percentage of screen height where the curve ends (0-100)
+// 0 = natural elevation (no stretching), 100 = top of screen
+const curveEndpoint = ref<number>(50);  // Start at middle
 
 const easingOptions = [
   { title: 'Linear', value: 'linear' },
@@ -969,6 +974,7 @@ const animationSettings = computed<AnimationOptions>(() => ({
   showMarker: animationShowMarker.value,
   markerSize: animationMarkerSize.value,
   markerColor: '#ffffff',
+  curveEndpoint: curveEndpoint.value,
 }));
 
 // Use the animation composable

@@ -68,13 +68,26 @@ export function useChartAnimation(
     return `${minutes}:${seconds.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`
   })
 
+  // Track curveEndpoint changes to force re-render
+  const curveEndpointTrigger = ref(0)
+  watch(
+    () => animationOptions.value.curveEndpoint,
+    () => {
+      curveEndpointTrigger.value++
+    }
+  )
+
   // Generate current SVG frame
   const currentSvg = computed(() => {
+    // Include trigger to ensure reactivity when curveEndpoint changes
+    void curveEndpointTrigger.value
+
     const frameOptions: FrameOptions = {
       progress: progress.value,
       showMarker: animationOptions.value.showMarker,
       markerSize: animationOptions.value.markerSize,
-      markerColor: animationOptions.value.markerColor
+      markerColor: animationOptions.value.markerColor,
+      curveEndpoint: animationOptions.value.curveEndpoint
     }
     return generateElevationFrame(chartOptions.value, frameOptions)
   })

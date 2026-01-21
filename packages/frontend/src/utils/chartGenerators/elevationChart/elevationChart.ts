@@ -1,4 +1,4 @@
-import type { ChartOptions } from '@chart-generator/shared'
+import type { ChartOptions, CurveEndpoint } from '@chart-generator/shared'
 import { renderStatisticalOverlays, hasAnyOverlayEnabled } from '../statisticalOverlayRenderer'
 import {
   gpxToViewBox,
@@ -19,6 +19,7 @@ export interface FrameOptions {
   showMarker: boolean       // Show a dot at the current position
   markerSize: number        // Radius of the marker dot
   markerColor: string       // Color of the marker dot
+  curveEndpoint: CurveEndpoint  // Where the curve ends: natural, middle, or top
 }
 
 export function generateElevationChart(options: ChartOptions): string {
@@ -521,7 +522,7 @@ export function generateElevationFrame(
   frameOptions: FrameOptions
 ): string {
   const { data, seriesData, seriesConfig, silhouetteMode, styleOverrides } = options
-  const { progress, showMarker, markerSize, markerColor } = frameOptions
+  const { progress, showMarker, markerSize, markerColor, curveEndpoint } = frameOptions
 
   // Clamp progress to 0-1
   const clampedProgress = Math.max(0, Math.min(1, progress))
@@ -533,7 +534,7 @@ export function generateElevationFrame(
       value: Object.values(d.values)[0] || 0
     })) : [])
     const color = styleOverrides?.series?.['main']?.color ?? options.colors.primary ?? seriesConfig?.[0]?.color ?? '#2E7D32'
-    return generateAnimatedSilhouette(chartData, color, clampedProgress, showMarker, markerSize, markerColor)
+    return generateAnimatedSilhouette(chartData, color, clampedProgress, showMarker, markerSize, markerColor, curveEndpoint)
   }
 
   // Single-series mode with animation
@@ -565,7 +566,8 @@ function generateAnimatedSilhouette(
   progress: number,
   showMarker: boolean,
   markerSize: number,
-  markerColor: string
+  markerColor: string,
+  curveEndpoint: CurveEndpoint = 0
 ): string {
   if (data.length === 0) return '<svg></svg>'
 
@@ -577,8 +579,11 @@ function generateAnimatedSilhouette(
   const config = VIEW_BOX_PRESETS.silhouette
   const { viewBoxPoints, chartArea } = gpxToViewBox(gpxPoints, config)
 
-  const linePoints = pointsToPolyline(viewBoxPoints)
-  const areaPath = pointsToAreaPolygon(viewBoxPoints, chartArea)
+  // Adjust points based on curveEndpoint setting
+  const adjustedPoints = adjustCurveEndpoint(viewBoxPoints, chartArea, curveEndpoint)
+
+  const linePoints = pointsToPolyline(adjustedPoints)
+  const areaPath = pointsToAreaPolygon(adjustedPoints, chartArea)
 
   const gradientId = `silhouette-gradient-anim`
   const clipId = `reveal-clip-anim`
@@ -587,7 +592,7 @@ function generateAnimatedSilhouette(
   const clipWidth = chartArea.width * progress
 
   // Find marker position (interpolate between points)
-  const markerPoint = getMarkerPosition(viewBoxPoints, progress)
+  const markerPoint = getMarkerPosition(adjustedPoints, progress)
 
   // Calculate clip width - start from x=0 to include the full chart area
   const clipX = 0
@@ -615,6 +620,19 @@ function generateAnimatedSilhouette(
       ` : ''}
     </svg>
   `
+}
+
+/**
+ * Placeholder - returns points unchanged for now
+ * TODO: Implement proper curve height adjustment
+ */
+function adjustCurveEndpoint(
+  points: ViewBoxPoint[],
+  chartArea: { x: number; y: number; width: number; height: number },
+  heightPercent: CurveEndpoint
+): ViewBoxPoint[] {
+  // Return points unchanged - slider has no effect yet
+  return points
 }
 
 /**
