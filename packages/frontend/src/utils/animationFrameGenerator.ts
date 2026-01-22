@@ -8,14 +8,24 @@ import { generateElevationFrame, type FrameOptions } from './chartGenerators/ele
 import { applyEasing } from './easing'
 
 /**
+ * Export dimensions for video rendering
+ */
+export interface ExportDimensions {
+  width: number
+  height: number
+}
+
+/**
  * Generate all animation frames for a chart
  * @param chartOptions - The chart configuration
  * @param animationOptions - Animation settings (duration, fps, easing, etc.)
+ * @param exportDimensions - Optional export dimensions for video export
  * @returns Array of SVG strings, one per frame
  */
 export function generateAnimationFrames(
   chartOptions: ChartOptions,
-  animationOptions: AnimationOptions
+  animationOptions: AnimationOptions,
+  exportDimensions?: ExportDimensions
 ): string[] {
   const { durationMs, fps, easing, showMarker, markerSize, markerColor } = animationOptions
 
@@ -37,7 +47,10 @@ export function generateAnimationFrames(
       progress: easedProgress,
       showMarker,
       markerSize,
-      markerColor
+      markerColor,
+      curveEndpoint: animationOptions.curveEndpoint ?? 0,
+      exportWidth: exportDimensions?.width,
+      exportHeight: exportDimensions?.height
     }
 
     // Generate the SVG for this frame

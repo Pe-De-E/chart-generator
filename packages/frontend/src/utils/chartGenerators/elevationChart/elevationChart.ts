@@ -20,6 +20,8 @@ export interface FrameOptions {
   markerSize: number        // Radius of the marker dot
   markerColor: string       // Color of the marker dot
   curveEndpoint: CurveEndpoint  // Where the curve ends: natural, middle, or top
+  exportWidth?: number      // Export width (for video export)
+  exportHeight?: number     // Export height (for video export)
 }
 
 export function generateElevationChart(options: ChartOptions): string {
@@ -534,7 +536,19 @@ export function generateElevationFrame(
       value: Object.values(d.values)[0] || 0
     })) : [])
     const color = styleOverrides?.series?.['main']?.color ?? options.colors.primary ?? seriesConfig?.[0]?.color ?? '#2E7D32'
-    return generateAnimatedSilhouette(chartData, color, clampedProgress, showMarker, markerSize, markerColor, curveEndpoint)
+    const backgroundColor = options.colors.background
+    return generateAnimatedSilhouette(
+      chartData,
+      color,
+      clampedProgress,
+      showMarker,
+      markerSize,
+      markerColor,
+      curveEndpoint,
+      frameOptions.exportWidth,
+      frameOptions.exportHeight,
+      backgroundColor
+    )
   }
 
   // Single-series mode with animation
@@ -559,6 +573,8 @@ export function generateElevationFrame(
 
 /**
  * Animated silhouette mode
+ * For video export: uses full reel dimensions with background gradient
+ * For preview: uses compact silhouette preset
  */
 function generateAnimatedSilhouette(
   data: Array<{ label: string, value: number }>,
@@ -567,56 +583,106 @@ function generateAnimatedSilhouette(
   showMarker: boolean,
   markerSize: number,
   markerColor: string,
-  curveEndpoint: CurveEndpoint = 0
+  curveEndpoint: CurveEndpoint = 0,
+  exportWidth?: number,
+  exportHeight?: number,
+  backgroundColor?: string
 ): string {
   if (data.length === 0) return '<svg></svg>'
+
+  // Use export dimensions if provided (for video export), otherwise use preview preset
+  const isExportMode = exportWidth !== undefined && exportHeight !== undefined
+  const width = exportWidth || VIEW_BOX_PRESETS.silhouette.width
+  const height = exportHeight || VIEW_BOX_PRESETS.silhouette.height
+
+  // For export mode: position curve in the lower portion of the reel
+  // The curve should take about 30% of the height and be positioned near the bottom
+  const curveHeight = isExportMode ? Math.round(height * 0.3) : height
+  const curveY = isExportMode ? height - curveHeight - Math.round(height * 0.08) : 0 // 8% margin from bottom
+
+  // Create a config for the curve area only
+  const curveConfig: ViewBoxConfig = {
+    width: width,
+    height: curveHeight,
+    padding: isExportMode
+      ? { top: 20, right: 60, bottom: 20, left: 60 }
+      : { top: 10, right: 10, bottom: 10, left: 10 }
+  }
 
   const gpxPoints: GPXPoint[] = data.map((d, i) => ({
     distance: i,
     elevation: d.value
   }))
 
-  const config = VIEW_BOX_PRESETS.silhouette
-  const { viewBoxPoints, chartArea } = gpxToViewBox(gpxPoints, config)
+  const { viewBoxPoints, chartArea } = gpxToViewBox(gpxPoints, curveConfig)
 
   // Adjust points based on curveEndpoint setting
   const adjustedPoints = adjustCurveEndpoint(viewBoxPoints, chartArea, curveEndpoint)
 
-  const linePoints = pointsToPolyline(adjustedPoints)
-  const areaPath = pointsToAreaPolygon(adjustedPoints, chartArea)
+  // Offset Y coordinates for export mode (curve is positioned lower)
+  const offsetPoints = isExportMode
+    ? adjustedPoints.map(p => ({ ...p, y: p.y + curveY }))
+    : adjustedPoints
+
+  // Adjust chartArea for offset
+  const offsetChartArea = isExportMode
+    ? { ...chartArea, y: chartArea.y + curveY }
+    : chartArea
+
+  const linePoints = pointsToPolyline(offsetPoints)
+  const areaPath = pointsToAreaPolygon(offsetPoints, offsetChartArea)
 
   const gradientId = `silhouette-gradient-anim`
+  const bgGradientId = `background-gradient-anim`
   const clipId = `reveal-clip-anim`
 
   // Calculate clip width based on progress
   const clipWidth = chartArea.width * progress
 
   // Find marker position (interpolate between points)
-  const markerPoint = getMarkerPosition(adjustedPoints, progress)
+  const markerPoint = getMarkerPosition(offsetPoints, progress)
 
-  // Calculate clip width - start from x=0 to include the full chart area
+  // Calculate clip - start from x=0 to include the full chart area
   const clipX = 0
   const fullClipWidth = chartArea.x + clipWidth
 
+  // Background gradient (purple gradient like in the preview CSS)
+  const backgroundSvg = isExportMode ? `
+    <defs>
+      <linearGradient id="${bgGradientId}" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" style="stop-color:#0f0c29;stop-opacity:1"/>
+        <stop offset="50%" style="stop-color:#302b63;stop-opacity:1"/>
+        <stop offset="100%" style="stop-color:#24243e;stop-opacity:1"/>
+      </linearGradient>
+    </defs>
+    <rect width="${width}" height="${height}" fill="url(#${bgGradientId})"/>
+  ` : ''
+
+  // Scale marker and stroke for export
+  const strokeWidth = isExportMode ? 6 : 3
+  const scaledMarkerSize = isExportMode ? markerSize * 2 : markerSize
+  const markerStrokeWidth = isExportMode ? 4 : 2
+
   return `
-    <svg width="${config.width}" height="${config.height}" viewBox="0 0 ${config.width} ${config.height}" xmlns="http://www.w3.org/2000/svg">
+    <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
+      ${backgroundSvg}
       <defs>
         <linearGradient id="${gradientId}" x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%" style="stop-color:${color};stop-opacity:0.5"/>
           <stop offset="100%" style="stop-color:${color};stop-opacity:0.1"/>
         </linearGradient>
         <clipPath id="${clipId}">
-          <rect x="${clipX}" y="0" width="${fullClipWidth}" height="${config.height}"/>
+          <rect x="${clipX}" y="0" width="${fullClipWidth}" height="${height}"/>
         </clipPath>
       </defs>
       <g clip-path="url(#${clipId})">
         <polygon points="${areaPath}" fill="url(#${gradientId})"/>
         <polyline points="${linePoints}" fill="none" stroke="${color}"
-                  stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+                  stroke-width="${strokeWidth}" stroke-linejoin="round" stroke-linecap="round"/>
       </g>
       ${showMarker && markerPoint ? `
-        <circle cx="${markerPoint.x}" cy="${markerPoint.y}" r="${markerSize}"
-                fill="${markerColor}" stroke="${color}" stroke-width="2"/>
+        <circle cx="${markerPoint.x}" cy="${markerPoint.y}" r="${scaledMarkerSize}"
+                fill="${markerColor}" stroke="${color}" stroke-width="${markerStrokeWidth}"/>
       ` : ''}
     </svg>
   `
