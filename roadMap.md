@@ -69,9 +69,10 @@ Die folgenden 8 Punkte wurden als Lücken identifiziert und in die Timeline inte
     - `generateAnimationFrames(options)` → Array von SVG-Strings
     - Berechnet alle Frames basierend auf fps + duration
     - z.B. 30fps × 5s = 150 Frames
-  - [ ] 🔵 7. Preview-Player im Generator
-    - Frames als "Daumenkino" abspielen (setInterval)
+  - [x] 🔵 7. Preview-Player im Generator
+    - Frames als "Daumenkino" abspielen (requestAnimationFrame)
     - Play/Pause/Scrubber Controls
+    - Geschwindigkeitsregler (0.25x - 2x)
   - [ ] 🔵 8. Testen & Feinschliff
     - Performance mit 500+ Datenpunkten
     - Smooth Easing testen
@@ -81,24 +82,25 @@ Die folgenden 8 Punkte wurden als Lücken identifiziert und in die Timeline inte
   - Gleiche Frames im Preview wie im Export (pixelgenau)
   - Kein "Warum sieht mein Video anders aus als die Vorschau?"
   - Vertrauen = Produkt-Qualität
-- [ ] 🟢 **MP4 Export 1080×1920** (ffmpeg.wasm, Client-seitig)
-  - [ ] Setup
-    - [ ] ffmpeg.wasm Packages installieren (`@ffmpeg/ffmpeg`, `@ffmpeg/util`)
-    - [ ] Vite-Config: SharedArrayBuffer Headers hinzufügen (COOP/COEP)
-  - [ ] Composable `useVideoExport`
-    - [ ] FFmpeg laden und initialisieren
-    - [ ] SVG-Frames zu PNG konvertieren (via Canvas)
-    - [ ] PNG-Sequenz an FFmpeg übergeben
-    - [ ] FFmpeg MP4-Encoding ausführen (H.264, 30fps)
-    - [ ] MP4 als Download anbieten
-  - [ ] UI
-    - [ ] Export-Button in ElevationChartStep hinzufügen
-    - [ ] Progress-Anzeige während Export (Ladebalken)
-    - [ ] Export-Einstellungen (Auflösung, FPS, Qualität)
+- [x] 🟢 **MP4 Export 1080×1920** (ffmpeg.wasm, Client-seitig)
+  - [x] Setup
+    - [x] ffmpeg.wasm Packages installieren (`@ffmpeg/ffmpeg`, `@ffmpeg/util`)
+    - [x] Vite-Config: SharedArrayBuffer Headers hinzufügen (COOP/COEP)
+  - [x] Composable `useVideoExport`
+    - [x] FFmpeg laden und initialisieren
+    - [x] SVG-Frames zu PNG konvertieren (via Canvas)
+    - [x] PNG-Sequenz an FFmpeg übergeben
+    - [x] FFmpeg MP4-Encoding ausführen (H.264, 30fps)
+    - [x] MP4 als Download anbieten
+  - [x] UI
+    - [x] Export-Button in ElevationChartStep hinzufügen
+    - [x] Progress-Anzeige während Export (Ladebalken + Stage-Chip)
+    - [x] Kurvenhöhe-Slider (15-60% der Reel-Höhe)
+    - [ ] Export-Einstellungen Dialog (Auflösung, FPS, Qualität)
   - [ ] Qualitätssicherung
     - [ ] Browser-Kompatibilität prüfen (SharedArrayBuffer Support)
     - [ ] Testen auf Chrome, Firefox, Edge
-  - [ ] Instagram Reel Specs: 9:16, min 720x1280, 3-90 Sek
+  - [x] Instagram Reel Specs: 9:16, 1080x1920, SVG mit Gradient-Hintergrund
 - [ ] 🔵 2–3 eigene GPX-Tracks testen  
 
 ## Mär 2026 – Feedback & erste Monetarisierung
