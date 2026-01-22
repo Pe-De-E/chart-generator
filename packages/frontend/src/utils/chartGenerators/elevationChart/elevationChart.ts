@@ -608,7 +608,7 @@ function generateAnimatedSilhouette(
   showMarker: boolean,
   markerSize: number,
   markerColor: string,
-  curveEndpoint: CurveEndpoint = 0,
+  curveEndpoint: CurveEndpoint = 30,
   _exportWidth?: number,
   _exportHeight?: number,
   _backgroundColor?: string
@@ -620,8 +620,9 @@ function generateAnimatedSilhouette(
   const height = VIEW_BOX_PRESETS.instagramReel.height // 1920
 
   // Position curve in the lower portion of the reel
-  // The curve takes about 30% of the height and is positioned near the bottom
-  const curveHeight = Math.round(height * 0.3)  // ~576px
+  // curveEndpoint is the percentage of reel height (15-60%)
+  const curveHeightPercent = Math.max(15, Math.min(60, curveEndpoint)) / 100
+  const curveHeight = Math.round(height * curveHeightPercent)
   const curveY = height - curveHeight - Math.round(height * 0.08)  // 8% margin from bottom
 
   // Create a config for the curve area only

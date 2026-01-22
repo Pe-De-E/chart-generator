@@ -133,6 +133,21 @@
               </template>
             </div>
           </div>
+
+          <!-- Curve Height Slider (vertical, right side of phone) -->
+          <div v-if="layoutMode === 'silhouette'" class="height-slider-container ml-3">
+            <v-slider
+              v-model="curveEndpoint"
+              :min="15"
+              :max="60"
+              :step="1"
+              direction="vertical"
+              hide-details
+              thumb-label
+              class="height-slider"
+            />
+            <div class="text-caption text-center mt-1">{{ curveEndpoint }}%</div>
+          </div>
         </v-card-text>
 
         <!-- Free Mode Controls -->
@@ -666,9 +681,8 @@ const animationEasing = ref<'linear' | 'ease-in' | 'ease-out' | 'ease-in-out'>('
 const animationShowMarker = ref(true);
 const animationMarkerSize = ref(6);
 
-// Curve endpoint setting: percentage of screen height where the curve ends (0-100)
-// 0 = natural elevation (no stretching), 100 = top of screen
-const curveEndpoint = ref<number>(50);  // Start at middle
+// Curve endpoint setting: percentage of screen height for the curve area (15-60%)
+const curveEndpoint = ref<number>(30);  // Start at 30% of reel height
 
 // Silhouette curve color
 const silhouetteCurveColor = ref('#ffffff');
@@ -1283,6 +1297,18 @@ const emit = defineEmits<{
 
 .silhouette-chart--editing :deep([data-editable="true"]:hover) {
   opacity: 0.8;
+}
+
+/* ===== Height Slider ===== */
+.height-slider-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 520px; /* Match phone frame height */
+}
+
+.height-slider {
+  height: 100%;
 }
 
 /* ===== Free Mode ===== */
