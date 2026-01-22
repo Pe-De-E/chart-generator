@@ -102,9 +102,7 @@
               <!-- Silhouette Mode: Chart at bottom like a horizon -->
               <template v-if="layoutMode === 'silhouette'">
                 <div class="silhouette-container">
-                  <!-- Gradient background -->
-                  <div class="silhouette-background"></div>
-                  <!-- Chart at bottom -->
+                  <!-- SVG includes background gradient -->
                   <div
                     class="silhouette-chart"
                     :class="{ 'silhouette-chart--editing': viewMode === 'static' }"
@@ -496,7 +494,95 @@
       >
         SVG herunterladen
       </v-btn>
+      <v-btn
+        color="deep-purple"
+        variant="flat"
+        prepend-icon="mdi-video-outline"
+        @click="startVideoExport"
+        :disabled="!videoExport.isSupported.value || videoExport.isExporting.value"
+      >
+        MP4 Export
+      </v-btn>
     </v-card-actions>
+
+    <!-- Video Export Progress Dialog -->
+    <v-dialog v-model="showExportDialog" persistent max-width="450">
+      <v-card>
+        <v-card-title class="d-flex align-center">
+          <v-icon class="mr-2">mdi-video-outline</v-icon>
+          Video Export
+        </v-card-title>
+        <v-card-text>
+          <!-- Error State -->
+          <v-alert
+            v-if="videoExport.progress.value.stage === 'error'"
+            type="error"
+            class="mb-4"
+          >
+            {{ videoExport.error.value }}
+          </v-alert>
+
+          <!-- Success State -->
+          <v-alert
+            v-else-if="videoExport.progress.value.stage === 'done'"
+            type="success"
+            class="mb-4"
+          >
+            Export erfolgreich! Die Datei wird heruntergeladen.
+          </v-alert>
+
+          <!-- Progress State -->
+          <template v-else>
+            <div class="text-body-2 mb-2">
+              {{ videoExport.progress.value.message }}
+            </div>
+            <v-progress-linear
+              :model-value="videoExport.progress.value.percent"
+              color="deep-purple"
+              height="20"
+              rounded
+            >
+              <template v-slot:default>
+                <strong>{{ videoExport.progress.value.percent }}%</strong>
+              </template>
+            </v-progress-linear>
+
+            <div class="text-caption text-grey mt-2" v-if="videoExport.progress.value.totalFrames > 0">
+              Frame {{ videoExport.progress.value.currentFrame }} / {{ videoExport.progress.value.totalFrames }}
+            </div>
+
+            <!-- Stage Info -->
+            <v-chip
+              size="small"
+              class="mt-3"
+              :color="getStageColor(videoExport.progress.value.stage)"
+            >
+              {{ getStageLabel(videoExport.progress.value.stage) }}
+            </v-chip>
+          </template>
+
+          <!-- SharedArrayBuffer Warning -->
+          <v-alert
+            v-if="!videoExport.isSupported.value"
+            type="warning"
+            class="mt-4"
+            density="compact"
+          >
+            SharedArrayBuffer wird nicht unterstützt. Bitte stelle sicher, dass die COOP/COEP Headers korrekt gesetzt sind.
+          </v-alert>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn
+            variant="text"
+            @click="closeExportDialog"
+            :disabled="videoExport.isExporting.value && videoExport.progress.value.stage !== 'error'"
+          >
+            {{ videoExport.progress.value.stage === 'done' || videoExport.progress.value.stage === 'error' ? 'Schließen' : 'Abbrechen' }}
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-card>
 </template>
 
@@ -512,6 +598,7 @@ import type { ChartOptions, AnimationOptions } from "@chart-generator/shared";
 import { DEFAULT_ANIMATION_OPTIONS } from "@chart-generator/shared";
 import ChartSettingsCard from "./ChartCreationStep/ChartSettingsCard.vue";
 import { useChartAnimation, type PlaybackSpeed } from "../../composables/useChartAnimation";
+import { useVideoExport } from "../../composables/useVideoExport";
 
 0// Settings panel expanded by default
 const expandedPanels = ref(["settings"]);
@@ -1017,83 +1104,67 @@ const animationProgress = computed(() => animation.progress.value);
 const playbackSpeed = computed(() => animation.playbackSpeed.value);
 const formattedTime = computed(() => animation.formattedTime.value);
 
+// Video export
+const videoExport = useVideoExport();
+const showExportDialog = ref(false);
 
-// Silhouette SVG - modified version for silhouette display
+async function startVideoExport() {
+  showExportDialog.value = true;
+
+  const blob = await videoExport.exportToMp4(
+    chartOptionsForAnimation.value,
+    animationSettings.value,
+    {
+      width: 1080,
+      height: 1920,
+      fps: 30,
+      quality: 'high'
+    }
+  );
+
+  if (blob) {
+    const filename = `${props.chartTitle || 'elevation-chart'}-${Date.now()}.mp4`;
+    videoExport.downloadVideo(blob, filename);
+  }
+}
+
+function closeExportDialog() {
+  showExportDialog.value = false;
+  videoExport.reset();
+}
+
+function getStageLabel(stage: string): string {
+  const labels: Record<string, string> = {
+    'idle': 'Bereit',
+    'loading-ffmpeg': 'FFmpeg laden',
+    'generating-frames': 'Frames generieren',
+    'converting-to-png': 'PNG konvertieren',
+    'encoding': 'Video encodieren',
+    'done': 'Fertig',
+    'error': 'Fehler'
+  };
+  return labels[stage] || stage;
+}
+
+function getStageColor(stage: string): string {
+  const colors: Record<string, string> = {
+    'idle': 'grey',
+    'loading-ffmpeg': 'blue',
+    'generating-frames': 'orange',
+    'converting-to-png': 'amber',
+    'encoding': 'deep-purple',
+    'done': 'success',
+    'error': 'error'
+  };
+  return colors[stage] || 'grey';
+}
+
+// Silhouette SVG - uses the same Reel format for both preview and export
 const silhouetteSvg = computed(() => {
-  // In animation mode with silhouette layout, the animation composable already generates
-  // the correct silhouette SVG with clip-path animation - use it directly
-  if (viewMode.value === 'animate') {
-    return animationSvg.value || '';
-  }
-
-  // In static/edit mode, transform the standard SVG for silhouette display
-  const baseSvg = props.svgContent;
-  if (!baseSvg) return '';
-
-  // Parse the SVG and modify it for silhouette display
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(baseSvg, 'image/svg+xml');
-  const svg = doc.querySelector('svg');
-  if (!svg) return baseSvg;
-
-  // Hide elements we don't want in silhouette mode
-  const elementsToHide = [
-    '#x-axis', '#y-axis',
-    '#x-axis-title', '#y-axis-title',
-    '#chart-title', '#elevation-stats', '#chart-background'
-  ];
-
-  elementsToHide.forEach(selector => {
-    const el = svg.querySelector(selector);
-    if (el) el.setAttribute('opacity', '0');
-  });
-
-  // Hide all labels and grid lines
-  svg.querySelectorAll('[id^="x-label"], [id^="y-label"], [id^="grid-line"]').forEach(el => {
-    el.setAttribute('opacity', '0');
-  });
-
-  // Style the elevation curve for silhouette look
-  const elevationArea = svg.querySelector('#elevation-area');
-  if (elevationArea) {
-    elevationArea.setAttribute('fill', 'url(#silhouette-gradient)');
-  }
-
-  const elevationLine = svg.querySelector('#elevation-line');
-  if (elevationLine) {
-    elevationLine.setAttribute('stroke', 'rgba(255, 255, 255, 0.9)');
-    elevationLine.setAttribute('stroke-width', '2');
-  }
-
-  // Add a gradient definition for the silhouette fill
-  const defs = svg.querySelector('defs') || doc.createElementNS('http://www.w3.org/2000/svg', 'defs');
-  if (!svg.querySelector('defs')) {
-    svg.insertBefore(defs, svg.firstChild);
-  }
-
-  // Create silhouette gradient
-  const gradient = doc.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
-  gradient.setAttribute('id', 'silhouette-gradient');
-  gradient.setAttribute('x1', '0%');
-  gradient.setAttribute('y1', '0%');
-  gradient.setAttribute('x2', '0%');
-  gradient.setAttribute('y2', '100%');
-
-  const stop1 = doc.createElementNS('http://www.w3.org/2000/svg', 'stop');
-  stop1.setAttribute('offset', '0%');
-  stop1.setAttribute('stop-color', 'rgba(255, 255, 255, 0.3)');
-
-  const stop2 = doc.createElementNS('http://www.w3.org/2000/svg', 'stop');
-  stop2.setAttribute('offset', '100%');
-  stop2.setAttribute('stop-color', 'rgba(255, 255, 255, 0.05)');
-
-  gradient.appendChild(stop1);
-  gradient.appendChild(stop2);
-  defs.appendChild(gradient);
-
-  // Serialize back to string
-  const serializer = new XMLSerializer();
-  return serializer.serializeToString(svg);
+  // Both animation and static mode use the same animation SVG
+  // In static mode, progress is 1 (fully revealed)
+  // This ensures preview matches export exactly
+  return animationSvg.value || '';
 });
 
 // Sync slider with animation progress
@@ -1193,37 +1264,16 @@ const emit = defineEmits<{
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
 }
-
-.silhouette-background {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(
-    to bottom,
-    #0f0c29 0%,
-    #302b63 50%,
-    #24243e 100%
-  );
-  z-index: 0;
-}
-
 
 .silhouette-chart {
-  position: relative;
-  z-index: 1;
   width: 100%;
-  padding: 0;
-  /* Add bottom margin to leave space for Instagram menu */
-  margin-bottom: 40px;
+  height: 100%;
 }
 
 .silhouette-chart :deep(svg) {
   width: 100% !important;
-  height: auto !important;
+  height: 100% !important;
   display: block;
 }
 

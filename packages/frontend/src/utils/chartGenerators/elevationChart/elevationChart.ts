@@ -55,31 +55,56 @@ function generateSilhouette(
 ): string {
   if (data.length === 0) return '<svg></svg>'
 
+  // Always use Instagram Reel dimensions for consistent preview/export
+  const width = VIEW_BOX_PRESETS.instagramReel.width   // 1080
+  const height = VIEW_BOX_PRESETS.instagramReel.height // 1920
+
+  // Position curve in the lower portion of the reel
+  const curveHeight = Math.round(height * 0.3)  // ~576px
+  const curveY = height - curveHeight - Math.round(height * 0.08)  // 8% margin from bottom
+
+  // Create a config for the curve area only
+  const curveConfig: ViewBoxConfig = {
+    width: width,
+    height: curveHeight,
+    padding: { top: 20, right: 60, bottom: 20, left: 60 }
+  }
+
   // Convert to GPX format (label as distance index, value as elevation)
   const gpxPoints: GPXPoint[] = data.map((d, i) => ({
     distance: i,
     elevation: d.value
   }))
 
-  const config = VIEW_BOX_PRESETS.silhouette
-  const { viewBoxPoints, chartArea } = gpxToViewBox(gpxPoints, config)
+  const { viewBoxPoints, chartArea } = gpxToViewBox(gpxPoints, curveConfig)
 
-  const linePoints = pointsToPolyline(viewBoxPoints)
-  const areaPath = pointsToAreaPolygon(viewBoxPoints, chartArea)
+  // Offset Y coordinates (curve is positioned in lower part of reel)
+  const offsetPoints = viewBoxPoints.map(p => ({ ...p, y: p.y + curveY }))
+  const offsetChartArea = { ...chartArea, y: chartArea.y + curveY }
+
+  const linePoints = pointsToPolyline(offsetPoints)
+  const areaPath = pointsToAreaPolygon(offsetPoints, offsetChartArea)
 
   const gradientId = `silhouette-gradient-${Date.now()}`
+  const bgGradientId = `background-gradient-${Date.now()}`
 
   return `
-    <svg width="${config.width}" height="${config.height}" xmlns="http://www.w3.org/2000/svg">
+    <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
       <defs>
+        <linearGradient id="${bgGradientId}" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" style="stop-color:#0f0c29;stop-opacity:1"/>
+          <stop offset="50%" style="stop-color:#302b63;stop-opacity:1"/>
+          <stop offset="100%" style="stop-color:#24243e;stop-opacity:1"/>
+        </linearGradient>
         <linearGradient id="${gradientId}" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" style="stop-color:${color};stop-opacity:0.4"/>
-          <stop offset="100%" style="stop-color:${color};stop-opacity:0.05"/>
+          <stop offset="0%" style="stop-color:${color};stop-opacity:0.5"/>
+          <stop offset="100%" style="stop-color:${color};stop-opacity:0.1"/>
         </linearGradient>
       </defs>
+      <rect width="${width}" height="${height}" fill="url(#${bgGradientId})"/>
       <polygon points="${areaPath}" fill="url(#${gradientId})"/>
       <polyline points="${linePoints}" fill="none" stroke="${color}"
-                stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+                stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/>
     </svg>
   `
 }
@@ -573,8 +598,8 @@ export function generateElevationFrame(
 
 /**
  * Animated silhouette mode
- * For video export: uses full reel dimensions with background gradient
- * For preview: uses compact silhouette preset
+ * Always uses Instagram Reel dimensions (1080x1920) for consistent preview/export
+ * The SVG scales to fit the container while maintaining aspect ratio
  */
 function generateAnimatedSilhouette(
   data: Array<{ label: string, value: number }>,
@@ -584,29 +609,26 @@ function generateAnimatedSilhouette(
   markerSize: number,
   markerColor: string,
   curveEndpoint: CurveEndpoint = 0,
-  exportWidth?: number,
-  exportHeight?: number,
-  backgroundColor?: string
+  _exportWidth?: number,
+  _exportHeight?: number,
+  _backgroundColor?: string
 ): string {
   if (data.length === 0) return '<svg></svg>'
 
-  // Use export dimensions if provided (for video export), otherwise use preview preset
-  const isExportMode = exportWidth !== undefined && exportHeight !== undefined
-  const width = exportWidth || VIEW_BOX_PRESETS.silhouette.width
-  const height = exportHeight || VIEW_BOX_PRESETS.silhouette.height
+  // Always use Instagram Reel dimensions for consistent preview/export
+  const width = VIEW_BOX_PRESETS.instagramReel.width   // 1080
+  const height = VIEW_BOX_PRESETS.instagramReel.height // 1920
 
-  // For export mode: position curve in the lower portion of the reel
-  // The curve should take about 30% of the height and be positioned near the bottom
-  const curveHeight = isExportMode ? Math.round(height * 0.3) : height
-  const curveY = isExportMode ? height - curveHeight - Math.round(height * 0.08) : 0 // 8% margin from bottom
+  // Position curve in the lower portion of the reel
+  // The curve takes about 30% of the height and is positioned near the bottom
+  const curveHeight = Math.round(height * 0.3)  // ~576px
+  const curveY = height - curveHeight - Math.round(height * 0.08)  // 8% margin from bottom
 
   // Create a config for the curve area only
   const curveConfig: ViewBoxConfig = {
     width: width,
     height: curveHeight,
-    padding: isExportMode
-      ? { top: 20, right: 60, bottom: 20, left: 60 }
-      : { top: 10, right: 10, bottom: 10, left: 10 }
+    padding: { top: 20, right: 60, bottom: 20, left: 60 }
   }
 
   const gpxPoints: GPXPoint[] = data.map((d, i) => ({
@@ -619,15 +641,11 @@ function generateAnimatedSilhouette(
   // Adjust points based on curveEndpoint setting
   const adjustedPoints = adjustCurveEndpoint(viewBoxPoints, chartArea, curveEndpoint)
 
-  // Offset Y coordinates for export mode (curve is positioned lower)
-  const offsetPoints = isExportMode
-    ? adjustedPoints.map(p => ({ ...p, y: p.y + curveY }))
-    : adjustedPoints
+  // Offset Y coordinates (curve is positioned in lower part of reel)
+  const offsetPoints = adjustedPoints.map(p => ({ ...p, y: p.y + curveY }))
 
   // Adjust chartArea for offset
-  const offsetChartArea = isExportMode
-    ? { ...chartArea, y: chartArea.y + curveY }
-    : chartArea
+  const offsetChartArea = { ...chartArea, y: chartArea.y + curveY }
 
   const linePoints = pointsToPolyline(offsetPoints)
   const areaPath = pointsToAreaPolygon(offsetPoints, offsetChartArea)
@@ -646,27 +664,19 @@ function generateAnimatedSilhouette(
   const clipX = 0
   const fullClipWidth = chartArea.x + clipWidth
 
-  // Background gradient (purple gradient like in the preview CSS)
-  const backgroundSvg = isExportMode ? `
-    <defs>
-      <linearGradient id="${bgGradientId}" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" style="stop-color:#0f0c29;stop-opacity:1"/>
-        <stop offset="50%" style="stop-color:#302b63;stop-opacity:1"/>
-        <stop offset="100%" style="stop-color:#24243e;stop-opacity:1"/>
-      </linearGradient>
-    </defs>
-    <rect width="${width}" height="${height}" fill="url(#${bgGradientId})"/>
-  ` : ''
-
-  // Scale marker and stroke for export
-  const strokeWidth = isExportMode ? 6 : 3
-  const scaledMarkerSize = isExportMode ? markerSize * 2 : markerSize
-  const markerStrokeWidth = isExportMode ? 4 : 2
+  // Stroke and marker sizes for reel resolution
+  const strokeWidth = 6
+  const scaledMarkerSize = markerSize * 2
+  const markerStrokeWidth = 4
 
   return `
     <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
-      ${backgroundSvg}
       <defs>
+        <linearGradient id="${bgGradientId}" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" style="stop-color:#0f0c29;stop-opacity:1"/>
+          <stop offset="50%" style="stop-color:#302b63;stop-opacity:1"/>
+          <stop offset="100%" style="stop-color:#24243e;stop-opacity:1"/>
+        </linearGradient>
         <linearGradient id="${gradientId}" x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%" style="stop-color:${color};stop-opacity:0.5"/>
           <stop offset="100%" style="stop-color:${color};stop-opacity:0.1"/>
@@ -675,6 +685,7 @@ function generateAnimatedSilhouette(
           <rect x="${clipX}" y="0" width="${fullClipWidth}" height="${height}"/>
         </clipPath>
       </defs>
+      <rect width="${width}" height="${height}" fill="url(#${bgGradientId})"/>
       <g clip-path="url(#${clipId})">
         <polygon points="${areaPath}" fill="url(#${gradientId})"/>
         <polyline points="${linePoints}" fill="none" stroke="${color}"
