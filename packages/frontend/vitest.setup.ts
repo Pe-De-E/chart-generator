@@ -4,6 +4,16 @@ import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 import { vi } from 'vitest'
 
+// Suppress CSS parsing errors from jsdom (doesn't support :has() selector used by Vuetify)
+const originalConsoleError = console.error
+console.error = (...args: unknown[]) => {
+  const message = args[0]
+  if (typeof message === 'string' && message.includes('Could not parse CSS stylesheet')) {
+    return // Suppress this specific error
+  }
+  originalConsoleError.apply(console, args)
+}
+
 // Create Vuetify instance for tests
 const vuetify = createVuetify({
   components,
@@ -39,3 +49,32 @@ Object.defineProperty(window, 'matchMedia', {
 // Mock URL.createObjectURL
 global.URL.createObjectURL = vi.fn(() => 'mock-url')
 global.URL.revokeObjectURL = vi.fn()
+
+// Mock router for components that use useRouter/useRoute
+vi.mock('vue-router', async () => {
+  const actual = await vi.importActual('vue-router')
+  return {
+    ...actual,
+    useRouter: () => ({
+      push: vi.fn(),
+      replace: vi.fn(),
+      go: vi.fn(),
+      back: vi.fn(),
+      forward: vi.fn(),
+      currentRoute: {
+        value: {
+          path: '/',
+          name: 'home',
+          params: {},
+          query: {}
+        }
+      }
+    }),
+    useRoute: () => ({
+      path: '/',
+      name: 'home',
+      params: {},
+      query: {}
+    })
+  }
+})

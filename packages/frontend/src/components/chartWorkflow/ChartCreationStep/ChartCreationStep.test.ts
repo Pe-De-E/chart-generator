@@ -28,6 +28,15 @@ describe('ChartCreationStep.vue', () => {
       showZScore: false,
       zScoreThreshold: 2,
       color: '#FF5252',
+      colors: {
+        mean: '#4CAF50',
+        median: '#2196F3',
+        stdDev: '#9C27B0',
+        minMax: '#FF9800',
+        quartiles: '#00BCD4',
+        customRange: '#E91E63',
+        zScore: '#F44336',
+      },
     } as StatisticalOverlays,
     svgContent: '<svg><rect width="100" height="100" /></svg>',
     seriesConfig: [

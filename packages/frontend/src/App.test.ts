@@ -16,6 +16,14 @@ const mockLogout = vi.fn()
 vi.mock('vue-router', () => ({
   useRouter: vi.fn(() => ({
     push: pushMock,
+    currentRoute: {
+      value: {
+        path: '/',
+        name: 'home',
+        params: {},
+        query: {}
+      }
+    }
   })),
   RouterView: {
     template: '<div class="router-view"><slot :Component="null" /></div>',
