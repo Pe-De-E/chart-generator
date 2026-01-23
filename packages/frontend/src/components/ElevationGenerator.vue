@@ -1,5 +1,5 @@
 <template>
-  <v-layout>
+  <div class="elevation-generator-layout">
     <!-- Sidebar Navigation with 2 steps -->
     <StepNavigation
       v-model:current-step="currentStep"
@@ -8,11 +8,10 @@
     />
 
     <!-- Main Content Area -->
-    <v-main>
-      <v-container fluid class="pa-6">
-        <v-window v-model="currentStep">
+    <div class="elevation-generator-content">
+      <v-window v-model="currentStep">
           <!-- Step 1: Upload GPX -->
-          <v-window-item :value="1">
+          <v-window-item :value="1" eager>
             <v-card flat>
               <v-card-text>
                 <div class="text-h5 mb-4">GPX-Datei hochladen</div>
@@ -91,7 +90,7 @@
           </v-window-item>
 
           <!-- Step 2: Create Chart -->
-          <v-window-item :value="2">
+          <v-window-item :value="2" eager>
             <ElevationChartStep
               v-model:chart-title="chartTitle"
               v-model:colors="colors"
@@ -112,9 +111,8 @@
             />
           </v-window-item>
         </v-window>
-      </v-container>
-    </v-main>
-  </v-layout>
+    </div>
+  </div>
 
   <!-- Fullscreen Preview Dialog -->
   <v-dialog v-model="showFullscreenPreview" fullscreen>
@@ -450,6 +448,19 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.elevation-generator-layout {
+  position: relative;
+  min-height: calc(100vh - 64px - 48px);
+  margin: -24px;
+}
+
+.elevation-generator-content {
+  margin-left: 280px;
+  padding: 24px;
+  min-height: calc(100vh - 64px - 48px);
+  background: rgb(var(--v-theme-surface));
+}
+
 .fullscreen-preview-container {
   display: flex;
   justify-content: flex-start;

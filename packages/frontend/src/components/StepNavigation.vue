@@ -9,7 +9,7 @@
         Workflow-Schritte
       </v-list-subheader>
 
-      <div v-for="(step, index) in steps" :key="index" class="mb-2">
+      <div v-for="step in displaySteps" :key="step.value" class="mb-2">
         <!-- Blocked Step with Tooltip -->
         <v-tooltip v-if="isStepBlocked(step.value)" location="right">
           <template v-slot:activator="{ props: tooltipProps }">
@@ -137,16 +137,16 @@
         rounded
       ></v-progress-linear>
       <div class="text-caption text-medium-emphasis mt-1 text-center">
-        {{ completedSteps }} von {{ totalSteps }} Schritten abgeschlossen
+        {{ completedStepsCount }} von {{ totalSteps }} Schritten abgeschlossen
       </div>
     </div>
   </v-navigation-drawer>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, type PropType } from 'vue'
 
-interface Step {
+export interface Step {
   value: number
   title: string
   description: string
@@ -160,6 +160,7 @@ interface StepValidation {
 
 const props = defineProps<{
   currentStep: number
+  steps?: Step[]
   completedSteps?: number[]
   stepValidations?: Record<number, StepValidation>
 }>()
@@ -168,7 +169,7 @@ const emit = defineEmits<{
   'update:currentStep': [step: number]
 }>()
 
-const steps: Step[] = [
+const defaultSteps: Step[] = [
   {
     value: 1,
     title: 'Hochladen',
@@ -189,12 +190,14 @@ const steps: Step[] = [
   }
 ]
 
-const totalSteps = steps.length
+const displaySteps = computed(() => props.steps ?? defaultSteps)
 
-const completedSteps = computed(() => {
+const totalSteps = computed(() => displaySteps.value.length)
+
+const completedStepsCount = computed(() => {
   // Count only truly completed steps (visited AND valid)
   let count = 0
-  for (let i = 1; i <= totalSteps; i++) {
+  for (let i = 1; i <= totalSteps.value; i++) {
     if (isStepCompleted(i)) {
       count++
     }
@@ -203,7 +206,7 @@ const completedSteps = computed(() => {
 })
 
 const progressPercentage = computed(() => {
-  return (completedSteps.value / totalSteps) * 100
+  return (completedStepsCount.value / totalSteps.value) * 100
 })
 
 const hasStepBeenVisited = (stepValue: number): boolean => {
@@ -300,7 +303,7 @@ const getStepIconColor = (stepValue: number): string => {
 }
 
 const getStepIcon = (stepValue: number): string => {
-  const step = steps.find(s => s.value === stepValue)
+  const step = displaySteps.value.find(s => s.value === stepValue)
   return step?.icon || 'mdi-circle'
 }
 </script>

@@ -89,7 +89,7 @@ function generateSilhouette(
   const bgGradientId = `background-gradient-${Date.now()}`
 
   return `
-    <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
+    <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <linearGradient id="${bgGradientId}" x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%" style="stop-color:#0f0c29;stop-opacity:1"/>
@@ -671,7 +671,7 @@ function generateAnimatedSilhouette(
   const markerStrokeWidth = 4
 
   return `
-    <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
+    <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <linearGradient id="${bgGradientId}" x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%" style="stop-color:#0f0c29;stop-opacity:1"/>
