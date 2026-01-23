@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-const chartTypeSchema = z.enum(['bar', 'line', 'scatter', 'pie', 'area'])
+const chartTypeSchema = z.enum(['bar', 'line', 'scatter', 'pie', 'area', 'elevation'])
 
 export const createChartSchema = z.object({
   title: z.string().min(1).max(255),
