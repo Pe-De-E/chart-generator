@@ -500,27 +500,33 @@ function getStageLabel(stage: string): string {
 <style scoped>
 .elevation-step {
   height: 100%;
-  padding: 16px;
+  padding: 12px;
+  padding-left: 0;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .elevation-layout {
   display: flex;
-  gap: 24px;
+  gap: 16px;
   height: 100%;
-  align-items: flex-start;
+  align-items: stretch;
+  justify-content: flex-start;
 }
 
 .preview-section {
   display: flex;
-  gap: 12px;
+  gap: 8px;
   flex-shrink: 0;
+  height: 100%;
+  margin-left: 0;
 }
 
-/* Reel Preview (realistic phone screen size, 9:16 aspect ratio) */
+/* Reel Preview - responsive height with 9:16 aspect ratio */
 .reel-preview {
   position: relative;
-  width: 360px;
-  height: 640px;
+  height: 100%;
+  aspect-ratio: 9 / 16;
   background: #000;
   border-radius: 8px;
   overflow: hidden;
@@ -552,7 +558,7 @@ function getStageLabel(stage: string): string {
   display: flex;
   flex-direction: column;
   align-items: center;
-  height: 640px;
+  height: 100%;
 }
 
 .height-slider {
@@ -564,27 +570,29 @@ function getStageLabel(stage: string): string {
   flex: 1;
   display: flex;
   flex-direction: column;
-  min-width: 300px;
-  max-width: 500px;
+  min-width: 280px;
+  max-width: 450px;
+  height: 100%;
+  overflow-y: auto;
 }
 
 .playback-controls {
-  background: #f5f5f5;
-  padding: 16px;
+  background: rgba(var(--v-theme-surface-variant), 0.5);
+  padding: 12px;
   border-radius: 8px;
 }
 
 .settings-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 10px;
 }
 
 .action-buttons {
   display: flex;
   gap: 8px;
   margin-top: auto;
-  padding-top: 16px;
+  padding-top: 12px;
 }
 
 .color-swatch {

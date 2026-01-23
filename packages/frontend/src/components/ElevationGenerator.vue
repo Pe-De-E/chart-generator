@@ -449,16 +449,37 @@ onUnmounted(() => {
 
 <style scoped>
 .elevation-generator-layout {
-  position: relative;
-  min-height: calc(100vh - 64px - 48px);
-  margin: -24px;
+  position: fixed;
+  top: 64px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
 }
 
 .elevation-generator-content {
-  margin-left: 280px;
-  padding: 24px;
-  min-height: calc(100vh - 64px - 48px);
+  position: absolute;
+  left: 280px;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  padding: 12px;
   background: rgb(var(--v-theme-surface));
+  overflow: hidden;
+  border-left: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
+}
+
+.elevation-generator-content :deep(.v-window) {
+  height: 100%;
+}
+
+.elevation-generator-content :deep(.v-window__container) {
+  height: 100%;
+}
+
+.elevation-generator-content :deep(.v-window-item) {
+  height: 100%;
 }
 
 .fullscreen-preview-container {
