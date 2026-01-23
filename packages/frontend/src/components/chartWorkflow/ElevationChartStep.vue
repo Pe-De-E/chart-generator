@@ -601,6 +601,27 @@
   </v-card>
 </template>
 
+<script lang="ts">
+// Animation config interface for persistence - exported for use in parent components
+export interface ElevationAnimationConfig {
+  duration: number;
+  easing: 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out';
+  showMarker: boolean;
+  markerSize: number;
+  curveEndpoint: number;
+  curveColor: string;
+}
+
+export const DEFAULT_ELEVATION_ANIMATION_CONFIG: ElevationAnimationConfig = {
+  duration: 5,
+  easing: 'ease-in-out',
+  showMarker: true,
+  markerSize: 6,
+  curveEndpoint: 30,
+  curveColor: '#ffffff',
+};
+</script>
+
 <script setup lang="ts">
 import { ref, nextTick, computed, watch } from "vue";
 import type { PropType } from "vue";
@@ -615,7 +636,7 @@ import ChartSettingsCard from "./ChartCreationStep/ChartSettingsCard.vue";
 import { useChartAnimation, type PlaybackSpeed } from "../../composables/useChartAnimation";
 import { useVideoExport } from "../../composables/useVideoExport";
 
-0// Settings panel expanded by default
+// Settings panel expanded by default
 const expandedPanels = ref(["settings"]);
 
 // View mode: 'animate' or 'static'
@@ -675,17 +696,38 @@ function resetTransform() {
   panY.value = 0;
 }
 
-// Animation settings state
-const animationDuration = ref(5);
-const animationEasing = ref<'linear' | 'ease-in' | 'ease-out' | 'ease-in-out'>('ease-in-out');
-const animationShowMarker = ref(true);
-const animationMarkerSize = ref(6);
+// Animation settings - computed with getters/setters for two-way binding with parent
+const animationDuration = computed({
+  get: () => props.animationConfig.duration,
+  set: (value: number) => updateAnimationConfig({ duration: value }),
+});
+
+const animationEasing = computed({
+  get: () => props.animationConfig.easing,
+  set: (value: 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out') => updateAnimationConfig({ easing: value }),
+});
+
+const animationShowMarker = computed({
+  get: () => props.animationConfig.showMarker,
+  set: (value: boolean) => updateAnimationConfig({ showMarker: value }),
+});
+
+const animationMarkerSize = computed({
+  get: () => props.animationConfig.markerSize,
+  set: (value: number) => updateAnimationConfig({ markerSize: value }),
+});
 
 // Curve endpoint setting: percentage of screen height for the curve area (15-60%)
-const curveEndpoint = ref<number>(30);  // Start at 30% of reel height
+const curveEndpoint = computed({
+  get: () => props.animationConfig.curveEndpoint,
+  set: (value: number) => updateAnimationConfig({ curveEndpoint: value }),
+});
 
 // Silhouette curve color
-const silhouetteCurveColor = ref('#ffffff');
+const silhouetteCurveColor = computed({
+  get: () => props.animationConfig.curveColor,
+  set: (value: string) => updateAnimationConfig({ curveColor: value }),
+});
 
 const easingOptions = [
   { title: 'Linear', value: 'linear' },
@@ -1074,6 +1116,10 @@ const props = defineProps({
     type: Array as PropType<Array<{ label: string; value: number }>>,
     default: () => [],
   },
+  animationConfig: {
+    type: Object as PropType<ElevationAnimationConfig>,
+    default: () => ({ ...DEFAULT_ELEVATION_ANIMATION_CONFIG }),
+  },
 });
 
 // Computed properties for animation
@@ -1212,9 +1258,15 @@ const emit = defineEmits<{
   "update:colors": [value: ChartColors];
   "update:silhouetteMode": [value: boolean];
   "update:styleOverrides": [value: ChartStyleOverrides];
+  "update:animationConfig": [value: ElevationAnimationConfig];
   updateSeriesColor: [index: number, color: string];
   regenerateColors: [];
 }>();
+
+// Helper to emit animation config updates
+function updateAnimationConfig(partial: Partial<ElevationAnimationConfig>) {
+  emit("update:animationConfig", { ...props.animationConfig, ...partial });
+}
 </script>
 
 <style scoped>

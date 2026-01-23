@@ -96,6 +96,7 @@
               v-model:chart-title="chartTitle"
               v-model:colors="colors"
               v-model:silhouette-mode="silhouetteMode"
+              v-model:animation-config="animationConfig"
               :svg-content="svgContent"
               :series-config="selectedSeries"
               :style-overrides="styleOverrides"
@@ -144,7 +145,10 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import StepNavigation from './StepNavigation.vue'
-import ElevationChartStep from './chartWorkflow/ElevationChartStep.vue'
+import ElevationChartStep, {
+  type ElevationAnimationConfig,
+  DEFAULT_ELEVATION_ANIMATION_CONFIG
+} from './chartWorkflow/ElevationChartStep.vue'
 import { useCSVParser, DEFAULT_DOWNSAMPLE_OPTIONS } from '../composables/useCSVParser'
 import { useSeriesSelection } from '../composables/useSeriesSelection'
 import { useChartConfig } from '../composables/useChartConfig'
@@ -224,6 +228,9 @@ const {
 
 // Set chart type to 'elevation' immediately
 chartType.value = 'elevation'
+
+// Animation config for elevation chart (persisted)
+const animationConfig = ref<ElevationAnimationConfig>({ ...DEFAULT_ELEVATION_ANIMATION_CONFIG })
 
 // Chart data for animation
 const chartDataForAnimation = computed(() => {
@@ -324,11 +331,21 @@ function resetWizard() {
   resetData()
   resetGrouping()
   resetConfig()
+  animationConfig.value = { ...DEFAULT_ELEVATION_ANIMATION_CONFIG }
 }
 
 // Save chart
 async function saveChart() {
   try {
+    const chartConfig = {
+      seriesConfig: selectedSeries.value,
+      colors: colors.value,
+      selectedLabelColumn: selectedLabelColumn.value,
+      selectedValueColumns: ['col_1'],
+      silhouetteMode: silhouetteMode.value,
+      animationConfig: animationConfig.value,
+    }
+
     if (loadedChartId.value) {
       await chartService.updateChart(loadedChartId.value, {
         title: chartTitle.value,
@@ -337,13 +354,7 @@ async function saveChart() {
           seriesData: seriesData.value,
           tableItems: tableItems.value,
         },
-        config: {
-          seriesConfig: selectedSeries.value,
-          colors: colors.value,
-          selectedLabelColumn: selectedLabelColumn.value,
-          selectedValueColumns: ['col_1'],
-          silhouetteMode: silhouetteMode.value,
-        },
+        config: chartConfig,
         svgContent: svgContent.value,
       })
       alert('Chart erfolgreich aktualisiert!')
@@ -355,13 +366,7 @@ async function saveChart() {
           seriesData: seriesData.value,
           tableItems: tableItems.value,
         },
-        config: {
-          seriesConfig: selectedSeries.value,
-          colors: colors.value,
-          selectedLabelColumn: selectedLabelColumn.value,
-          selectedValueColumns: ['col_1'],
-          silhouetteMode: silhouetteMode.value,
-        },
+        config: chartConfig,
         svgContent: svgContent.value,
       })
       loadedChartId.value = chart.id
@@ -421,6 +426,12 @@ async function loadChartData(chartId: string) {
     }
     if (savedConfig.silhouetteMode !== undefined) {
       silhouetteMode.value = savedConfig.silhouetteMode
+    }
+    if (savedConfig.animationConfig) {
+      animationConfig.value = {
+        ...DEFAULT_ELEVATION_ANIMATION_CONFIG,
+        ...savedConfig.animationConfig,
+      }
     }
 
     currentStep.value = 2
