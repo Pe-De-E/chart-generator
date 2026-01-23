@@ -18,7 +18,7 @@
           <v-slider
             v-model="curveEndpoint"
             :min="15"
-            :max="60"
+            :max="100"
             :step="1"
             direction="vertical"
             hide-details
@@ -119,6 +119,14 @@
               hide-inputs
             />
           </v-menu>
+          <!-- Marker Toggle -->
+          <v-switch
+            v-model="animationShowMarker"
+            label="Marker anzeigen"
+            density="compact"
+            hide-details
+            color="primary"
+          />
         </div>
 
         <!-- Action Buttons -->

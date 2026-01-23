@@ -61,13 +61,13 @@ function generateSilhouette(
 
   // Position curve in the lower portion of the reel
   const curveHeight = Math.round(height * 0.3)  // ~576px
-  const curveY = height - curveHeight - Math.round(height * 0.08)  // 8% margin from bottom
+  const curveY = height - curveHeight  // Curve starts at bottom edge
 
   // Create a config for the curve area only
   const curveConfig: ViewBoxConfig = {
     width: width,
     height: curveHeight,
-    padding: { top: 20, right: 60, bottom: 20, left: 60 }
+    padding: { top: 20, right: 0, bottom: 0, left: 0 }
   }
 
   // Convert to GPX format (label as distance index, value as elevation)
@@ -620,16 +620,16 @@ function generateAnimatedSilhouette(
   const height = VIEW_BOX_PRESETS.instagramReel.height // 1920
 
   // Position curve in the lower portion of the reel
-  // curveEndpoint is the percentage of reel height (15-60%)
-  const curveHeightPercent = Math.max(15, Math.min(60, curveEndpoint)) / 100
+  // curveEndpoint is the percentage of reel height (15-100%)
+  const curveHeightPercent = Math.max(15, Math.min(100, curveEndpoint)) / 100
   const curveHeight = Math.round(height * curveHeightPercent)
-  const curveY = height - curveHeight - Math.round(height * 0.08)  // 8% margin from bottom
+  const curveY = height - curveHeight  // Curve starts at bottom edge
 
   // Create a config for the curve area only
   const curveConfig: ViewBoxConfig = {
     width: width,
     height: curveHeight,
-    padding: { top: 20, right: 60, bottom: 20, left: 60 }
+    padding: { top: 20, right: 0, bottom: 0, left: 0 }
   }
 
   const gpxPoints: GPXPoint[] = data.map((d, i) => ({
