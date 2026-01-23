@@ -130,7 +130,9 @@ function createChart() {
 }
 
 function loadChart(chartId: string) {
-  router.push({ name: 'Generator', query: { id: chartId } })
+  const chart = charts.value.find(c => c.id === chartId)
+  const routeName = chart?.type === 'elevation' ? 'Elevation' : 'Generator'
+  router.push({ name: routeName, query: { id: chartId } })
 }
 
 function confirmDelete(chart: SavedChart) {
