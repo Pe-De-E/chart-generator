@@ -76,6 +76,7 @@ const chartIcon = computed(() => {
     scatter: 'mdi-chart-scatter-plot',
     pie: 'mdi-chart-pie',
     area: 'mdi-chart-areaspline',
+    elevation: 'mdi-terrain',
   }
   return icons[props.chart.type] || 'mdi-chart-box'
 })
@@ -95,7 +96,8 @@ const formattedDate = computed(() => {
 })
 
 function encodeSvg(svgContent: string): string {
-  return window.btoa(svgContent)
+  // btoa() only supports Latin-1, so we need to encode Unicode characters first
+  return window.btoa(unescape(encodeURIComponent(svgContent)))
 }
 </script>
 
