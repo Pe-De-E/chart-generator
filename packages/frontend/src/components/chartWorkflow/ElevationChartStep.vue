@@ -118,7 +118,7 @@
             />
           </v-menu>
           <!-- Background Color -->
-          <v-menu :close-on-content-click="false">
+          <v-menu v-if="!useGradientBackground" :close-on-content-click="false">
             <template v-slot:activator="{ props: menuProps }">
               <v-btn v-bind="menuProps" variant="outlined" block>
                 <div
@@ -134,6 +134,14 @@
               hide-inputs
             />
           </v-menu>
+          <!-- Gradient Background Toggle -->
+          <v-checkbox
+            v-model="useGradientBackground"
+            label="Gradient"
+            density="compact"
+            hide-details
+            color="primary"
+          />
           <!-- Marker Toggle -->
           <v-checkbox
             v-model="animationShowMarker"
@@ -285,6 +293,7 @@ export interface ElevationAnimationConfig {
   curveEndpoint: number;
   curveColor: string;
   backgroundColor: string;
+  useGradientBackground: boolean;
   showElevationLabels: boolean;
   elevationLabelColor: string;
 }
@@ -299,6 +308,7 @@ export const DEFAULT_ELEVATION_ANIMATION_CONFIG: ElevationAnimationConfig = {
   elevationLabelColor: '#ffffffb3',
   curveColor: '#ffffff',
   backgroundColor: '#000000',
+  useGradientBackground: false,
 };
 </script>
 
@@ -438,6 +448,11 @@ const backgroundColor = computed({
   set: (value: string) => updateAnimationConfig({ backgroundColor: value }),
 });
 
+const useGradientBackground = computed({
+  get: () => props.animationConfig.useGradientBackground ?? false,
+  set: (value: boolean) => updateAnimationConfig({ useGradientBackground: value }),
+});
+
 // Animation settings for the composable
 const animationSettings = computed<AnimationOptions>(() => ({
   ...DEFAULT_ANIMATION_OPTIONS,
@@ -491,6 +506,7 @@ const animationSvg = computed(() => {
     curveEndpoint: props.animationConfig.curveEndpoint,
     showElevationLabels: props.animationConfig.showElevationLabels,
     elevationLabelColor: props.animationConfig.elevationLabelColor,
+    useGradientBackground: props.animationConfig.useGradientBackground,
   });
 });
 
@@ -534,6 +550,7 @@ async function startVideoExport() {
         curveEndpoint: props.animationConfig.curveEndpoint,
         showElevationLabels: props.animationConfig.showElevationLabels,
         elevationLabelColor: props.animationConfig.elevationLabelColor,
+        useGradientBackground: props.animationConfig.useGradientBackground,
         exportWidth: 1080,
         exportHeight: 1920,
       });

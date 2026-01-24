@@ -22,6 +22,7 @@ export interface FrameOptions {
   curveEndpoint: CurveEndpoint  // Where the curve ends: natural, middle, or top
   showElevationLabels?: boolean // Show elevation labels on the left
   elevationLabelColor?: string  // Color of elevation labels
+  useGradientBackground?: boolean // Use gradient instead of solid background
   exportWidth?: number      // Export width (for video export)
   exportHeight?: number     // Export height (for video export)
 }
@@ -576,7 +577,8 @@ export function generateElevationFrame(
       frameOptions.exportHeight,
       backgroundColor,
       frameOptions.showElevationLabels ?? false,
-      frameOptions.elevationLabelColor ?? '#ffffffb3'
+      frameOptions.elevationLabelColor ?? '#ffffffb3',
+      frameOptions.useGradientBackground ?? false
     )
   }
 
@@ -617,7 +619,8 @@ function generateAnimatedSilhouette(
   _exportHeight?: number,
   backgroundColor: string = '#000000',
   showElevationLabels: boolean = false,
-  elevationLabelColor: string = '#ffffffb3'
+  elevationLabelColor: string = '#ffffffb3',
+  useGradientBackground: boolean = false
 ): string {
   if (data.length === 0) return '<svg></svg>'
 
@@ -713,9 +716,20 @@ function generateAnimatedSilhouette(
     elevationLabelsHtml = labels.join('')
   }
 
+  // Background gradient definition (only used when useGradientBackground is true)
+  const bgGradientId = 'background-gradient-anim'
+  const bgGradientDef = useGradientBackground ? `
+        <linearGradient id="${bgGradientId}" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" style="stop-color:#0f0c29;stop-opacity:1"/>
+          <stop offset="50%" style="stop-color:#302b63;stop-opacity:1"/>
+          <stop offset="100%" style="stop-color:#24243e;stop-opacity:1"/>
+        </linearGradient>` : ''
+
+  const bgFill = useGradientBackground ? `url(#${bgGradientId})` : backgroundColor
+
   return `
     <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
-      <defs>
+      <defs>${bgGradientDef}
         <linearGradient id="${gradientId}" x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%" style="stop-color:${color};stop-opacity:0.5"/>
           <stop offset="100%" style="stop-color:${color};stop-opacity:0.1"/>
@@ -724,7 +738,7 @@ function generateAnimatedSilhouette(
           <rect x="${clipX}" y="0" width="${fullClipWidth}" height="${height}"/>
         </clipPath>
       </defs>
-      <rect width="${width}" height="${height}" fill="${backgroundColor}"/>
+      <rect width="${width}" height="${height}" fill="${bgFill}"/>
       ${elevationLabelsHtml}
       <g clip-path="url(#${clipId})">
         <polygon points="${areaPath}" fill="url(#${gradientId})"/>
