@@ -615,7 +615,7 @@ function generateAnimatedSilhouette(
   curveEndpoint: CurveEndpoint = 30,
   _exportWidth?: number,
   _exportHeight?: number,
-  _backgroundColor?: string,
+  backgroundColor: string = '#000000',
   showElevationLabels: boolean = false,
   elevationLabelColor: string = '#ffffffb3'
 ): string {
@@ -661,7 +661,6 @@ function generateAnimatedSilhouette(
   const areaPath = pointsToAreaPolygon(offsetPoints, offsetChartArea)
 
   const gradientId = `silhouette-gradient-anim`
-  const bgGradientId = `background-gradient-anim`
   const clipId = `reveal-clip-anim`
 
   // Calculate clip width based on progress
@@ -717,11 +716,6 @@ function generateAnimatedSilhouette(
   return `
     <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <linearGradient id="${bgGradientId}" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" style="stop-color:#0f0c29;stop-opacity:1"/>
-          <stop offset="50%" style="stop-color:#302b63;stop-opacity:1"/>
-          <stop offset="100%" style="stop-color:#24243e;stop-opacity:1"/>
-        </linearGradient>
         <linearGradient id="${gradientId}" x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%" style="stop-color:${color};stop-opacity:0.5"/>
           <stop offset="100%" style="stop-color:${color};stop-opacity:0.1"/>
@@ -730,7 +724,7 @@ function generateAnimatedSilhouette(
           <rect x="${clipX}" y="0" width="${fullClipWidth}" height="${height}"/>
         </clipPath>
       </defs>
-      <rect width="${width}" height="${height}" fill="url(#${bgGradientId})"/>
+      <rect width="${width}" height="${height}" fill="${backgroundColor}"/>
       ${elevationLabelsHtml}
       <g clip-path="url(#${clipId})">
         <polygon points="${areaPath}" fill="url(#${gradientId})"/>

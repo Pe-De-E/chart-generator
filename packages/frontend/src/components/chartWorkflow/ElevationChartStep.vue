@@ -117,6 +117,23 @@
               hide-inputs
             />
           </v-menu>
+          <!-- Background Color -->
+          <v-menu :close-on-content-click="false">
+            <template v-slot:activator="{ props: menuProps }">
+              <v-btn v-bind="menuProps" variant="outlined" block>
+                <div
+                  class="color-swatch mr-2"
+                  :style="{ backgroundColor: backgroundColor }"
+                ></div>
+                Hintergrund
+              </v-btn>
+            </template>
+            <v-color-picker
+              v-model="backgroundColor"
+              mode="hexa"
+              hide-inputs
+            />
+          </v-menu>
           <!-- Marker Toggle -->
           <v-checkbox
             v-model="animationShowMarker"
@@ -267,6 +284,7 @@ export interface ElevationAnimationConfig {
   markerSize: number;
   curveEndpoint: number;
   curveColor: string;
+  backgroundColor: string;
   showElevationLabels: boolean;
   elevationLabelColor: string;
 }
@@ -280,6 +298,7 @@ export const DEFAULT_ELEVATION_ANIMATION_CONFIG: ElevationAnimationConfig = {
   showElevationLabels: false,
   elevationLabelColor: '#ffffffb3',
   curveColor: '#ffffff',
+  backgroundColor: '#000000',
 };
 </script>
 
@@ -414,6 +433,11 @@ const elevationLabelColor = computed({
   set: (value: string) => updateAnimationConfig({ elevationLabelColor: value }),
 });
 
+const backgroundColor = computed({
+  get: () => props.animationConfig.backgroundColor || '#000000',
+  set: (value: string) => updateAnimationConfig({ backgroundColor: value }),
+});
+
 // Animation settings for the composable
 const animationSettings = computed<AnimationOptions>(() => ({
   ...DEFAULT_ANIMATION_OPTIONS,
@@ -437,7 +461,7 @@ const chartOptions = computed<ChartOptions>(() => ({
     primary: layoutMode.value === 'silhouette'
       ? silhouetteCurveColor.value
       : props.colors.primary || '#4CAF50',
-    background: props.colors.background
+    background: backgroundColor.value
   },
   title: props.chartTitle,
   silhouetteMode: layoutMode.value === 'silhouette',
