@@ -127,6 +127,14 @@
             hide-details
             color="primary"
           />
+          <!-- Elevation Labels Toggle -->
+          <v-switch
+            v-model="showElevationLabels"
+            label="Höhenmeter anzeigen"
+            density="compact"
+            hide-details
+            color="primary"
+          />
         </div>
 
         <!-- Action Buttons -->
@@ -242,6 +250,7 @@ export interface ElevationAnimationConfig {
   markerSize: number;
   curveEndpoint: number;
   curveColor: string;
+  showElevationLabels: boolean;
 }
 
 export const DEFAULT_ELEVATION_ANIMATION_CONFIG: ElevationAnimationConfig = {
@@ -250,6 +259,7 @@ export const DEFAULT_ELEVATION_ANIMATION_CONFIG: ElevationAnimationConfig = {
   showMarker: true,
   markerSize: 6,
   curveEndpoint: 30,
+  showElevationLabels: false,
   curveColor: '#ffffff',
 };
 </script>
@@ -375,6 +385,11 @@ const silhouetteCurveColor = computed({
   set: (value: string) => updateAnimationConfig({ curveColor: value }),
 });
 
+const showElevationLabels = computed({
+  get: () => props.animationConfig.showElevationLabels,
+  set: (value: boolean) => updateAnimationConfig({ showElevationLabels: value }),
+});
+
 // Animation settings for the composable
 const animationSettings = computed<AnimationOptions>(() => ({
   ...DEFAULT_ANIMATION_OPTIONS,
@@ -426,6 +441,7 @@ const animationSvg = computed(() => {
     markerSize: props.animationConfig.markerSize,
     markerColor: '#ffffff',
     curveEndpoint: props.animationConfig.curveEndpoint,
+    showElevationLabels: props.animationConfig.showElevationLabels,
   });
 });
 
@@ -467,6 +483,7 @@ async function startVideoExport() {
         markerSize: props.animationConfig.markerSize,
         markerColor: '#ffffff',
         curveEndpoint: props.animationConfig.curveEndpoint,
+        showElevationLabels: props.animationConfig.showElevationLabels,
         exportWidth: 1080,
         exportHeight: 1920,
       });

@@ -20,6 +20,7 @@ export interface FrameOptions {
   markerSize: number        // Radius of the marker dot
   markerColor: string       // Color of the marker dot
   curveEndpoint: CurveEndpoint  // Where the curve ends: natural, middle, or top
+  showElevationLabels?: boolean // Show elevation labels on the left
   exportWidth?: number      // Export width (for video export)
   exportHeight?: number     // Export height (for video export)
 }
@@ -572,7 +573,8 @@ export function generateElevationFrame(
       curveEndpoint,
       frameOptions.exportWidth,
       frameOptions.exportHeight,
-      backgroundColor
+      backgroundColor,
+      frameOptions.showElevationLabels ?? false
     )
   }
 
@@ -611,7 +613,8 @@ function generateAnimatedSilhouette(
   curveEndpoint: CurveEndpoint = 30,
   _exportWidth?: number,
   _exportHeight?: number,
-  _backgroundColor?: string
+  _backgroundColor?: string,
+  showElevationLabels: boolean = false
 ): string {
   if (data.length === 0) return '<svg></svg>'
 
@@ -625,11 +628,14 @@ function generateAnimatedSilhouette(
   const curveHeight = Math.round(height * curveHeightPercent)
   const curveY = height - curveHeight  // Curve starts at bottom edge
 
+  // Add left padding if elevation labels are shown
+  const leftPadding = showElevationLabels ? 100 : 0
+
   // Create a config for the curve area only
   const curveConfig: ViewBoxConfig = {
     width: width,
     height: curveHeight,
-    padding: { top: 20, right: 0, bottom: 0, left: 0 }
+    padding: { top: 20, right: 0, bottom: 0, left: leftPadding }
   }
 
   const gpxPoints: GPXPoint[] = data.map((d, i) => ({
@@ -670,6 +676,41 @@ function generateAnimatedSilhouette(
   const scaledMarkerSize = markerSize * 2
   const markerStrokeWidth = 4
 
+  // Generate elevation labels if enabled
+  let elevationLabelsHtml = ''
+  if (showElevationLabels) {
+    const values = data.map(d => d.value)
+    const minElevation = Math.min(...values)
+    const maxElevation = Math.max(...values)
+    const elevationRange = maxElevation - minElevation
+
+    // Create 5 labels from min to max
+    const labelCount = 5
+    const fontSize = 28
+    const labels: string[] = []
+
+    // Add padding to keep labels visible
+    const labelAreaTop = offsetChartArea.y + fontSize
+    const labelAreaBottom = offsetChartArea.y + offsetChartArea.height - fontSize / 2
+    const labelAreaHeight = labelAreaBottom - labelAreaTop
+
+    for (let i = 0; i < labelCount; i++) {
+      const value = Math.round(minElevation + (elevationRange * i) / (labelCount - 1))
+      const normalizedY = i / (labelCount - 1)
+      const y = labelAreaBottom - (normalizedY * labelAreaHeight)
+
+      labels.push(`
+        <text x="${leftPadding - 10}" y="${y + fontSize / 3}"
+              text-anchor="end" font-size="${fontSize}" fill="rgba(255,255,255,0.7)"
+              font-family="system-ui, sans-serif">${value}m</text>
+        <line x1="${leftPadding - 5}" y1="${y}" x2="${leftPadding}" y2="${y}"
+              stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
+      `)
+    }
+
+    elevationLabelsHtml = labels.join('')
+  }
+
   return `
     <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
       <defs>
@@ -687,6 +728,7 @@ function generateAnimatedSilhouette(
         </clipPath>
       </defs>
       <rect width="${width}" height="${height}" fill="url(#${bgGradientId})"/>
+      ${elevationLabelsHtml}
       <g clip-path="url(#${clipId})">
         <polygon points="${areaPath}" fill="url(#${gradientId})"/>
         <polyline points="${linePoints}" fill="none" stroke="${color}"
