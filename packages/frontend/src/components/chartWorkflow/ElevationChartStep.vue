@@ -135,6 +135,23 @@
             hide-details
             color="primary"
           />
+          <!-- Elevation Label Color -->
+          <v-menu v-if="showElevationLabels" :close-on-content-click="false">
+            <template v-slot:activator="{ props: menuProps }">
+              <v-btn v-bind="menuProps" variant="outlined" block size="small">
+                <div
+                  class="color-swatch mr-2"
+                  :style="{ backgroundColor: elevationLabelColor }"
+                ></div>
+                Labelfarbe
+              </v-btn>
+            </template>
+            <v-color-picker
+              v-model="elevationLabelColor"
+              mode="hexa"
+              show-swatches
+            />
+          </v-menu>
         </div>
 
         <!-- Action Buttons -->
@@ -251,6 +268,7 @@ export interface ElevationAnimationConfig {
   curveEndpoint: number;
   curveColor: string;
   showElevationLabels: boolean;
+  elevationLabelColor: string;
 }
 
 export const DEFAULT_ELEVATION_ANIMATION_CONFIG: ElevationAnimationConfig = {
@@ -260,6 +278,7 @@ export const DEFAULT_ELEVATION_ANIMATION_CONFIG: ElevationAnimationConfig = {
   markerSize: 6,
   curveEndpoint: 30,
   showElevationLabels: false,
+  elevationLabelColor: '#ffffffb3',
   curveColor: '#ffffff',
 };
 </script>
@@ -390,6 +409,11 @@ const showElevationLabels = computed({
   set: (value: boolean) => updateAnimationConfig({ showElevationLabels: value }),
 });
 
+const elevationLabelColor = computed({
+  get: () => props.animationConfig.elevationLabelColor,
+  set: (value: string) => updateAnimationConfig({ elevationLabelColor: value }),
+});
+
 // Animation settings for the composable
 const animationSettings = computed<AnimationOptions>(() => ({
   ...DEFAULT_ANIMATION_OPTIONS,
@@ -442,6 +466,7 @@ const animationSvg = computed(() => {
     markerColor: '#ffffff',
     curveEndpoint: props.animationConfig.curveEndpoint,
     showElevationLabels: props.animationConfig.showElevationLabels,
+    elevationLabelColor: props.animationConfig.elevationLabelColor,
   });
 });
 
@@ -484,6 +509,7 @@ async function startVideoExport() {
         markerColor: '#ffffff',
         curveEndpoint: props.animationConfig.curveEndpoint,
         showElevationLabels: props.animationConfig.showElevationLabels,
+        elevationLabelColor: props.animationConfig.elevationLabelColor,
         exportWidth: 1080,
         exportHeight: 1920,
       });

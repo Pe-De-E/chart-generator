@@ -21,6 +21,7 @@ export interface FrameOptions {
   markerColor: string       // Color of the marker dot
   curveEndpoint: CurveEndpoint  // Where the curve ends: natural, middle, or top
   showElevationLabels?: boolean // Show elevation labels on the left
+  elevationLabelColor?: string  // Color of elevation labels
   exportWidth?: number      // Export width (for video export)
   exportHeight?: number     // Export height (for video export)
 }
@@ -574,7 +575,8 @@ export function generateElevationFrame(
       frameOptions.exportWidth,
       frameOptions.exportHeight,
       backgroundColor,
-      frameOptions.showElevationLabels ?? false
+      frameOptions.showElevationLabels ?? false,
+      frameOptions.elevationLabelColor ?? '#ffffffb3'
     )
   }
 
@@ -614,7 +616,8 @@ function generateAnimatedSilhouette(
   _exportWidth?: number,
   _exportHeight?: number,
   _backgroundColor?: string,
-  showElevationLabels: boolean = false
+  showElevationLabels: boolean = false,
+  elevationLabelColor: string = '#ffffffb3'
 ): string {
   if (data.length === 0) return '<svg></svg>'
 
@@ -701,10 +704,10 @@ function generateAnimatedSilhouette(
 
       labels.push(`
         <text x="${leftPadding - 10}" y="${y + fontSize / 3}"
-              text-anchor="end" font-size="${fontSize}" fill="rgba(255,255,255,0.7)"
+              text-anchor="end" font-size="${fontSize}" fill="${elevationLabelColor}"
               font-family="system-ui, sans-serif">${value}m</text>
         <line x1="${leftPadding - 5}" y1="${y}" x2="${leftPadding}" y2="${y}"
-              stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
+              stroke="${elevationLabelColor}" stroke-width="2" opacity="0.5"/>
       `)
     }
 
