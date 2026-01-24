@@ -1,35 +1,33 @@
 <template>
   <div class="elevation-step">
-    <!-- Main Layout: Preview + Controls -->
+    <!-- Main Layout: Preview + Slider + Controls -->
     <div class="elevation-layout">
-      <!-- Left: Reel Preview with Slider -->
-      <div class="preview-section">
-        <div class="reel-preview">
-          <div class="silhouette-container">
-            <div
-              class="silhouette-chart"
-              v-html="silhouetteSvg"
-            ></div>
-          </div>
-        </div>
-
-        <!-- Curve Height Slider -->
-        <div class="height-slider-container">
-          <v-slider
-            v-model="curveEndpoint"
-            :min="15"
-            :max="100"
-            :step="1"
-            direction="vertical"
-            hide-details
-            thumb-label
-            class="height-slider"
-          />
-          <div class="text-caption text-center mt-1">{{ curveEndpoint }}%</div>
+      <!-- Reel Preview -->
+      <div class="reel-preview">
+        <div class="silhouette-container">
+          <div
+            class="silhouette-chart"
+            v-html="silhouetteSvg"
+          ></div>
         </div>
       </div>
 
-      <!-- Right: Controls -->
+      <!-- Curve Height Slider -->
+      <div class="height-slider-container">
+        <v-slider
+          v-model="curveEndpoint"
+          :min="15"
+          :max="100"
+          :step="1"
+          direction="vertical"
+          hide-details
+          thumb-label
+          class="height-slider"
+        />
+        <div class="text-caption text-center mt-1">{{ curveEndpoint }}%</div>
+      </div>
+
+      <!-- Controls -->
       <div class="controls-section">
         <!-- Playback Controls -->
         <div class="playback-controls mb-4">
@@ -120,20 +118,22 @@
             />
           </v-menu>
           <!-- Marker Toggle -->
-          <v-switch
+          <v-checkbox
             v-model="animationShowMarker"
             label="Marker anzeigen"
             density="compact"
             hide-details
             color="primary"
+            class="settings-full-width"
           />
           <!-- Elevation Labels Toggle -->
-          <v-switch
+          <v-checkbox
             v-model="showElevationLabels"
             label="Höhenmeter anzeigen"
             density="compact"
             hide-details
             color="primary"
+            class="settings-full-width"
           />
           <!-- Elevation Label Color -->
           <v-menu v-if="showElevationLabels" :close-on-content-click="false">
@@ -559,23 +559,14 @@ function getStageLabel(stage: string): string {
 
 .elevation-layout {
   display: flex;
-  gap: 16px;
+  gap: 12px;
   height: 100%;
   align-items: stretch;
-  justify-content: flex-start;
-}
-
-.preview-section {
-  display: flex;
-  gap: 8px;
-  flex-shrink: 0;
-  height: 100%;
-  margin-left: 0;
 }
 
 /* Reel Preview - responsive height with 9:16 aspect ratio */
 .reel-preview {
-  position: relative;
+  flex-shrink: 0;
   height: 100%;
   aspect-ratio: 9 / 16;
   background: #000;
@@ -618,13 +609,13 @@ function getStageLabel(stage: string): string {
 
 /* Controls Section */
 .controls-section {
-  flex: 1;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  min-width: 280px;
-  max-width: 450px;
+  width: 340px;
   height: 100%;
   overflow-y: auto;
+  overflow-x: visible;
 }
 
 .playback-controls {
@@ -637,6 +628,10 @@ function getStageLabel(stage: string): string {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
+}
+
+.settings-full-width {
+  grid-column: 1 / -1;
 }
 
 .action-buttons {
