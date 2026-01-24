@@ -23,6 +23,7 @@ export interface FrameOptions {
   showElevationLabels?: boolean // Show elevation labels on the left
   elevationLabelColor?: string  // Color of elevation labels
   useGradientBackground?: boolean // Use gradient instead of solid background
+  gradientColor?: string    // Base color for the gradient background
   exportWidth?: number      // Export width (for video export)
   exportHeight?: number     // Export height (for video export)
 }
@@ -578,7 +579,8 @@ export function generateElevationFrame(
       backgroundColor,
       frameOptions.showElevationLabels ?? false,
       frameOptions.elevationLabelColor ?? '#ffffffb3',
-      frameOptions.useGradientBackground ?? false
+      frameOptions.useGradientBackground ?? false,
+      frameOptions.gradientColor ?? '#302b63'
     )
   }
 
@@ -620,7 +622,8 @@ function generateAnimatedSilhouette(
   backgroundColor: string = '#000000',
   showElevationLabels: boolean = false,
   elevationLabelColor: string = '#ffffffb3',
-  useGradientBackground: boolean = false
+  useGradientBackground: boolean = false,
+  gradientColor: string = '#302b63'
 ): string {
   if (data.length === 0) return '<svg></svg>'
 
@@ -717,12 +720,13 @@ function generateAnimatedSilhouette(
   }
 
   // Background gradient definition (only used when useGradientBackground is true)
+  // Creates a gradient from black at top to the selected color in middle to dark at bottom
   const bgGradientId = 'background-gradient-anim'
   const bgGradientDef = useGradientBackground ? `
         <linearGradient id="${bgGradientId}" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" style="stop-color:#0f0c29;stop-opacity:1"/>
-          <stop offset="50%" style="stop-color:#302b63;stop-opacity:1"/>
-          <stop offset="100%" style="stop-color:#24243e;stop-opacity:1"/>
+          <stop offset="0%" style="stop-color:#000000;stop-opacity:1"/>
+          <stop offset="50%" style="stop-color:${gradientColor};stop-opacity:1"/>
+          <stop offset="100%" style="stop-color:#000000;stop-opacity:1"/>
         </linearGradient>` : ''
 
   const bgFill = useGradientBackground ? `url(#${bgGradientId})` : backgroundColor
