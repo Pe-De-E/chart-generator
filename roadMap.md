@@ -101,6 +101,14 @@ Die folgenden 8 Punkte wurden als Lücken identifiziert und in die Timeline inte
     - [ ] Browser-Kompatibilität prüfen (SharedArrayBuffer Support)
     - [ ] Testen auf Chrome, Firefox, Edge
   - [x] Instagram Reel Specs: 9:16, 1080x1920, SVG mit Gradient-Hintergrund
+- [x] 🟣 **Silhouette-Modus Customization** (Jan 2026)
+  - [x] Kurve berührt alle Ränder (links, rechts, unten)
+  - [x] Kurvenhöhe-Slider erweitert auf 15-100% der Reel-Höhe
+  - [x] Marker ein-/ausschaltbar
+  - [x] Höhenmeter-Labels mit Farbwähler
+  - [x] Hintergrundfarbe wählbar (Solid Color)
+  - [x] Gradient-Hintergrund Toggle mit Farbwähler
+  - [x] Kurvenfarbe wählbar
 - [ ] 🔵 2–3 eigene GPX-Tracks testen  
 
 ## Mär 2026 – Feedback & erste Monetarisierung
