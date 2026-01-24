@@ -1,17 +1,44 @@
 # Sprint-Plan GPX → Insta-Reels (Feb 2026 – Aug 2027)
 
-**Legende:**  
+**Legende:**
 
-- 🟢 Kernprodukt  
-- 🔵 UX / Feedback  
-- 🟣 Style / Animation  
+- 🟢 Kernprodukt
+- 🔵 UX / Feedback
+- 🟣 Style / Animation
 - 🟡 Monetarisierung / Business
+- 🧘 Stabilisierung (bewusst nichts Neues)
 
 **Hinweis:** Du bleibst bis August 2027 in deiner Vollzeitstelle. Der Exit ist **bedingungsabhängig** – nur wenn dein Projekt ausreichend Einnahmen generiert.
 
 ---
 
-Weitere Ideen:
+## Belastungs-Prinzipien (verbindlich)
+
+Diese Regeln gelten für jeden Monat:
+
+| Regel | Begründung |
+|-------|------------|
+| **Max. 2–3 schwere Themen pro Monat** | Mit Vollzeitjob, Krankheit, Depression ist mehr nicht nachhaltig |
+| **Stabilisierungs-Monate einplanen** | Bewusst nichts Neues bauen, nur pflegen und atmen |
+| **Energie > Features** | Ein fertiges Feature bei 70% Energie ist besser als drei angefangene bei 100% |
+| **Pause ist keine Niederlage** | Schlechte Woche? Dann Wartung statt Neubau |
+
+**Markierte Stabilisierungs-Monate:** Jun 2026 🧘, Okt 2026 🧘, Feb 2027 🧘
+
+---
+
+## Projekt-Eigenschaften
+
+**Drei Eigenschaften, die es verkaufbar machen:**
+1. Klarer, enger Use Case (GPX → Reel)
+2. Visuelles Ergebnis (leicht teilbar, leicht zeigbar)
+3. Creator-Zielgruppe (zahlen eher als B2C-Normalnutzer)
+
+**Erwartung:** Nischenprodukt mit 500–2000 zahlenden Nutzern. Kein Unicorn, aber stabiler Cashflow.
+
+---
+
+## Ideen-Backlog (nicht eingeplant)
 
 - Höhenmeter über das Jahr aggregiert animieren für End of Year Content
 - Trainingstimeline über Monat oder Jahr erstellen
@@ -27,15 +54,18 @@ Die folgenden 8 Punkte wurden als Lücken identifiziert und in die Timeline inte
 | 1. Visuelle Normalisierung (Y-Axis) | Feb 2026 | 🟢 Kern |
 | 2. Coordinate-Contract | Feb 2026 | 🟢 Kern |
 | 3. Animierbare Textlayer | Mai 2026 | 🟣 Style |
-| 4. Theme- & Style-Layer | Mai 2026 | 🟣 Style |
+| 4. Theme- & Style-Layer | Feb 2026 | 🟣 Style |
 | 5. Frame-Truth | Feb 2026 | 🟢 Kern |
 | 6. Audio-Entscheidung | Mär 2026 | 🔵 UX |
-| 7. Produkt-UX Basics | Mär 2026 | 🔵 UX |
+| 7. Produkt-UX Basics | Apr 2026 | 🔵 UX |
 | 8. Failure Paths | Mär 2026 | 🔵 UX |
 
 ---
 
-## Feb 2026 – Basis & Pipeline
+## Feb 2026 – Technische Wahrheit + Theme-System
+
+**Fokus:** Reproduzierbar schöne Videos + Design-Fundament für später
+**Kein:** Preis, Business, Landingpage-Gedanke. Reine Technik.
 
 - [x] 🟢 GPX Import + Downsampling (500–1500 Punkte)
 - [x] 🟢 **Coordinate-Contract** (saubere Datenraum-Trennung)
@@ -109,95 +139,127 @@ Die folgenden 8 Punkte wurden als Lücken identifiziert und in die Timeline inte
   - [x] Hintergrundfarbe wählbar (Solid Color)
   - [x] Gradient-Hintergrund Toggle mit Farbwähler
   - [x] Kurvenfarbe wählbar
-- [ ] 🔵 2–3 eigene GPX-Tracks testen  
+- [ ] 🔵 2–3 eigene GPX-Tracks testen
+- [ ] 🟣 **Theme- & Style-Layer** (Design-System statt Hardcoding)
+  - Definierte Themes: minimal, bold, dark, neon
+  - Design-Tokens: Farben, Line-Width, Marker-Stil, Area-Opacity
+  - Theme-Auswahl im UI
+  - Fundament für Textlayer und Pro-Templates
 
-## Mär 2026 – Feedback & erste Monetarisierung
+## Mär 2026 – Feedback & Realitätstest
 
+**Kernfrage dieses Monats:** Drückt irgendwer freiwillig auf Bezahlen?
+
+- [ ] 🟡 **Früher Monetarisierungs-Test** (wichtigste Metrik!)
+  - "Pay what you want" oder "Support this export with 3€"
+  - Nicht um Geld zu verdienen – um Zahlungsbereitschaft zu validieren
+  - **Diese eine Zahl ist wertvoller als jede Feature-Idee**
 - [ ] 🔵 Freunde / Kollegen GPX hochladen lassen
 - [ ] 🔵 UX-Fehler sammeln & beheben
-- [ ] 🟣 Animation flüssiger machen
 - [ ] 🔵 **Failure Paths** (Edge Cases & Robustheit)
   - Was wenn GPX nur 30 Punkte hat? → Warnung + sinnvoller Fallback
   - Was wenn Strecke 800 km lang ist? → Auto-Downsampling + Hinweis
   - Was wenn Höhenmeter = 0? → Flache Linie oder Hinweis
   - Was wenn GPX kaputt ist? → Klare Fehlermeldung
-  - Ohne das fühlt sich das Produkt "fragil" an
+- [ ] 🔵 **Audio-Entscheidung** (bewusste Positionierung)
+  - Stummes Video? → Klar kommunizieren
+  - Klare Aussage: "Video bewusst ohne Audio – für Reels gedacht"  
+
+## Apr 2026 – Landingpage & UX Polish
+
+- [ ] 🔵 Landingpage bauen
 - [ ] 🔵 **Produkt-UX Basics** (Upload → Klick → Posten)
   - Presets statt Optionen-Overload
   - "Quick Export" Button für Standardfall
   - "Sieht gut aus"-Pfad für 80% der Nutzer
-  - Power-User-Optionen später/versteckt
-- [ ] 🔵 **Audio-Entscheidung** (bewusste Positionierung)
-  - Stummes Video? → Klar kommunizieren
-  - Musik separat in Insta hinzufügen? → Dokumentieren
-  - Klare Aussage: "Video bewusst ohne Audio – für Reels gedacht"
-  - Unklarheit = Support-Hölle
-- [ ] 🟡 Pay-per-Export testen / freiwilliger Support-Button  
-
-## Apr 2026 – Landingpage & Social Sharing
-
-- [ ] 🔵 Landingpage bauen  
-- [ ] 🟢 Export optimieren (Encoding, Geschwindigkeit)  
-- [ ] 🔵 erste Reels posten & Feedback sammeln  
+- [ ] 🟢 Export optimieren (Encoding, Geschwindigkeit)
+- [ ] 🔵 Erste Reels posten & Feedback sammeln
 - [ ] 🟡 Monetarisierung: erste 5–10 bezahlte Exporte  
 
-## Mai 2026 – Templates & Overlay-Test
+## Mai 2026 – Textlayer
 
-- [ ] 🟣 **Theme- & Style-Layer** (Design-System statt Hardcoding)
-  - Definierte Themes: minimal, bold, dark, neon
-  - Design-Tokens: Farben, Line-Width, Marker-Stil, Area-Opacity
-  - Nicht hart codieren → später verkaufbar
-  - Theme-Auswahl im UI
+**Ein schweres Thema: Animierbare Textlayer (Theme-Layer bereits in Feb erledigt)**
+
 - [ ] 🟣 **Animierbare Textlayer** (Social-Media-Gold)
-  - Strecke (km), Höhenmeter, Datum, Ort als animierbare Elemente
-  - Timing: Text fade-in nicht bei Frame 0, sondern bei 10–15% Progress
+  - Strecke (km), Höhenmeter, Datum als animierbare Elemente
+  - Text fade-in bei 10–15% Progress
+  - Nutzt Design-Tokens aus Theme-Layer
   - Ohne Text = "nice", mit Text = **postwürdig**
-  - Konfigurierbar: welche Infos anzeigen, Position, Font
-- [ ] 🟣 Dark / Neon / Minimal Templates einbauen (nutzt Theme-Layer)
-- [ ] 🟢 Overlay-Idee vorbereiten (Video-Hintergrund)
-- [ ] 🟢 Export stabilisieren
+- [ ] 🟣 Erste Theme-Varianten erstellen (minimal, bold, dark, neon)
 - [ ] 🟡 Monetarisierung: Preis / Abo-Option überlegen  
 
-## Jun 2026 – UX & Style Feinschliff
+## Jun 2026 – Stabilisierung 🧘
 
-- [ ] 🔵 Feedback auswerten  
-- [ ] 🟣 Typo, Marker, Animationstempo verfeinern  
-- [ ] 🟢 Overlay-Export testen  
-- [ ] 🟡 Monetarisierung pushen: erste Einnahmen skalieren  
+**Bewusst nichts Neues bauen. Atmen, pflegen, verfeinern.**
 
-## Jul 2026 – Performance & Mobile
+- [ ] 🔵 Feedback auswerten
+- [ ] 🟣 Typo, Marker, Animationstempo verfeinern
+- [ ] 🧘 Technische Schulden aufräumen
+- [ ] 🧘 Dokumentation aktualisieren
+- [ ] 🟡 Monetarisierung: bestehende Flows optimieren (nicht neue Features)  
 
-- [ ] 🟢 Ruckelfrei auf allen Geräten  
-- [ ] 🔵 Mobile UI/UX optimieren  
+## Jul 2026 – Performance & Overlay
+
+- [ ] 🟢 Ruckelfrei auf allen Geräten
+- [ ] 🔵 Mobile UI/UX optimieren
+- [ ] 🟢 Overlay-Idee vorbereiten (Video-Hintergrund)
 - [ ] 🟢 Export mit Alpha-Kanal vorbereiten  
-- [ ] 🔵 Marketing vorbereiten (Reels, Feedback)  
 
-## Aug 2026 – Overlay offiziell & Social Proof
+## Aug 2026 – Overlay & Social Proof
 
-- [ ] 🟢 Overlay offiziell testen, wenn positiv  
-- [ ] 🟡 Monetarisierung: Pay-per-Export + kleine Abos  
-- [ ] 🔵 Social Proof sammeln: Testimonials, Screenshots, Reels  
+- [ ] 🟢 Overlay offiziell testen
+- [ ] 🟡 Monetarisierung: Pay-per-Export + kleine Abos
+- [ ] 🔵 Social Proof sammeln: erste Testimonials, Screenshots  
 
-## Sep–Okt 2026 – Stabilität & Pro Features
+## Sep 2026 – Pro Features
 
-- [ ] 🟢 Kernprodukt stabil & skalierbar  
-- [ ] 🟣 Style finalisieren  
-- [ ] 🟣 „Pro Creator“ Templates anbieten  
-- [ ] 🟡 Monetarisierung optimieren & wiederholen  
+- [ ] 🟢 Kernprodukt stabil & skalierbar
+- [ ] 🟣 Style finalisieren
+- [ ] 🟣 „Pro Creator" Templates anbieten
+- [ ] 🟡 Monetarisierung optimieren
 
-## Nov–Dez 2026 – Feedbackrunde 2 & Marketing
+## Okt 2026 – Stabilisierung 🧘
 
-- [ ] 🔵 Größere Nutzergruppe testen  
-- [ ] 🟢 Bugs beheben, Performance final  
-- [ ] 🔵 Marketing pushen: Reichweite erhöhen  
-- [ ] 🟡 Monetarisierung: Abo + Pay-per-Export offiziell  
+**Pause. Nur Bugfixes und kleine Verbesserungen.**
 
-## Jan–Jul 2027 – Wachstum & Exit-Vorbereitung
+- [ ] 🧘 Bugs aus September beheben
+- [ ] 🧘 Performance-Monitoring einrichten
+- [ ] 🧘 Backup/Recovery prüfen
+- [ ] 🔵 Nutzerfeedback kategorisieren (für nächste Phase)  
 
-- [ ] 🟢 Stabilität & Export/Overlay perfektionieren  
-- [ ] 🔵 Community & Social Proof ausbauen  
-- [ ] 🟡 Monetarisierung skalieren  
-- [ ] 🔵 Exit nur vorbereiten, wenn Projekt tragfähig  
+## Nov 2026 – Feedbackrunde 2
+
+- [ ] 🔵 Größere Nutzergruppe testen
+- [ ] 🟢 Bugs beheben, Performance final
+- [ ] 🔵 Feedback sammeln und priorisieren
+
+## Dez 2026 – Marketing & Monetarisierung
+
+- [ ] 🔵 Marketing pushen: Reichweite erhöhen
+- [ ] 🟡 Monetarisierung: Abo + Pay-per-Export offiziell
+- [ ] 🔵 Jahresrückblick: Erfolge und Learnings dokumentieren  
+
+## Jan 2027 – Wachstum
+
+- [ ] 🟢 Stabilität & Export/Overlay perfektionieren
+- [ ] 🔵 Community aufbauen
+- [ ] 🟡 Monetarisierung skalieren
+
+## Feb 2027 – Stabilisierung 🧘
+
+**Halbzeit-Pause. Energie tanken vor der letzten Phase.**
+
+- [ ] 🧘 Nur Wartung, keine neuen Features
+- [ ] 🧘 Codebase aufräumen
+- [ ] 🔵 Retrospektive: Was funktioniert, was nicht?
+- [ ] 🔵 Plan für Mär–Jul adjustieren basierend auf Realität
+
+## Mär–Jul 2027 – Exit-Vorbereitung
+
+- [ ] 🔵 Social Proof ausbauen (Testimonials, Case Studies)
+- [ ] 🟡 Einnahmen stabilisieren
+- [ ] 🔵 Exit nur vorbereiten, wenn Projekt tragfähig
+- [ ] 🔵 Notfallplan dokumentieren (falls Exit nicht möglich)  
 
 ## Aug 2027 – Bedingungsabhängiger Exit / Vollzeitstelle bleibt
 
