@@ -147,11 +147,11 @@ Die folgenden 8 Punkte wurden als Lücken identifiziert und in die Timeline inte
   - [x] Multiple Hintergrundtypen: Solid, Gradient, Mesh, Grid, Dots
   - [x] Kurvenfarbe wählbar
 - [ ] 🔵 2–3 eigene GPX-Tracks testen
-- [ ] 🟣 **Theme- & Style-Layer** (Design-System statt Hardcoding)
-  - Definierte Themes: minimal, bold, dark, neon
-  - Design-Tokens: Farben, Line-Width, Marker-Stil, Area-Opacity
-  - Theme-Auswahl im UI
-  - Fundament für Textlayer und Pro-Templates
+- [x] 🟣 **Theme- & Style-Layer** (Design-System statt Hardcoding)
+  - [x] Definierte Themes: dark, minimal, bold, neon, sunset
+  - [x] Design-Tokens: Farben, Stroke-Width, Marker-Stil, Background-Type
+  - [x] Theme-Auswahl im UI mit Vorschau
+  - [x] Fundament für Textlayer und Pro-Templates
 
 ## Mär 2026 – Feedback & Realitätstest
 

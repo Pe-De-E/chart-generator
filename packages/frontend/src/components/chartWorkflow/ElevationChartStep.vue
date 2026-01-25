@@ -120,6 +120,42 @@
             </v-expansion-panel-title>
             <v-expansion-panel-text>
               <div class="panel-stack">
+                <!-- Theme Selector -->
+                <v-select
+                  :model-value="selectedThemeId"
+                  :items="themeOptions"
+                  item-title="name"
+                  item-value="id"
+                  label="Theme"
+                  variant="outlined"
+                  density="compact"
+                  hide-details
+                  @update:model-value="applyTheme"
+                >
+                  <template v-slot:item="{ props: itemProps, item }">
+                    <v-list-item v-bind="itemProps">
+                      <template v-slot:prepend>
+                        <div
+                          class="theme-preview-swatch mr-3"
+                          :style="{ background: item.raw.preview }"
+                        ></div>
+                      </template>
+                      <v-list-item-subtitle>{{ item.raw.description }}</v-list-item-subtitle>
+                    </v-list-item>
+                  </template>
+                  <template v-slot:selection="{ item }">
+                    <div class="d-flex align-center">
+                      <div
+                        class="theme-preview-swatch mr-2"
+                        :style="{ background: item.raw.preview }"
+                      ></div>
+                      {{ item.raw.name }}
+                    </div>
+                  </template>
+                </v-select>
+
+                <v-divider class="my-3" />
+
                 <!-- Curve Color -->
                 <v-menu :close-on-content-click="false">
                   <template v-slot:activator="{ props: menuProps }">
@@ -508,6 +544,7 @@ import { DEFAULT_ANIMATION_OPTIONS } from "@chart-generator/shared";
 import { useChartAnimation, type PlaybackSpeed } from "../../composables/useChartAnimation";
 import { useVideoExport } from "../../composables/useVideoExport";
 import { generateElevationFrame } from "../../utils/chartGenerators/elevationChart/elevationChart";
+import { ELEVATION_THEMES, type ElevationTheme } from "../../themes/elevationThemes";
 
 // View mode: 'animate' or 'static'
 const viewMode = ref<'animate' | 'static'>('animate');
@@ -540,6 +577,17 @@ const backgroundTypeOptions = [
   { title: 'Grid', value: 'grid', icon: 'mdi-grid' },
   { title: 'Dots', value: 'dots', icon: 'mdi-dots-grid' },
 ];
+
+// Theme options for the selector
+const themeOptions = ELEVATION_THEMES.map(t => ({
+  id: t.id,
+  name: t.name,
+  description: t.description,
+  preview: t.preview
+}));
+
+// Track currently selected theme (for UI display only)
+const selectedThemeId = ref<string | null>(null);
 
 const props = defineProps({
   chartTitle: {
@@ -594,6 +642,36 @@ const emit = defineEmits<{
 // Helper to emit animation config updates
 function updateAnimationConfig(partial: Partial<ElevationAnimationConfig>) {
   emit("update:animationConfig", { ...props.animationConfig, ...partial });
+}
+
+// Apply a theme preset
+function applyTheme(themeId: string) {
+  const theme = ELEVATION_THEMES.find(t => t.id === themeId);
+  if (!theme) return;
+
+  selectedThemeId.value = themeId;
+
+  // Map theme tokens to animation config
+  const { tokens } = theme;
+  updateAnimationConfig({
+    duration: tokens.animation.duration,
+    easing: tokens.animation.easing,
+    showMarker: tokens.marker.show,
+    markerSize: tokens.marker.size,
+    curveColor: tokens.curve.color,
+    backgroundColor: tokens.background.color,
+    backgroundType: tokens.background.type,
+    gradientColor: tokens.background.gradientColor,
+    meshColor1: tokens.background.meshColors[0],
+    meshColor2: tokens.background.meshColors[1],
+    meshColor3: tokens.background.meshColors[2],
+    showElevationLabels: tokens.labels.showElevation,
+    elevationLabelColor: tokens.labels.elevationColor,
+    showDistanceLabels: tokens.labels.showDistance,
+    distanceLabelColor: tokens.labels.distanceColor,
+    patternColor: tokens.pattern.color,
+    patternOpacity: tokens.pattern.opacity,
+  });
 }
 
 // Animation settings - computed with getters/setters for two-way binding with parent
@@ -976,5 +1054,13 @@ function getStageLabel(stage: string): string {
   height: 24px;
   border-radius: 4px;
   border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+.theme-preview-swatch {
+  width: 32px;
+  height: 20px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  flex-shrink: 0;
 }
 </style>
