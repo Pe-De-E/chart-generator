@@ -42,6 +42,11 @@ Diese Regeln gelten für jeden Monat:
 
 - Höhenmeter über das Jahr aggregiert animieren für End of Year Content
 - Trainingstimeline über Monat oder Jahr erstellen
+- **Eigene Presets speichern**
+  - Aktuelles Design als eigenes Theme speichern
+  - Name und Vorschau für gespeicherte Presets
+  - Presets in localStorage oder Account speichern
+  - Presets exportieren/importieren (JSON)
 - **Service-Integrationen** (ergänzend zum GPX-Upload, nicht ersetzend)
   - Strava-Anbindung (OAuth2, Activity Streams API)
   - Komoot-Anbindung
