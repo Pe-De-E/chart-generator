@@ -82,7 +82,7 @@ Die folgenden 8 Punkte wurden als Lücken identifiziert und in die Timeline inte
 | 5. Frame-Truth | Feb 2026 | 🟢 Kern |
 | 6. Audio-Entscheidung | Mär 2026 | 🔵 UX |
 | 7. Produkt-UX Basics | Apr 2026 | 🔵 UX |
-| 8. Failure Paths | Mär 2026 | 🔵 UX |
+| 8. Failure Paths | ~~Mär 2026~~ Jan 2026 ✅ | 🔵 UX |
 
 ---
 
@@ -182,7 +182,7 @@ Die folgenden 8 Punkte wurden als Lücken identifiziert und in die Timeline inte
   - **Diese eine Zahl ist wertvoller als jede Feature-Idee**
 - [ ] 🔵 Freunde / Kollegen GPX hochladen lassen
 - [ ] 🔵 UX-Fehler sammeln & beheben
-- [ ] 🔵 **Failure Paths** (Edge Cases & Robustheit)
+- [x] 🔵 **Failure Paths** (Edge Cases & Robustheit)
   - Was wenn GPX nur 30 Punkte hat? → Warnung + sinnvoller Fallback
   - Was wenn Strecke 800 km lang ist? → Auto-Downsampling + Hinweis
   - Was wenn Höhenmeter = 0? → Flache Linie oder Hinweis
