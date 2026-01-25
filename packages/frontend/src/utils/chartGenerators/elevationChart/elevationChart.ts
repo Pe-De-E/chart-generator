@@ -762,14 +762,15 @@ function generateAnimatedSilhouette(
   const curveHeight = Math.round(height * curveHeightPercent)
   const curveY = height - curveHeight  // Curve starts at bottom edge
 
-  // Add left padding if elevation labels are shown
+  // Add padding for labels
   const leftPadding = showElevationLabels ? 100 : 0
+  const bottomPadding = showDistanceLabels ? 80 : 0
 
   // Create a config for the curve area only
   const curveConfig: ViewBoxConfig = {
     width: width,
     height: curveHeight,
-    padding: { top: 20, right: 0, bottom: 0, left: leftPadding }
+    padding: { top: 20, right: 0, bottom: bottomPadding, left: leftPadding }
   }
 
   const gpxPoints: GPXPoint[] = data.map((d, i) => ({
@@ -865,13 +866,14 @@ function generateAnimatedSilhouette(
     const labelCount = 5
     const fontSize = 28
     const labels: string[] = []
-    const bottomPadding = 60
 
-    // Position labels along the bottom of the chart
+    // Position labels along the bottom of the chart, below the curve
     const labelAreaLeft = offsetChartArea.x
     const labelAreaRight = offsetChartArea.x + offsetChartArea.width
     const labelAreaWidth = labelAreaRight - labelAreaLeft
-    const labelY = height - bottomPadding + fontSize
+    // Labels go in the bottom padding area, below the curve
+    const curveBottom = offsetChartArea.y + offsetChartArea.height
+    const labelY = curveBottom + 50  // 50px below curve bottom
 
     for (let i = 0; i < labelCount; i++) {
       const distanceKm = estimatedTotalKm ? (estimatedTotalKm * i) / (labelCount - 1) : 0
@@ -887,8 +889,8 @@ function generateAnimatedSilhouette(
         <text x="${x}" y="${labelY}"
               text-anchor="middle" font-size="${fontSize}" fill="${distanceLabelColor}"
               font-family="system-ui, sans-serif">${distanceStr}km</text>
-        <line x1="${x}" y1="${offsetChartArea.y + offsetChartArea.height}"
-              x2="${x}" y2="${offsetChartArea.y + offsetChartArea.height + 10}"
+        <line x1="${x}" y1="${curveBottom}"
+              x2="${x}" y2="${curveBottom + 15}"
               stroke="${distanceLabelColor}" stroke-width="2" opacity="0.5"/>
       `)
     }
