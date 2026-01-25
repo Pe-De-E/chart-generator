@@ -29,9 +29,9 @@
 
       <!-- Controls -->
       <div class="controls-section">
-        <!-- Playback Controls -->
-        <div class="playback-controls mb-4">
-          <div class="d-flex align-center ga-2 mb-3">
+        <!-- Playback Controls (always visible) -->
+        <div class="playback-controls mb-3">
+          <div class="d-flex align-center ga-2">
             <v-btn
               :icon="isPlaying ? 'mdi-pause' : 'mdi-play'"
               variant="flat"
@@ -80,146 +80,190 @@
           </div>
         </div>
 
-        <!-- Animation Settings -->
-        <div class="settings-grid mb-4">
-          <v-text-field
-            v-model.number="animationDuration"
-            label="Dauer (Sek.)"
-            type="number"
-            :min="1"
-            :max="30"
-            variant="outlined"
-            density="compact"
-            hide-details
-          />
-          <v-select
-            v-model="animationEasing"
-            label="Easing"
-            :items="easingOptions"
-            variant="outlined"
-            density="compact"
-            hide-details
-          />
-          <!-- Curve Color -->
-          <v-menu :close-on-content-click="false">
-            <template v-slot:activator="{ props: menuProps }">
-              <v-btn v-bind="menuProps" variant="outlined" block>
-                <div
-                  class="color-swatch mr-2"
-                  :style="{ backgroundColor: silhouetteCurveColor }"
-                ></div>
-                Kurvenfarbe
-              </v-btn>
-            </template>
-            <v-color-picker
-              v-model="silhouetteCurveColor"
-              mode="hexa"
-              hide-inputs
-            />
-          </v-menu>
-          <!-- Background Color -->
-          <v-menu v-if="!useGradientBackground" :close-on-content-click="false">
-            <template v-slot:activator="{ props: menuProps }">
-              <v-btn v-bind="menuProps" variant="outlined" block>
-                <div
-                  class="color-swatch mr-2"
-                  :style="{ backgroundColor: backgroundColor }"
-                ></div>
-                Hintergrund
-              </v-btn>
-            </template>
-            <v-color-picker
-              v-model="backgroundColor"
-              mode="hexa"
-              hide-inputs
-            />
-          </v-menu>
-          <!-- Gradient Background Toggle -->
-          <v-checkbox
-            v-model="useGradientBackground"
-            label="Gradient"
-            density="compact"
-            hide-details
-            color="primary"
-          />
-          <!-- Gradient Color -->
-          <v-menu v-if="useGradientBackground" :close-on-content-click="false">
-            <template v-slot:activator="{ props: menuProps }">
-              <v-btn v-bind="menuProps" variant="outlined" block>
-                <div
-                  class="color-swatch mr-2"
-                  :style="{ backgroundColor: gradientColor }"
-                ></div>
-                Gradientfarbe
-              </v-btn>
-            </template>
-            <v-color-picker
-              v-model="gradientColor"
-              mode="hexa"
-              hide-inputs
-            />
-          </v-menu>
-          <!-- Marker Toggle -->
-          <v-checkbox
-            v-model="animationShowMarker"
-            label="Marker anzeigen"
-            density="compact"
-            hide-details
-            color="primary"
-            class="settings-full-width"
-          />
-          <!-- Elevation Labels Toggle -->
-          <v-checkbox
-            v-model="showElevationLabels"
-            label="Höhenmeter anzeigen"
-            density="compact"
-            hide-details
-            color="primary"
-            class="settings-full-width"
-          />
-          <!-- Elevation Label Color -->
-          <v-menu v-if="showElevationLabels" :close-on-content-click="false">
-            <template v-slot:activator="{ props: menuProps }">
-              <v-btn v-bind="menuProps" variant="outlined" block size="small">
-                <div
-                  class="color-swatch mr-2"
-                  :style="{ backgroundColor: elevationLabelColor }"
-                ></div>
-                Labelfarbe
-              </v-btn>
-            </template>
-            <v-color-picker
-              v-model="elevationLabelColor"
-              mode="hexa"
-              show-swatches
-            />
-          </v-menu>
-        </div>
+        <!-- Collapsible Settings Panels -->
+        <v-expansion-panels v-model="expandedPanels" multiple class="settings-panels mb-3">
+          <!-- Animation Settings -->
+          <v-expansion-panel value="animation">
+            <v-expansion-panel-title>
+              <v-icon start size="small">mdi-animation-play</v-icon>
+              Animation
+            </v-expansion-panel-title>
+            <v-expansion-panel-text>
+              <div class="panel-grid">
+                <v-text-field
+                  v-model.number="animationDuration"
+                  label="Dauer (Sek.)"
+                  type="number"
+                  :min="1"
+                  :max="30"
+                  variant="outlined"
+                  density="compact"
+                  hide-details
+                />
+                <v-select
+                  v-model="animationEasing"
+                  label="Easing"
+                  :items="easingOptions"
+                  variant="outlined"
+                  density="compact"
+                  hide-details
+                />
+              </div>
+            </v-expansion-panel-text>
+          </v-expansion-panel>
+
+          <!-- Colors Settings -->
+          <v-expansion-panel value="colors">
+            <v-expansion-panel-title>
+              <v-icon start size="small">mdi-palette</v-icon>
+              Farben
+            </v-expansion-panel-title>
+            <v-expansion-panel-text>
+              <div class="panel-grid">
+                <!-- Curve Color -->
+                <v-menu :close-on-content-click="false">
+                  <template v-slot:activator="{ props: menuProps }">
+                    <v-btn v-bind="menuProps" variant="outlined" block>
+                      <div
+                        class="color-swatch mr-2"
+                        :style="{ backgroundColor: silhouetteCurveColor }"
+                      ></div>
+                      Kurve
+                    </v-btn>
+                  </template>
+                  <v-color-picker
+                    v-model="silhouetteCurveColor"
+                    mode="hexa"
+                    hide-inputs
+                  />
+                </v-menu>
+                <!-- Background Color -->
+                <v-menu v-if="!useGradientBackground" :close-on-content-click="false">
+                  <template v-slot:activator="{ props: menuProps }">
+                    <v-btn v-bind="menuProps" variant="outlined" block>
+                      <div
+                        class="color-swatch mr-2"
+                        :style="{ backgroundColor: backgroundColor }"
+                      ></div>
+                      Hintergrund
+                    </v-btn>
+                  </template>
+                  <v-color-picker
+                    v-model="backgroundColor"
+                    mode="hexa"
+                    hide-inputs
+                  />
+                </v-menu>
+                <!-- Gradient Color (shown when gradient enabled) -->
+                <v-menu v-if="useGradientBackground" :close-on-content-click="false">
+                  <template v-slot:activator="{ props: menuProps }">
+                    <v-btn v-bind="menuProps" variant="outlined" block>
+                      <div
+                        class="color-swatch mr-2"
+                        :style="{ backgroundColor: gradientColor }"
+                      ></div>
+                      Gradient
+                    </v-btn>
+                  </template>
+                  <v-color-picker
+                    v-model="gradientColor"
+                    mode="hexa"
+                    hide-inputs
+                  />
+                </v-menu>
+                <!-- Gradient Toggle -->
+                <v-checkbox
+                  v-model="useGradientBackground"
+                  label="Gradient-Hintergrund"
+                  density="compact"
+                  hide-details
+                  color="primary"
+                  class="panel-full-width"
+                />
+              </div>
+            </v-expansion-panel-text>
+          </v-expansion-panel>
+
+          <!-- Marker & Labels -->
+          <v-expansion-panel value="markers">
+            <v-expansion-panel-title>
+              <v-icon start size="small">mdi-map-marker</v-icon>
+              Marker & Labels
+            </v-expansion-panel-title>
+            <v-expansion-panel-text>
+              <div class="panel-stack">
+                <v-checkbox
+                  v-model="animationShowMarker"
+                  label="Marker anzeigen"
+                  density="compact"
+                  hide-details
+                  color="primary"
+                />
+                <v-checkbox
+                  v-model="showElevationLabels"
+                  label="Höhenmeter anzeigen"
+                  density="compact"
+                  hide-details
+                  color="primary"
+                />
+                <!-- Elevation Label Color -->
+                <v-menu v-if="showElevationLabels" :close-on-content-click="false">
+                  <template v-slot:activator="{ props: menuProps }">
+                    <v-btn v-bind="menuProps" variant="outlined" block size="small" class="mt-2">
+                      <div
+                        class="color-swatch mr-2"
+                        :style="{ backgroundColor: elevationLabelColor }"
+                      ></div>
+                      Labelfarbe
+                    </v-btn>
+                  </template>
+                  <v-color-picker
+                    v-model="elevationLabelColor"
+                    mode="hexa"
+                    show-swatches
+                  />
+                </v-menu>
+              </div>
+            </v-expansion-panel-text>
+          </v-expansion-panel>
+        </v-expansion-panels>
 
         <!-- Action Buttons -->
         <div class="action-buttons">
-          <v-btn variant="text" @click="$emit('back')">
-            <v-icon start>mdi-chevron-left</v-icon>
-            Zurück
-          </v-btn>
+          <v-tooltip text="Zurück" location="top">
+            <template v-slot:activator="{ props: tooltipProps }">
+              <v-btn
+                v-bind="tooltipProps"
+                icon="mdi-chevron-left"
+                variant="text"
+                @click="$emit('back')"
+              />
+            </template>
+          </v-tooltip>
           <v-spacer></v-spacer>
-          <v-btn
-            color="success"
-            variant="flat"
-            prepend-icon="mdi-content-save"
-            @click="$emit('save')"
-          >
-            Speichern
-          </v-btn>
-          <v-btn
-            color="deep-purple"
-            variant="flat"
-            prepend-icon="mdi-video-outline"
-            @click="startVideoExport"
-            :disabled="!videoExport.isSupported.value || videoExport.isExporting.value"
-          >
-            MP4 Export
-          </v-btn>
+          <v-tooltip text="Speichern" location="top">
+            <template v-slot:activator="{ props: tooltipProps }">
+              <v-btn
+                v-bind="tooltipProps"
+                icon="mdi-content-save"
+                color="success"
+                variant="flat"
+                @click="$emit('save')"
+              />
+            </template>
+          </v-tooltip>
+          <v-tooltip text="MP4 Export" location="top">
+            <template v-slot:activator="{ props: tooltipProps }">
+              <v-btn
+                v-bind="tooltipProps"
+                icon="mdi-video-outline"
+                color="deep-purple"
+                variant="flat"
+                @click="startVideoExport"
+                :disabled="!videoExport.isSupported.value || videoExport.isExporting.value"
+              />
+            </template>
+          </v-tooltip>
         </div>
       </div>
     </div>
@@ -356,6 +400,9 @@ const sliderProgress = ref(0);
 
 // Video export dialog
 const showExportDialog = ref(false);
+
+// Expanded panels state (all open by default)
+const expandedPanels = ref(['animation', 'colors', 'markers']);
 
 const easingOptions = [
   { title: 'Linear', value: 'linear' },
@@ -676,10 +723,11 @@ function getStageLabel(stage: string): string {
 
 /* Controls Section */
 .controls-section {
-  flex-shrink: 0;
+  flex: 1;
+  min-width: 280px;
+  max-width: 400px;
   display: flex;
   flex-direction: column;
-  width: 340px;
   height: 100%;
   overflow-y: auto;
   overflow-x: visible;
@@ -691,13 +739,35 @@ function getStageLabel(stage: string): string {
   border-radius: 8px;
 }
 
-.settings-grid {
+/* Expansion Panels */
+.settings-panels {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.settings-panels :deep(.v-expansion-panel-title) {
+  min-height: 44px;
+  padding: 8px 16px;
+  font-size: 0.875rem;
+}
+
+.settings-panels :deep(.v-expansion-panel-text__wrapper) {
+  padding: 8px 16px 16px;
+}
+
+.panel-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
 }
 
-.settings-full-width {
+.panel-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.panel-full-width {
   grid-column: 1 / -1;
 }
 
@@ -706,6 +776,7 @@ function getStageLabel(stage: string): string {
   gap: 8px;
   margin-top: auto;
   padding-top: 12px;
+  flex-shrink: 0;
 }
 
 .color-swatch {
