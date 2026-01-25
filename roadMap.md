@@ -78,7 +78,7 @@ Die folgenden 8 Punkte wurden als Lücken identifiziert und in die Timeline inte
   - Mindest-Höhenunterschied für visuelle Spannung
   - Optional: "Visuelle Überhöhung" (nicht lügen, aber lesbar machen)
   - Ohne das sehen flache Strecken tot aus, steile sprengen die Skala
-- [ ] 🟢 **SVG-Animation: Stroke-draw + Marker** (Frame-basiert für Video-Export)
+- [x] 🟢 **SVG-Animation: Stroke-draw + Marker** (Frame-basiert für Video-Export)
   - [x] 🟣 1. Animations-Architektur
     - `generateElevationFrame(options, progress: 0-1)` Funktion erstellen
     - Progress 0 = Start, Progress 1 = Ende
@@ -103,10 +103,11 @@ Die folgenden 8 Punkte wurden als Lücken identifiziert und in die Timeline inte
     - Frames als "Daumenkino" abspielen (requestAnimationFrame)
     - Play/Pause/Scrubber Controls
     - Geschwindigkeitsregler (0.25x - 2x)
-  - [ ] 🔵 8. Testen & Feinschliff
-    - Performance mit 500+ Datenpunkten
-    - Smooth Easing testen
-    - Memory-Verbrauch bei vielen Frames
+  - [x] 🔵 8. Testen & Feinschliff
+    - Performance mit 500+ Datenpunkten ✅
+    - Smooth Easing testen ✅
+    - Memory-Verbrauch bei vielen Frames ✅
+    - 91 Tests, 98% Coverage für elevationChart.ts
 - [x] 🟢 **Frame-Truth** (deterministische Frame-Erzeugung)
   - SVG ist die Single Source of Truth
   - Gleiche Frames im Preview wie im Export (pixelgenau)
