@@ -52,6 +52,20 @@ Diese Regeln gelten für jeden Monat:
   - Komoot-Anbindung
   - Weitere Services: Garmin Connect, Wahoo, etc.
   - Ziel: Aktivität direkt auswählen statt GPX-Datei suchen
+- **DevOps & Projekt-Infrastruktur**
+  - Changelog einführen (CHANGELOG.md)
+    - Neuigkeiten und Updates kommunizieren
+    - Format: Keep a Changelog / Semantic Versioning
+  - Versioning (Semantic Versioning)
+    - package.json Version pflegen
+    - Git Tags für Releases
+    - Version in der App anzeigen
+  - Git Branching-Strategie
+    - `feature/*` Branches für neue Features
+    - `dev` Branch für Integration
+    - `main` Branch nur für Production-Ready Code
+    - Hotfixes direkt auf `main`, dann zurück nach `dev`
+    - Pull Requests für alle Merges
 
 ---
 
