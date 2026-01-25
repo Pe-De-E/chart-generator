@@ -53,14 +53,14 @@ Diese Regeln gelten für jeden Monat:
   - Weitere Services: Garmin Connect, Wahoo, etc.
   - Ziel: Aktivität direkt auswählen statt GPX-Datei suchen
 - **DevOps & Projekt-Infrastruktur**
-  - Changelog einführen (CHANGELOG.md)
+  - [x] Changelog einführen (CHANGELOG.md)
     - Neuigkeiten und Updates kommunizieren
     - Format: Keep a Changelog / Semantic Versioning
-  - Versioning (Semantic Versioning)
-    - package.json Version pflegen
+  - [x] Versioning (Semantic Versioning)
+    - package.json Version pflegen (aktuell: 0.1.0)
     - Git Tags für Releases
-    - Version in der App anzeigen
-  - Git Branching-Strategie
+    - [ ] Version in der App anzeigen
+  - [x] Git Branching-Strategie
     - `feature/*` Branches für neue Features
     - `dev` Branch für Integration
     - `main` Branch nur für Production-Ready Code
