@@ -45,9 +45,19 @@
                     ></v-data-table>
                   </v-card-text>
                   <v-card-text>
+                    <!-- Stats summary -->
                     <v-alert type="info" variant="tonal" density="compact">
-                      {{ tableItems.length }} Punkte geladen
+                      <div class="d-flex align-center justify-space-between flex-wrap ga-2">
+                        <span>{{ tableItems.length }} Punkte geladen</span>
+                        <div v-if="gpxStats" class="text-caption d-flex ga-3">
+                          <span><v-icon size="small" class="mr-1">mdi-map-marker-distance</v-icon>{{ gpxStats.totalDistanceKm.toFixed(1) }} km</span>
+                          <span><v-icon size="small" class="mr-1">mdi-arrow-up-bold</v-icon>{{ gpxStats.elevationGain }} m</span>
+                          <span><v-icon size="small" class="mr-1">mdi-arrow-down-bold</v-icon>{{ gpxStats.elevationLoss }} m</span>
+                        </div>
+                      </div>
                     </v-alert>
+
+                    <!-- Downsampling info -->
                     <v-alert
                       v-if="downsamplingInfo"
                       type="success"
@@ -58,6 +68,22 @@
                       <v-icon icon="mdi-chart-timeline-variant-shimmer" class="mr-1"></v-icon>
                       Optimiert: {{ downsamplingInfo.original.toLocaleString() }} → {{ downsamplingInfo.reduced.toLocaleString() }} Punkte
                       <span class="text-caption ml-1">({{ downsamplingInfo.percentage }}% reduziert)</span>
+                    </v-alert>
+
+                    <!-- GPX Validation Warnings -->
+                    <v-alert
+                      v-for="(warning, index) in gpxWarnings"
+                      :key="index"
+                      :type="getWarningSeverityColor(warning.severity)"
+                      variant="tonal"
+                      density="compact"
+                      class="mt-2"
+                    >
+                      <template v-slot:prepend>
+                        <v-icon :icon="getWarningIcon(warning.type)"></v-icon>
+                      </template>
+                      <div class="font-weight-medium">{{ warning.message }}</div>
+                      <div class="text-caption">{{ warning.suggestion }}</div>
                     </v-alert>
                   </v-card-text>
                 </v-card>
@@ -147,7 +173,8 @@ import ElevationChartStep, {
   type ElevationAnimationConfig,
   DEFAULT_ELEVATION_ANIMATION_CONFIG
 } from './chartWorkflow/ElevationChartStep.vue'
-import { useCSVParser, DEFAULT_DOWNSAMPLE_OPTIONS } from '../composables/useCSVParser'
+import { useCSVParser, DEFAULT_DOWNSAMPLE_OPTIONS, type GPXWarning } from '../composables/useCSVParser'
+import { getWarningSeverityColor, getWarningIcon } from '../utils/gpxValidation'
 import { useSeriesSelection } from '../composables/useSeriesSelection'
 import { useChartConfig } from '../composables/useChartConfig'
 import { useDataGrouping } from '../composables/useDataGrouping'
@@ -256,11 +283,28 @@ const downsamplingInfo = computed(() => {
   }
 })
 
+// GPX validation warnings
+const gpxWarnings = computed((): GPXWarning[] => {
+  if (!lastGPXResult.value) return []
+  return lastGPXResult.value.validation.warnings
+})
+
+// GPX stats for display
+const gpxStats = computed(() => {
+  if (!lastGPXResult.value) return null
+  return lastGPXResult.value.validation.stats
+})
+
 // Step validations
 const validateStep1 = computed(() => {
   const missingTodos: string[] = []
   if (tableItems.value.length === 0) {
     missingTodos.push('GPX-Datei hochladen')
+  }
+  // Check for critical errors
+  const hasErrors = gpxWarnings.value.some(w => w.severity === 'error')
+  if (hasErrors) {
+    missingTodos.push('GPX-Fehler beheben')
   }
   return {
     isValid: missingTodos.length === 0,

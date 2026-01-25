@@ -7,6 +7,14 @@ import {
   PREMIUM_DOWNSAMPLE_OPTIONS,
   downsampleGPX
 } from '../utils/downsampling'
+import {
+  type GPXValidationResult,
+  type GPXValidationOptions,
+  type GPXWarning,
+  type GPXStats,
+  validateGPX,
+  DEFAULT_VALIDATION_OPTIONS,
+} from '../utils/gpxValidation'
 
 // Re-export downsampling types and constants for convenience
 export {
@@ -17,10 +25,20 @@ export {
   PREMIUM_DOWNSAMPLE_OPTIONS
 }
 
+// Re-export validation types
+export {
+  type GPXValidationResult,
+  type GPXValidationOptions,
+  type GPXWarning,
+  type GPXStats,
+  DEFAULT_VALIDATION_OPTIONS,
+}
+
 export interface GPXParseResult {
   headers: TableHeader[]
   items: TableItem[]
   downsampling: DownsampleResult
+  validation: GPXValidationResult
 }
 
 export interface TableHeader {
@@ -157,16 +175,35 @@ export function useCSVParser() {
 
   function parseGPX(
     xmlText: string,
-    options: DownsampleOptions = DEFAULT_DOWNSAMPLE_OPTIONS
-  ): GPXParseResult | null {
+    options: DownsampleOptions = DEFAULT_DOWNSAMPLE_OPTIONS,
+    validationOptions: GPXValidationOptions = DEFAULT_VALIDATION_OPTIONS
+  ): GPXParseResult {
     const parser = new DOMParser()
     const doc = parser.parseFromString(xmlText, 'application/xml')
+
+    // Set up headers for elevation profile
+    const headers: TableHeader[] = [
+      { title: 'Entfernung (km)', key: 'col_0', sortable: true },
+      { title: 'Höhe (m)', key: 'col_1', sortable: true },
+    ]
 
     // Check for parsing errors
     const parseError = doc.querySelector('parsererror')
     if (parseError) {
       console.error('GPX parsing error:', parseError.textContent)
-      return null
+      const emptyValidation = validateGPX([], validationOptions)
+      emptyValidation.warnings.unshift({
+        type: 'parse_error',
+        severity: 'error',
+        message: 'GPX-Datei konnte nicht gelesen werden',
+        suggestion: 'Die Datei scheint beschädigt oder kein gültiges GPX-Format zu sein.',
+      })
+      return {
+        headers,
+        items: [],
+        downsampling: { points: [], originalCount: 0, downsampledCount: 0, wasDownsampled: false },
+        validation: { ...emptyValidation, isValid: false },
+      }
     }
 
     // Extract all trackpoints from <trkpt> elements
@@ -174,14 +211,14 @@ export function useCSVParser() {
 
     if (trackPoints.length === 0) {
       console.error('No trackpoints found in GPX file')
-      return null
+      const emptyValidation = validateGPX([], validationOptions)
+      return {
+        headers,
+        items: [],
+        downsampling: { points: [], originalCount: 0, downsampledCount: 0, wasDownsampled: false },
+        validation: emptyValidation,
+      }
     }
-
-    // Set up headers for elevation profile
-    const headers: TableHeader[] = [
-      { title: 'Entfernung (km)', key: 'col_0', sortable: true },
-      { title: 'Höhe (m)', key: 'col_1', sortable: true },
-    ]
 
     // Extract all points first
     const allPoints: GPXPoint[] = []
@@ -212,6 +249,9 @@ export function useCSVParser() {
       prevLon = lon
     })
 
+    // Validate the GPX data (before downsampling for accurate stats)
+    const validationResult = validateGPX(allPoints, validationOptions)
+
     // Apply intelligent downsampling
     const downsamplingResult = downsampleGPX(allPoints, options)
 
@@ -228,7 +268,8 @@ export function useCSVParser() {
     return {
       headers,
       items,
-      downsampling: downsamplingResult
+      downsampling: downsamplingResult,
+      validation: validationResult,
     }
   }
 
