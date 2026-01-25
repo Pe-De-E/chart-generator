@@ -640,8 +640,9 @@ function closeExportDialog() {
 
 function getStageColor(stage: string): string {
   switch (stage) {
-    case 'preparing': return 'blue';
-    case 'rendering': return 'orange';
+    case 'loading-ffmpeg': return 'blue';
+    case 'generating-frames': return 'orange';
+    case 'converting-to-png': return 'orange';
     case 'encoding': return 'purple';
     case 'done': return 'green';
     case 'error': return 'red';
@@ -652,8 +653,9 @@ function getStageColor(stage: string): string {
 function getStageLabel(stage: string): string {
   switch (stage) {
     case 'idle': return 'Bereit';
-    case 'preparing': return 'Vorbereitung...';
-    case 'rendering': return 'Frames rendern...';
+    case 'loading-ffmpeg': return 'FFmpeg laden...';
+    case 'generating-frames': return 'Frames generieren...';
+    case 'converting-to-png': return 'Frames rendern...';
     case 'encoding': return 'Video kodieren...';
     case 'done': return 'Fertig!';
     case 'error': return 'Fehler';

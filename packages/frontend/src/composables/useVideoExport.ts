@@ -336,6 +336,160 @@ export function useVideoExport() {
     error.value = null
   }
 
+  // Cancellation flag
+  let cancelRequested = false
+
+  /**
+   * Cancel ongoing export
+   */
+  function cancelExport() {
+    cancelRequested = true
+    isExporting.value = false
+    progress.value = {
+      stage: 'idle',
+      percent: 0,
+      currentFrame: 0,
+      totalFrames: 0,
+      message: 'Export cancelled'
+    }
+  }
+
+  /**
+   * Export video using a render callback function
+   * This API allows the caller to provide custom frame rendering logic
+   */
+  interface ExportVideoOptions {
+    width: number
+    height: number
+    fps: number
+    durationMs: number
+    filename: string
+    renderFrame: (progress: number) => string
+  }
+
+  async function exportVideo(options: ExportVideoOptions): Promise<void> {
+    const { width, height, fps, durationMs, filename, renderFrame } = options
+
+    if (isExporting.value) {
+      error.value = 'Export already in progress'
+      return
+    }
+
+    isExporting.value = true
+    cancelRequested = false
+    error.value = null
+
+    try {
+      // Step 1: Load FFmpeg if not already loaded
+      const loaded = await loadFFmpeg()
+      if (!loaded || !ffmpeg.value) {
+        throw new Error('Failed to load FFmpeg')
+      }
+
+      if (cancelRequested) return
+
+      const ff = ffmpeg.value
+
+      // Calculate total frames
+      const totalFrames = Math.ceil((durationMs / 1000) * fps) + 1
+
+      // Step 2: Generate and convert frames
+      progress.value = {
+        stage: 'converting-to-png',
+        percent: 0,
+        currentFrame: 0,
+        totalFrames,
+        message: 'Rendering frames...'
+      }
+
+      for (let i = 0; i < totalFrames; i++) {
+        if (cancelRequested) return
+
+        const frameProgress = i / (totalFrames - 1)
+        const svgString = renderFrame(frameProgress)
+
+        const pngData = await svgToPng(svgString, width, height)
+        const fileName = `frame${i.toString().padStart(5, '0')}.png`
+        await ff.writeFile(fileName, pngData)
+
+        progress.value = {
+          ...progress.value,
+          currentFrame: i + 1,
+          percent: Math.round(((i + 1) / totalFrames) * 100),
+          message: `Rendering frame ${i + 1}/${totalFrames}`
+        }
+      }
+
+      if (cancelRequested) return
+
+      // Step 3: Encode to MP4
+      progress.value = {
+        stage: 'encoding',
+        percent: 0,
+        currentFrame: totalFrames,
+        totalFrames,
+        message: 'Encoding video...'
+      }
+
+      await ff.exec([
+        '-framerate', fps.toString(),
+        '-i', 'frame%05d.png',
+        '-c:v', 'libx264',
+        '-preset', 'medium',
+        '-crf', '18',
+        '-pix_fmt', 'yuv420p',
+        '-movflags', '+faststart',
+        'output.mp4'
+      ])
+
+      if (cancelRequested) return
+
+      // Step 4: Read output file and download
+      const data = await ff.readFile('output.mp4')
+      const videoBlob = new Blob([data], { type: 'video/mp4' })
+
+      // Download the video
+      downloadVideo(videoBlob, filename)
+
+      // Cleanup: remove all frame files
+      for (let i = 0; i < totalFrames; i++) {
+        const fileName = `frame${i.toString().padStart(5, '0')}.png`
+        try {
+          await ff.deleteFile(fileName)
+        } catch {
+          // Ignore cleanup errors
+        }
+      }
+      try {
+        await ff.deleteFile('output.mp4')
+      } catch {
+        // Ignore cleanup errors
+      }
+
+      progress.value = {
+        stage: 'done',
+        percent: 100,
+        currentFrame: totalFrames,
+        totalFrames,
+        message: 'Export complete!'
+      }
+    } catch (e) {
+      if (cancelRequested) return
+
+      const errorMsg = e instanceof Error ? e.message : 'Export failed'
+      error.value = errorMsg
+      progress.value = {
+        stage: 'error',
+        percent: 0,
+        currentFrame: 0,
+        totalFrames: 0,
+        message: errorMsg
+      }
+    } finally {
+      isExporting.value = false
+    }
+  }
+
   return {
     // State
     isLoaded,
@@ -347,7 +501,9 @@ export function useVideoExport() {
     // Actions
     loadFFmpeg,
     exportToMp4,
+    exportVideo,
     downloadVideo,
+    cancelExport,
     reset
   }
 }
