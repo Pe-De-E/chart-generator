@@ -762,15 +762,16 @@ function generateAnimatedSilhouette(
   const curveHeight = Math.round(height * curveHeightPercent)
   const curveY = height - curveHeight  // Curve starts at bottom edge
 
-  // Add padding for labels
-  const leftPadding = showElevationLabels ? 100 : 0
-  const bottomPadding = showDistanceLabels ? 80 : 0
+  // Add padding for labels - smaller values to keep curve visible
+  const leftPadding = showElevationLabels ? 80 : 20
+  const rightPadding = 20
+  const bottomPadding = showDistanceLabels ? 70 : 0
 
   // Create a config for the curve area only
   const curveConfig: ViewBoxConfig = {
     width: width,
     height: curveHeight,
-    padding: { top: 20, right: 0, bottom: bottomPadding, left: leftPadding }
+    padding: { top: 20, right: rightPadding, bottom: bottomPadding, left: leftPadding }
   }
 
   const gpxPoints: GPXPoint[] = data.map((d, i) => ({
@@ -820,13 +821,14 @@ function generateAnimatedSilhouette(
 
     // Create 5 labels from min to max
     const labelCount = 5
-    const fontSize = 28
+    const fontSize = 24
     const labels: string[] = []
 
-    // Add padding to keep labels visible
-    const labelAreaTop = offsetChartArea.y + fontSize
-    const labelAreaBottom = offsetChartArea.y + offsetChartArea.height - fontSize / 2
+    // Position labels along the curve height
+    const labelAreaTop = offsetChartArea.y + 10
+    const labelAreaBottom = offsetChartArea.y + offsetChartArea.height - 10
     const labelAreaHeight = labelAreaBottom - labelAreaTop
+    const labelX = leftPadding - 10  // Position labels just left of the curve
 
     for (let i = 0; i < labelCount; i++) {
       const value = Math.round(minElevation + (elevationRange * i) / (labelCount - 1))
@@ -834,11 +836,11 @@ function generateAnimatedSilhouette(
       const y = labelAreaBottom - (normalizedY * labelAreaHeight)
 
       labels.push(`
-        <text x="${leftPadding - 10}" y="${y + fontSize / 3}"
+        <text x="${labelX}" y="${y + fontSize / 3}"
               text-anchor="end" font-size="${fontSize}" fill="${elevationLabelColor}"
               font-family="system-ui, sans-serif">${value}m</text>
-        <line x1="${leftPadding - 5}" y1="${y}" x2="${leftPadding}" y2="${y}"
-              stroke="${elevationLabelColor}" stroke-width="2" opacity="0.5"/>
+        <line x1="${labelX + 3}" y1="${y}" x2="${leftPadding}" y2="${y}"
+              stroke="${elevationLabelColor}" stroke-width="1" opacity="0.3"/>
       `)
     }
 
@@ -885,9 +887,12 @@ function generateAnimatedSilhouette(
         ? distanceKm.toFixed(1)
         : Math.round(distanceKm).toString()
 
+      // Use different text anchors for edge labels to prevent cutoff
+      const textAnchor = i === 0 ? 'start' : (i === labelCount - 1 ? 'end' : 'middle')
+
       labels.push(`
         <text x="${x}" y="${labelY}"
-              text-anchor="middle" font-size="${fontSize}" fill="${distanceLabelColor}"
+              text-anchor="${textAnchor}" font-size="${fontSize}" fill="${distanceLabelColor}"
               font-family="system-ui, sans-serif">${distanceStr}km</text>
         <line x1="${x}" y1="${curveBottom}"
               x2="${x}" y2="${curveBottom + 15}"
