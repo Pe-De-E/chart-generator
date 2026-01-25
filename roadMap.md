@@ -42,6 +42,11 @@ Diese Regeln gelten für jeden Monat:
 
 - Höhenmeter über das Jahr aggregiert animieren für End of Year Content
 - Trainingstimeline über Monat oder Jahr erstellen
+- **Service-Integrationen** (ergänzend zum GPX-Upload, nicht ersetzend)
+  - Strava-Anbindung (OAuth2, Activity Streams API)
+  - Komoot-Anbindung
+  - Weitere Services: Garmin Connect, Wahoo, etc.
+  - Ziel: Aktivität direkt auswählen statt GPX-Datei suchen
 
 ---
 
