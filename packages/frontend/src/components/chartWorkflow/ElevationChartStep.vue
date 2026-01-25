@@ -119,7 +119,7 @@
               Farben
             </v-expansion-panel-title>
             <v-expansion-panel-text>
-              <div class="panel-grid">
+              <div class="panel-stack">
                 <!-- Curve Color -->
                 <v-menu :close-on-content-click="false">
                   <template v-slot:activator="{ props: menuProps }">
@@ -137,15 +137,37 @@
                     hide-inputs
                   />
                 </v-menu>
-                <!-- Background Color -->
-                <v-menu v-if="!useGradientBackground" :close-on-content-click="false">
+
+                <!-- Background Type Selector -->
+                <v-select
+                  v-model="backgroundType"
+                  :items="backgroundTypeOptions"
+                  item-title="title"
+                  item-value="value"
+                  label="Hintergrund"
+                  variant="outlined"
+                  density="compact"
+                  hide-details
+                  class="mt-2"
+                >
+                  <template v-slot:item="{ props: itemProps, item }">
+                    <v-list-item v-bind="itemProps">
+                      <template v-slot:prepend>
+                        <v-icon :icon="item.raw.icon" size="small" />
+                      </template>
+                    </v-list-item>
+                  </template>
+                </v-select>
+
+                <!-- Solid Background Color -->
+                <v-menu v-if="backgroundType === 'solid' || backgroundType === 'grid' || backgroundType === 'dots'" :close-on-content-click="false">
                   <template v-slot:activator="{ props: menuProps }">
-                    <v-btn v-bind="menuProps" variant="outlined" block>
+                    <v-btn v-bind="menuProps" variant="outlined" block size="small" class="mt-2">
                       <div
                         class="color-swatch mr-2"
                         :style="{ backgroundColor: backgroundColor }"
                       ></div>
-                      Hintergrund
+                      Hintergrundfarbe
                     </v-btn>
                   </template>
                   <v-color-picker
@@ -154,15 +176,16 @@
                     hide-inputs
                   />
                 </v-menu>
-                <!-- Gradient Color (shown when gradient enabled) -->
-                <v-menu v-if="useGradientBackground" :close-on-content-click="false">
+
+                <!-- Gradient Color -->
+                <v-menu v-if="backgroundType === 'gradient'" :close-on-content-click="false">
                   <template v-slot:activator="{ props: menuProps }">
-                    <v-btn v-bind="menuProps" variant="outlined" block>
+                    <v-btn v-bind="menuProps" variant="outlined" block size="small" class="mt-2">
                       <div
                         class="color-swatch mr-2"
                         :style="{ backgroundColor: gradientColor }"
                       ></div>
-                      Gradient
+                      Gradient-Farbe
                     </v-btn>
                   </template>
                   <v-color-picker
@@ -171,15 +194,68 @@
                     hide-inputs
                   />
                 </v-menu>
-                <!-- Gradient Toggle -->
-                <v-checkbox
-                  v-model="useGradientBackground"
-                  label="Gradient-Hintergrund"
-                  density="compact"
-                  hide-details
-                  color="primary"
-                  class="panel-full-width"
-                />
+
+                <!-- Mesh Gradient Colors -->
+                <template v-if="backgroundType === 'mesh'">
+                  <div class="text-caption text-grey mt-2 mb-1">Mesh-Farben</div>
+                  <div class="d-flex ga-2">
+                    <v-menu :close-on-content-click="false">
+                      <template v-slot:activator="{ props: menuProps }">
+                        <v-btn v-bind="menuProps" variant="outlined" size="small" icon>
+                          <div class="color-swatch-small" :style="{ backgroundColor: meshColor1 }"></div>
+                        </v-btn>
+                      </template>
+                      <v-color-picker v-model="meshColor1" mode="hexa" hide-inputs />
+                    </v-menu>
+                    <v-menu :close-on-content-click="false">
+                      <template v-slot:activator="{ props: menuProps }">
+                        <v-btn v-bind="menuProps" variant="outlined" size="small" icon>
+                          <div class="color-swatch-small" :style="{ backgroundColor: meshColor2 }"></div>
+                        </v-btn>
+                      </template>
+                      <v-color-picker v-model="meshColor2" mode="hexa" hide-inputs />
+                    </v-menu>
+                    <v-menu :close-on-content-click="false">
+                      <template v-slot:activator="{ props: menuProps }">
+                        <v-btn v-bind="menuProps" variant="outlined" size="small" icon>
+                          <div class="color-swatch-small" :style="{ backgroundColor: meshColor3 }"></div>
+                        </v-btn>
+                      </template>
+                      <v-color-picker v-model="meshColor3" mode="hexa" hide-inputs />
+                    </v-menu>
+                  </div>
+                </template>
+
+                <!-- Pattern Color and Opacity (Grid/Dots) -->
+                <template v-if="backgroundType === 'grid' || backgroundType === 'dots'">
+                  <v-menu :close-on-content-click="false">
+                    <template v-slot:activator="{ props: menuProps }">
+                      <v-btn v-bind="menuProps" variant="outlined" block size="small" class="mt-2">
+                        <div
+                          class="color-swatch mr-2"
+                          :style="{ backgroundColor: patternColor }"
+                        ></div>
+                        Musterfarbe
+                      </v-btn>
+                    </template>
+                    <v-color-picker
+                      v-model="patternColor"
+                      mode="hexa"
+                      hide-inputs
+                    />
+                  </v-menu>
+                  <v-slider
+                    v-model="patternOpacity"
+                    :min="0.05"
+                    :max="0.5"
+                    :step="0.05"
+                    label="Deckkraft"
+                    density="compact"
+                    hide-details
+                    thumb-label
+                    class="mt-2"
+                  />
+                </template>
               </div>
             </v-expansion-panel-text>
           </v-expansion-panel>
@@ -209,16 +285,41 @@
                 <!-- Elevation Label Color -->
                 <v-menu v-if="showElevationLabels" :close-on-content-click="false">
                   <template v-slot:activator="{ props: menuProps }">
-                    <v-btn v-bind="menuProps" variant="outlined" block size="small" class="mt-2">
+                    <v-btn v-bind="menuProps" variant="outlined" block size="small" class="mt-1">
                       <div
                         class="color-swatch mr-2"
                         :style="{ backgroundColor: elevationLabelColor }"
                       ></div>
-                      Labelfarbe
+                      Höhenmeter-Farbe
                     </v-btn>
                   </template>
                   <v-color-picker
                     v-model="elevationLabelColor"
+                    mode="hexa"
+                    show-swatches
+                  />
+                </v-menu>
+                <v-checkbox
+                  v-model="showDistanceLabels"
+                  label="Kilometer anzeigen"
+                  density="compact"
+                  hide-details
+                  color="primary"
+                  class="mt-2"
+                />
+                <!-- Distance Label Color -->
+                <v-menu v-if="showDistanceLabels" :close-on-content-click="false">
+                  <template v-slot:activator="{ props: menuProps }">
+                    <v-btn v-bind="menuProps" variant="outlined" block size="small" class="mt-1">
+                      <div
+                        class="color-swatch mr-2"
+                        :style="{ backgroundColor: distanceLabelColor }"
+                      ></div>
+                      Kilometer-Farbe
+                    </v-btn>
+                  </template>
+                  <v-color-picker
+                    v-model="distanceLabelColor"
                     mode="hexa"
                     show-swatches
                   />
@@ -345,6 +446,9 @@
 </template>
 
 <script lang="ts">
+// Background type options
+export type BackgroundType = 'solid' | 'gradient' | 'mesh' | 'grid' | 'dots';
+
 // Animation config interface for persistence - exported for use in parent components
 export interface ElevationAnimationConfig {
   duration: number;
@@ -354,10 +458,19 @@ export interface ElevationAnimationConfig {
   curveEndpoint: number;
   curveColor: string;
   backgroundColor: string;
-  useGradientBackground: boolean;
+  backgroundType: BackgroundType;
   gradientColor: string;
+  meshColor1: string;
+  meshColor2: string;
+  meshColor3: string;
+  patternColor: string;
+  patternOpacity: number;
   showElevationLabels: boolean;
   elevationLabelColor: string;
+  showDistanceLabels: boolean;
+  distanceLabelColor: string;
+  // Legacy support
+  useGradientBackground?: boolean;
 }
 
 export const DEFAULT_ELEVATION_ANIMATION_CONFIG: ElevationAnimationConfig = {
@@ -368,10 +481,17 @@ export const DEFAULT_ELEVATION_ANIMATION_CONFIG: ElevationAnimationConfig = {
   curveEndpoint: 30,
   showElevationLabels: false,
   elevationLabelColor: '#ffffffb3',
+  showDistanceLabels: false,
+  distanceLabelColor: '#ffffffb3',
   curveColor: '#ffffff',
   backgroundColor: '#000000',
-  useGradientBackground: false,
+  backgroundType: 'solid',
   gradientColor: '#302b63',
+  meshColor1: '#667eea',
+  meshColor2: '#764ba2',
+  meshColor3: '#f093fb',
+  patternColor: '#ffffff',
+  patternOpacity: 0.1,
 };
 </script>
 
@@ -412,6 +532,14 @@ const easingOptions = [
 ];
 
 const speedOptions: PlaybackSpeed[] = [0.25, 0.5, 1, 1.5, 2];
+
+const backgroundTypeOptions = [
+  { title: 'Solid', value: 'solid', icon: 'mdi-square' },
+  { title: 'Gradient', value: 'gradient', icon: 'mdi-gradient-vertical' },
+  { title: 'Mesh', value: 'mesh', icon: 'mdi-blur' },
+  { title: 'Grid', value: 'grid', icon: 'mdi-grid' },
+  { title: 'Dots', value: 'dots', icon: 'mdi-dots-grid' },
+];
 
 const props = defineProps({
   chartTitle: {
@@ -509,19 +637,60 @@ const elevationLabelColor = computed({
   set: (value: string) => updateAnimationConfig({ elevationLabelColor: value }),
 });
 
+const showDistanceLabels = computed({
+  get: () => props.animationConfig.showDistanceLabels,
+  set: (value: boolean) => updateAnimationConfig({ showDistanceLabels: value }),
+});
+
+const distanceLabelColor = computed({
+  get: () => props.animationConfig.distanceLabelColor,
+  set: (value: string) => updateAnimationConfig({ distanceLabelColor: value }),
+});
+
 const backgroundColor = computed({
   get: () => props.animationConfig.backgroundColor || '#000000',
   set: (value: string) => updateAnimationConfig({ backgroundColor: value }),
 });
 
+const backgroundType = computed({
+  get: () => props.animationConfig.backgroundType || 'solid',
+  set: (value: BackgroundType) => updateAnimationConfig({ backgroundType: value }),
+});
+
+// Legacy support - map to backgroundType
 const useGradientBackground = computed({
-  get: () => props.animationConfig.useGradientBackground ?? false,
-  set: (value: boolean) => updateAnimationConfig({ useGradientBackground: value }),
+  get: () => props.animationConfig.backgroundType === 'gradient',
+  set: (value: boolean) => updateAnimationConfig({ backgroundType: value ? 'gradient' : 'solid' }),
 });
 
 const gradientColor = computed({
   get: () => props.animationConfig.gradientColor || '#302b63',
   set: (value: string) => updateAnimationConfig({ gradientColor: value }),
+});
+
+const meshColor1 = computed({
+  get: () => props.animationConfig.meshColor1 || '#667eea',
+  set: (value: string) => updateAnimationConfig({ meshColor1: value }),
+});
+
+const meshColor2 = computed({
+  get: () => props.animationConfig.meshColor2 || '#764ba2',
+  set: (value: string) => updateAnimationConfig({ meshColor2: value }),
+});
+
+const meshColor3 = computed({
+  get: () => props.animationConfig.meshColor3 || '#f093fb',
+  set: (value: string) => updateAnimationConfig({ meshColor3: value }),
+});
+
+const patternColor = computed({
+  get: () => props.animationConfig.patternColor || '#ffffff',
+  set: (value: string) => updateAnimationConfig({ patternColor: value }),
+});
+
+const patternOpacity = computed({
+  get: () => props.animationConfig.patternOpacity ?? 0.1,
+  set: (value: number) => updateAnimationConfig({ patternOpacity: value }),
 });
 
 // Animation settings for the composable
@@ -577,8 +746,15 @@ const animationSvg = computed(() => {
     curveEndpoint: props.animationConfig.curveEndpoint,
     showElevationLabels: props.animationConfig.showElevationLabels,
     elevationLabelColor: props.animationConfig.elevationLabelColor,
-    useGradientBackground: props.animationConfig.useGradientBackground,
+    showDistanceLabels: props.animationConfig.showDistanceLabels,
+    distanceLabelColor: props.animationConfig.distanceLabelColor,
+    backgroundType: props.animationConfig.backgroundType,
     gradientColor: props.animationConfig.gradientColor,
+    meshColor1: props.animationConfig.meshColor1,
+    meshColor2: props.animationConfig.meshColor2,
+    meshColor3: props.animationConfig.meshColor3,
+    patternColor: props.animationConfig.patternColor,
+    patternOpacity: props.animationConfig.patternOpacity,
   });
 });
 
@@ -622,8 +798,15 @@ async function startVideoExport() {
         curveEndpoint: props.animationConfig.curveEndpoint,
         showElevationLabels: props.animationConfig.showElevationLabels,
         elevationLabelColor: props.animationConfig.elevationLabelColor,
-        useGradientBackground: props.animationConfig.useGradientBackground,
+        showDistanceLabels: props.animationConfig.showDistanceLabels,
+        distanceLabelColor: props.animationConfig.distanceLabelColor,
+        backgroundType: props.animationConfig.backgroundType,
         gradientColor: props.animationConfig.gradientColor,
+        meshColor1: props.animationConfig.meshColor1,
+        meshColor2: props.animationConfig.meshColor2,
+        meshColor3: props.animationConfig.meshColor3,
+        patternColor: props.animationConfig.patternColor,
+        patternOpacity: props.animationConfig.patternOpacity,
         exportWidth: 1080,
         exportHeight: 1920,
       });
@@ -784,6 +967,13 @@ function getStageLabel(stage: string): string {
 .color-swatch {
   width: 20px;
   height: 20px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+.color-swatch-small {
+  width: 24px;
+  height: 24px;
   border-radius: 4px;
   border: 1px solid rgba(0, 0, 0, 0.2);
 }

@@ -142,8 +142,9 @@ Die folgenden 8 Punkte wurden als Lücken identifiziert und in die Timeline inte
   - [x] Kurvenhöhe-Slider erweitert auf 15-100% der Reel-Höhe
   - [x] Marker ein-/ausschaltbar
   - [x] Höhenmeter-Labels mit Farbwähler
+  - [x] Kilometer-Labels mit Farbwähler
   - [x] Hintergrundfarbe wählbar (Solid Color)
-  - [x] Gradient-Hintergrund Toggle mit Farbwähler
+  - [x] Multiple Hintergrundtypen: Solid, Gradient, Mesh, Grid, Dots
   - [x] Kurvenfarbe wählbar
 - [ ] 🔵 2–3 eigene GPX-Tracks testen
 - [ ] 🟣 **Theme- & Style-Layer** (Design-System statt Hardcoding)

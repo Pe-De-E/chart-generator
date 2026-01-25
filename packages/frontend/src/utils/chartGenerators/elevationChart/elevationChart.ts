@@ -12,6 +12,11 @@ import {
 } from '../../coordinateContract'
 
 /**
+ * Background type options
+ */
+export type BackgroundType = 'solid' | 'gradient' | 'mesh' | 'grid' | 'dots'
+
+/**
  * Animation frame options
  */
 export interface FrameOptions {
@@ -22,8 +27,17 @@ export interface FrameOptions {
   curveEndpoint: CurveEndpoint  // Where the curve ends: natural, middle, or top
   showElevationLabels?: boolean // Show elevation labels on the left
   elevationLabelColor?: string  // Color of elevation labels
-  useGradientBackground?: boolean // Use gradient instead of solid background
+  showDistanceLabels?: boolean  // Show distance labels at the bottom
+  distanceLabelColor?: string   // Color of distance labels
+  totalDistanceKm?: number      // Total distance in km (from GPX data)
+  useGradientBackground?: boolean // (Legacy) Use gradient instead of solid background
   gradientColor?: string    // Base color for the gradient background
+  backgroundType?: BackgroundType // Type of background (solid, gradient, mesh, grid, dots)
+  meshColor1?: string       // First color for mesh gradient
+  meshColor2?: string       // Second color for mesh gradient
+  meshColor3?: string       // Third color for mesh gradient
+  patternColor?: string     // Color for grid/dots pattern
+  patternOpacity?: number   // Opacity for grid/dots pattern (0-1)
   exportWidth?: number      // Export width (for video export)
   exportHeight?: number     // Export height (for video export)
 }
@@ -566,6 +580,11 @@ export function generateElevationFrame(
     })) : [])
     const color = styleOverrides?.series?.['main']?.color ?? options.colors.primary ?? seriesConfig?.[0]?.color ?? '#2E7D32'
     const backgroundColor = options.colors.background
+
+    // Determine background type (support legacy useGradientBackground)
+    const backgroundType: BackgroundType = frameOptions.backgroundType
+      ?? (frameOptions.useGradientBackground ? 'gradient' : 'solid')
+
     return generateAnimatedSilhouette(
       chartData,
       color,
@@ -579,8 +598,16 @@ export function generateElevationFrame(
       backgroundColor,
       frameOptions.showElevationLabels ?? false,
       frameOptions.elevationLabelColor ?? '#ffffffb3',
-      frameOptions.useGradientBackground ?? false,
-      frameOptions.gradientColor ?? '#302b63'
+      backgroundType,
+      frameOptions.gradientColor ?? '#302b63',
+      frameOptions.meshColor1 ?? '#667eea',
+      frameOptions.meshColor2 ?? '#764ba2',
+      frameOptions.meshColor3 ?? '#f093fb',
+      frameOptions.patternColor ?? '#ffffff',
+      frameOptions.patternOpacity ?? 0.1,
+      frameOptions.showDistanceLabels ?? false,
+      frameOptions.distanceLabelColor ?? '#ffffffb3',
+      frameOptions.totalDistanceKm
     )
   }
 
@@ -605,6 +632,96 @@ export function generateElevationFrame(
 }
 
 /**
+ * Generate background SVG elements based on type
+ */
+function generateBackgroundElements(
+  width: number,
+  height: number,
+  backgroundType: BackgroundType,
+  backgroundColor: string,
+  gradientColor: string,
+  meshColor1: string,
+  meshColor2: string,
+  meshColor3: string,
+  patternColor: string,
+  patternOpacity: number
+): { defs: string; elements: string } {
+  const bgGradientId = 'background-gradient-anim'
+  const meshGradientId = 'mesh-gradient-anim'
+  const patternId = 'pattern-anim'
+
+  switch (backgroundType) {
+    case 'gradient':
+      return {
+        defs: `
+          <linearGradient id="${bgGradientId}" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" style="stop-color:#000000;stop-opacity:1"/>
+            <stop offset="50%" style="stop-color:${gradientColor};stop-opacity:1"/>
+            <stop offset="100%" style="stop-color:#000000;stop-opacity:1"/>
+          </linearGradient>`,
+        elements: `<rect width="${width}" height="${height}" fill="url(#${bgGradientId})"/>`
+      }
+
+    case 'mesh':
+      // Mesh gradient using overlapping radial gradients
+      return {
+        defs: `
+          <radialGradient id="${meshGradientId}-1" cx="20%" cy="30%" r="80%" fx="20%" fy="30%">
+            <stop offset="0%" style="stop-color:${meshColor1};stop-opacity:1"/>
+            <stop offset="100%" style="stop-color:${meshColor1};stop-opacity:0"/>
+          </radialGradient>
+          <radialGradient id="${meshGradientId}-2" cx="80%" cy="20%" r="70%" fx="80%" fy="20%">
+            <stop offset="0%" style="stop-color:${meshColor2};stop-opacity:0.8"/>
+            <stop offset="100%" style="stop-color:${meshColor2};stop-opacity:0"/>
+          </radialGradient>
+          <radialGradient id="${meshGradientId}-3" cx="50%" cy="80%" r="60%" fx="50%" fy="80%">
+            <stop offset="0%" style="stop-color:${meshColor3};stop-opacity:0.9"/>
+            <stop offset="100%" style="stop-color:${meshColor3};stop-opacity:0"/>
+          </radialGradient>`,
+        elements: `
+          <rect width="${width}" height="${height}" fill="${backgroundColor}"/>
+          <rect width="${width}" height="${height}" fill="url(#${meshGradientId}-1)"/>
+          <rect width="${width}" height="${height}" fill="url(#${meshGradientId}-2)" style="mix-blend-mode: screen;"/>
+          <rect width="${width}" height="${height}" fill="url(#${meshGradientId}-3)" style="mix-blend-mode: screen;"/>`
+      }
+
+    case 'grid':
+      // Grid pattern
+      const gridSize = 40
+      return {
+        defs: `
+          <pattern id="${patternId}" width="${gridSize}" height="${gridSize}" patternUnits="userSpaceOnUse">
+            <path d="M ${gridSize} 0 L 0 0 0 ${gridSize}" fill="none" stroke="${patternColor}" stroke-width="1" opacity="${patternOpacity}"/>
+          </pattern>`,
+        elements: `
+          <rect width="${width}" height="${height}" fill="${backgroundColor}"/>
+          <rect width="${width}" height="${height}" fill="url(#${patternId})"/>`
+      }
+
+    case 'dots':
+      // Dot pattern
+      const dotSpacing = 30
+      const dotRadius = 3
+      return {
+        defs: `
+          <pattern id="${patternId}" width="${dotSpacing}" height="${dotSpacing}" patternUnits="userSpaceOnUse">
+            <circle cx="${dotSpacing / 2}" cy="${dotSpacing / 2}" r="${dotRadius}" fill="${patternColor}" opacity="${patternOpacity}"/>
+          </pattern>`,
+        elements: `
+          <rect width="${width}" height="${height}" fill="${backgroundColor}"/>
+          <rect width="${width}" height="${height}" fill="url(#${patternId})"/>`
+      }
+
+    case 'solid':
+    default:
+      return {
+        defs: '',
+        elements: `<rect width="${width}" height="${height}" fill="${backgroundColor}"/>`
+      }
+  }
+}
+
+/**
  * Animated silhouette mode
  * Always uses Instagram Reel dimensions (1080x1920) for consistent preview/export
  * The SVG scales to fit the container while maintaining aspect ratio
@@ -622,8 +739,16 @@ function generateAnimatedSilhouette(
   backgroundColor: string = '#000000',
   showElevationLabels: boolean = false,
   elevationLabelColor: string = '#ffffffb3',
-  useGradientBackground: boolean = false,
-  gradientColor: string = '#302b63'
+  backgroundType: BackgroundType = 'solid',
+  gradientColor: string = '#302b63',
+  meshColor1: string = '#667eea',
+  meshColor2: string = '#764ba2',
+  meshColor3: string = '#f093fb',
+  patternColor: string = '#ffffff',
+  patternOpacity: number = 0.1,
+  showDistanceLabels: boolean = false,
+  distanceLabelColor: string = '#ffffffb3',
+  totalDistanceKm?: number
 ): string {
   if (data.length === 0) return '<svg></svg>'
 
@@ -719,21 +844,75 @@ function generateAnimatedSilhouette(
     elevationLabelsHtml = labels.join('')
   }
 
-  // Background gradient definition (only used when useGradientBackground is true)
-  // Creates a gradient from black at top to the selected color in middle to dark at bottom
-  const bgGradientId = 'background-gradient-anim'
-  const bgGradientDef = useGradientBackground ? `
-        <linearGradient id="${bgGradientId}" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" style="stop-color:#000000;stop-opacity:1"/>
-          <stop offset="50%" style="stop-color:${gradientColor};stop-opacity:1"/>
-          <stop offset="100%" style="stop-color:#000000;stop-opacity:1"/>
-        </linearGradient>` : ''
+  // Generate distance labels if enabled
+  let distanceLabelsHtml = ''
+  if (showDistanceLabels) {
+    // Estimate total distance from data length if not provided
+    // Try to parse distance from labels (e.g., "5.2km" or "5.2")
+    let estimatedTotalKm = totalDistanceKm
+    if (!estimatedTotalKm && data.length > 0) {
+      // Try to parse the last label as distance
+      const lastLabel = data[data.length - 1].label
+      const match = lastLabel.match(/^([\d.]+)/)
+      if (match) {
+        estimatedTotalKm = parseFloat(match[1])
+      } else {
+        // Fallback: assume 1 point per 100m
+        estimatedTotalKm = data.length / 10
+      }
+    }
 
-  const bgFill = useGradientBackground ? `url(#${bgGradientId})` : backgroundColor
+    const labelCount = 5
+    const fontSize = 28
+    const labels: string[] = []
+    const bottomPadding = 60
+
+    // Position labels along the bottom of the chart
+    const labelAreaLeft = offsetChartArea.x
+    const labelAreaRight = offsetChartArea.x + offsetChartArea.width
+    const labelAreaWidth = labelAreaRight - labelAreaLeft
+    const labelY = height - bottomPadding + fontSize
+
+    for (let i = 0; i < labelCount; i++) {
+      const distanceKm = estimatedTotalKm ? (estimatedTotalKm * i) / (labelCount - 1) : 0
+      const normalizedX = i / (labelCount - 1)
+      const x = labelAreaLeft + (normalizedX * labelAreaWidth)
+
+      // Format distance nicely
+      const distanceStr = distanceKm < 10
+        ? distanceKm.toFixed(1)
+        : Math.round(distanceKm).toString()
+
+      labels.push(`
+        <text x="${x}" y="${labelY}"
+              text-anchor="middle" font-size="${fontSize}" fill="${distanceLabelColor}"
+              font-family="system-ui, sans-serif">${distanceStr}km</text>
+        <line x1="${x}" y1="${offsetChartArea.y + offsetChartArea.height}"
+              x2="${x}" y2="${offsetChartArea.y + offsetChartArea.height + 10}"
+              stroke="${distanceLabelColor}" stroke-width="2" opacity="0.5"/>
+      `)
+    }
+
+    distanceLabelsHtml = labels.join('')
+  }
+
+  // Generate background based on type
+  const bgElements = generateBackgroundElements(
+    width,
+    height,
+    backgroundType,
+    backgroundColor,
+    gradientColor,
+    meshColor1,
+    meshColor2,
+    meshColor3,
+    patternColor,
+    patternOpacity
+  )
 
   return `
     <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
-      <defs>${bgGradientDef}
+      <defs>${bgElements.defs}
         <linearGradient id="${gradientId}" x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%" style="stop-color:${color};stop-opacity:0.5"/>
           <stop offset="100%" style="stop-color:${color};stop-opacity:0.1"/>
@@ -742,8 +921,9 @@ function generateAnimatedSilhouette(
           <rect x="${clipX}" y="0" width="${fullClipWidth}" height="${height}"/>
         </clipPath>
       </defs>
-      <rect width="${width}" height="${height}" fill="${bgFill}"/>
+      ${bgElements.elements}
       ${elevationLabelsHtml}
+      ${distanceLabelsHtml}
       <g clip-path="url(#${clipId})">
         <polygon points="${areaPath}" fill="url(#${gradientId})"/>
         <polyline points="${linePoints}" fill="none" stroke="${color}"
