@@ -137,7 +137,7 @@ Die folgenden 8 Punkte wurden als Lücken identifiziert und in die Timeline inte
     - [x] Export-Button in ElevationChartStep hinzufügen
     - [x] Progress-Anzeige während Export (Ladebalken + Stage-Chip)
     - [x] Kurvenhöhe-Slider (15-60% der Reel-Höhe)
-    - [ ] Export-Einstellungen Dialog (Auflösung, FPS, Qualität)
+    - [x] Export-Einstellungen Dialog (Auflösung, FPS, Qualität)
   - [ ] Qualitätssicherung
     - [ ] Browser-Kompatibilität prüfen (SharedArrayBuffer Support)
     - [ ] Testen auf Chrome, Firefox, Edge

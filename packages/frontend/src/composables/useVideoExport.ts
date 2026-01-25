@@ -362,13 +362,14 @@ export function useVideoExport() {
     width: number
     height: number
     fps: number
+    quality?: 'low' | 'medium' | 'high'
     durationMs: number
     filename: string
     renderFrame: (progress: number) => string
   }
 
   async function exportVideo(options: ExportVideoOptions): Promise<void> {
-    const { width, height, fps, durationMs, filename, renderFrame } = options
+    const { width, height, fps, quality = 'high', durationMs, filename, renderFrame } = options
 
     if (isExporting.value) {
       error.value = 'Export already in progress'
@@ -431,12 +432,14 @@ export function useVideoExport() {
         message: 'Encoding video...'
       }
 
+      const crf = QUALITY_CRF[quality]
+
       await ff.exec([
         '-framerate', fps.toString(),
         '-i', 'frame%05d.png',
         '-c:v', 'libx264',
         '-preset', 'medium',
-        '-crf', '18',
+        '-crf', crf.toString(),
         '-pix_fmt', 'yuv420p',
         '-movflags', '+faststart',
         'output.mp4'

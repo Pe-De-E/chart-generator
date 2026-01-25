@@ -396,7 +396,7 @@
                 icon="mdi-video-outline"
                 color="deep-purple"
                 variant="flat"
-                @click="startVideoExport"
+                @click="openExportSettings"
                 :disabled="!videoExport.isSupported.value || videoExport.isExporting.value"
               />
             </template>
@@ -404,6 +404,67 @@
         </div>
       </div>
     </div>
+
+    <!-- Export Settings Dialog -->
+    <v-dialog v-model="showExportSettingsDialog" max-width="400">
+      <v-card>
+        <v-card-title class="d-flex align-center">
+          <v-icon class="mr-2">mdi-cog</v-icon>
+          Export-Einstellungen
+        </v-card-title>
+        <v-card-text>
+          <v-select
+            v-model="exportSettings.resolution"
+            :items="resolutionOptions"
+            item-title="title"
+            item-value="value"
+            label="Auflösung"
+            variant="outlined"
+            density="comfortable"
+            class="mb-3"
+          />
+          <v-select
+            v-model="exportSettings.fps"
+            :items="fpsOptions"
+            item-title="title"
+            item-value="value"
+            label="Bildrate"
+            variant="outlined"
+            density="comfortable"
+            class="mb-3"
+          />
+          <v-select
+            v-model="exportSettings.quality"
+            :items="qualityOptions"
+            item-title="title"
+            item-value="value"
+            label="Qualität"
+            variant="outlined"
+            density="comfortable"
+          />
+          <v-alert
+            type="info"
+            density="compact"
+            variant="tonal"
+            class="mt-4"
+          >
+            <div class="text-caption">
+              Geschätzte Frames: {{ Math.ceil(animationDuration * exportSettings.fps) + 1 }}
+            </div>
+          </v-alert>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="showExportSettingsDialog = false">
+            Abbrechen
+          </v-btn>
+          <v-btn color="deep-purple" variant="flat" @click="startVideoExport">
+            <v-icon start>mdi-export</v-icon>
+            Exportieren
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
 
     <!-- Video Export Progress Dialog -->
     <v-dialog v-model="showExportDialog" persistent max-width="450">
@@ -555,8 +616,34 @@ const layoutMode = ref<'silhouette' | 'free'>('silhouette');
 // Slider progress state
 const sliderProgress = ref(0);
 
-// Video export dialog
+// Video export dialogs
 const showExportDialog = ref(false);
+const showExportSettingsDialog = ref(false);
+
+// Export settings
+const exportSettings = ref({
+  resolution: '1080x1920' as '1080x1920' | '720x1280' | '540x960',
+  fps: 30 as 24 | 30 | 60,
+  quality: 'high' as 'low' | 'medium' | 'high'
+});
+
+const resolutionOptions = [
+  { title: '1080 x 1920 (Full HD)', value: '1080x1920' },
+  { title: '720 x 1280 (HD)', value: '720x1280' },
+  { title: '540 x 960 (SD)', value: '540x960' },
+];
+
+const fpsOptions = [
+  { title: '24 fps (Cinematic)', value: 24 },
+  { title: '30 fps (Standard)', value: 30 },
+  { title: '60 fps (Smooth)', value: 60 },
+];
+
+const qualityOptions = [
+  { title: 'Niedrig (kleine Datei)', value: 'low' },
+  { title: 'Mittel', value: 'medium' },
+  { title: 'Hoch (beste Qualität)', value: 'high' },
+];
 
 // Expanded panels state (all open by default)
 const expandedPanels = ref(['animation', 'colors', 'markers']);
@@ -858,13 +945,24 @@ function setSpeed(speed: PlaybackSpeed) {
 // Video export
 const videoExport = useVideoExport();
 
+// Open export settings dialog
+function openExportSettings() {
+  showExportSettingsDialog.value = true;
+}
+
+// Start the actual export with selected settings
 async function startVideoExport() {
+  showExportSettingsDialog.value = false;
   showExportDialog.value = true;
 
+  // Parse resolution
+  const [width, height] = exportSettings.value.resolution.split('x').map(Number);
+
   await videoExport.exportVideo({
-    width: 1080,
-    height: 1920,
-    fps: 30,
+    width,
+    height,
+    fps: exportSettings.value.fps,
+    quality: exportSettings.value.quality,
     durationMs: animationDuration.value * 1000,
     filename: `${props.chartTitle || 'elevation'}-reel.mp4`,
     renderFrame: (progress: number) => {
@@ -885,8 +983,8 @@ async function startVideoExport() {
         meshColor3: props.animationConfig.meshColor3,
         patternColor: props.animationConfig.patternColor,
         patternOpacity: props.animationConfig.patternOpacity,
-        exportWidth: 1080,
-        exportHeight: 1920,
+        exportWidth: width,
+        exportHeight: height,
       });
     }
   });
