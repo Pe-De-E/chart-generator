@@ -159,6 +159,9 @@
       </v-list-item>
     </div>
   </v-navigation-drawer>
+
+  <!-- Chart Type Selection Dialog -->
+  <ChartTypeDialog v-model="showChartTypeDialog" />
 </template>
 
 <script setup lang="ts">
@@ -166,6 +169,7 @@ import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useTheme } from 'vuetify'
 import { useAuth } from '../composables/useAuth'
+import ChartTypeDialog from './ChartTypeDialog.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -173,6 +177,7 @@ const theme = useTheme()
 const { currentUser, isAuthenticated, isAdmin, logout } = useAuth()
 
 const isCollapsed = ref(false)
+const showChartTypeDialog = ref(false)
 
 const isDark = computed(() => theme.global.current.value.dark)
 
@@ -205,11 +210,7 @@ function toggleTheme() {
 }
 
 function handleNewChart() {
-  if (router.currentRoute.value.path === '/generator') {
-    window.dispatchEvent(new CustomEvent('chart:new'))
-  } else {
-    router.push('/generator')
-  }
+  showChartTypeDialog.value = true
 }
 
 async function handleLogout() {
