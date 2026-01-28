@@ -1,4 +1,4 @@
-# Sprint-Plan GPX → Insta-Reels (Feb 2026 – Aug 2027)
+# Sprint-Plan GPX → Insta-Reels (Feb 2026 – Ende 2027)
 
 **Legende:**
 
@@ -8,20 +8,21 @@
 - 🟡 Monetarisierung / Business
 - 🧘 Stabilisierung (bewusst nichts Neues)
 
-**Hinweis:** Du bleibst bis August 2027 in deiner Vollzeitstelle. Der Exit ist **bedingungsabhängig** – nur wenn dein Projekt ausreichend Einnahmen generiert.
+**Neue Situation (Jan 2026):** Kündigung erhalten. Das Projekt ist kein Nebenprojekt mehr, sondern ein potenzieller Einkommenspfad. Prioritäten verschieben sich: Feedback > Eleganz, Zahlungsbereitschaft > Feature-Vollständigkeit, Geschwindigkeit > Perfektion.
 
 ---
 
 ## Belastungs-Prinzipien (verbindlich)
 
-Diese Regeln gelten für jeden Monat:
+Diese Regeln gelten für jeden Monat – jetzt wichtiger denn je:
 
 | Regel | Begründung |
 |-------|------------|
-| **Max. 2–3 schwere Themen pro Monat** | Mit Vollzeitjob, Krankheit, Depression ist mehr nicht nachhaltig |
+| **Max. 2–3 schwere Themen pro Monat** | Kündigung ≠ Panik-Modus. Burnout hilft niemandem. |
 | **Stabilisierungs-Monate einplanen** | Bewusst nichts Neues bauen, nur pflegen und atmen |
 | **Energie > Features** | Ein fertiges Feature bei 70% Energie ist besser als drei angefangene bei 100% |
 | **Pause ist keine Niederlage** | Schlechte Woche? Dann Wartung statt Neubau |
+| **Klarheit > Ideen** | Ideen gibt es viele. Eine Sache richtig gut machen. |
 
 **Markierte Stabilisierungs-Monate:** Jun 2026 🧘, Okt 2026 🧘, Feb 2027 🧘
 
@@ -52,6 +53,11 @@ Diese Regeln gelten für jeden Monat:
   - Komoot-Anbindung
   - Weitere Services: Garmin Connect, Wahoo, etc.
   - Ziel: Aktivität direkt auswählen statt GPX-Datei suchen
+- **Instagram-Integration** (⚠️ Bewusst im Backlog, nicht vor 2027)
+  - Direkte Posting-Schnittstelle zu Instagram
+  - Zu viel Infrastruktur-Overhead: Auth, Policies, Rate Limits
+  - Das ist kein Feature, das ist ein zweites Produkt
+  - Exporte funktionieren bereits – manuelles Posten ist akzeptabel
 - **DevOps & Projekt-Infrastruktur**
   - [x] Changelog einführen (CHANGELOG.md)
     - Neuigkeiten und Updates kommunizieren
@@ -179,17 +185,25 @@ Die folgenden 8 Punkte wurden als Lücken identifiziert und in die Timeline inte
   - [x] Theme-Auswahl im UI mit Vorschau
   - [x] Fundament für Textlayer und Pro-Templates
 
-## Mär 2026 – Feedback & Realitätstest
+## Mär 2026 – Feedback & Realitätstest + Weiche Bezahlschranke
 
-**Kernfrage dieses Monats:** Drückt irgendwer freiwillig auf Bezahlen?
+**Kernfrage dieses Monats:** Drückt irgendwer freiwillig auf Bezahlen? Und: Kommen sie wieder?
 
 - [x] 🟡 **Früher Monetarisierungs-Test** (wichtigste Metrik!) ✅ Jan 2026
   - [x] "Pay what you want" Button nach erfolgreichem Export (PayPal-Link)
   - Nicht um Geld zu verdienen – um Zahlungsbereitschaft zu validieren
   - **Diese eine Zahl ist wertvoller als jede Feature-Idee**
-- [ ] 🔵 Freunde / Kollegen GPX hochladen lassen
+- [ ] 🟡 **Weiche Bezahlschranke einführen** (kritisch!)
+  - 2–3 Exporte kostenlos, danach:
+  - Option A: Wasserzeichen ("Made with Altavio")
+  - Option B: Reduzierte Auflösung (720p statt 1080p)
+  - Option C: Wartezeit zwischen Exporten
+  - **Ziel:** Reibung testen, nicht Gier. Wer zahlt nicht aus Nettigkeit?
+- [ ] 🔵 **Freunde / Kollegen GPX hochladen lassen** (GATE, nicht Todo!)
+  - Wenn bis April niemand außerhalb deiner Bubble freiwillig postet → kein Produkt
+  - Dann brutal kürzen oder neu zuspitzen, nicht weiter polishen
 - [ ] 🔵 UX-Fehler sammeln & beheben
-- [x] 🔵 **Failure Paths** (Edge Cases & Robustheit)
+- [x] 🔵 **Failure Paths** (Edge Cases & Robustheit) ✅ Jan 2026
   - Was wenn GPX nur 30 Punkte hat? → Warnung + sinnvoller Fallback
   - Was wenn Strecke 800 km lang ist? → Auto-Downsampling + Hinweis
   - Was wenn Höhenmeter = 0? → Flache Linie oder Hinweis
@@ -231,18 +245,29 @@ Die folgenden 8 Punkte wurden als Lücken identifiziert und in die Timeline inte
 - [ ] 🧘 Dokumentation aktualisieren
 - [ ] 🟡 Monetarisierung: bestehende Flows optimieren (nicht neue Features)  
 
-## Jul 2026 – Performance & Overlay
+## Jul 2026 – Zweites Feature: Landscape Mode ODER Foto-Hintergrund
 
-- [ ] 🟢 Ruckelfrei auf allen Geräten
+**Regel:** Ein zweites Feature darf kein neues Problem lösen – nur das gleiche Problem in anderer Situation.
+
+- [ ] 🟢 **Landscape Mode** (1920×1080 statt 1080×1920)
+  - Gleiches Bedürfnis, anderer Kontext (YouTube, Stories, Desktop)
+  - Kurven-Layout horizontal statt vertikal
+  - Export-Option im Settings-Dialog
+- [ ] 🟢 **ODER: Fotos als Hintergrund**
+  - Eigenes Foto hochladen statt Gradient/Mesh
+  - Gleicher Zweck: "mein Ride, meine Story"
+  - Foto-Overlay mit Transparenz/Blur-Optionen
 - [ ] 🔵 Mobile UI/UX optimieren
-- [ ] 🟢 Overlay-Idee vorbereiten (Video-Hintergrund)
-- [ ] 🟢 Export mit Alpha-Kanal vorbereiten  
+- [ ] 🟢 Performance: Ruckelfrei auf allen Geräten
 
-## Aug 2026 – Overlay & Social Proof
+**Wichtig:** Nur EINES dieser Features, nicht beide!
 
-- [ ] 🟢 Overlay offiziell testen
+## Aug 2026 – Polish & Social Proof
+
+- [ ] 🟣 Zweites Feature polishen und stabilisieren
 - [ ] 🟡 Monetarisierung: Pay-per-Export + kleine Abos
-- [ ] 🔵 Social Proof sammeln: erste Testimonials, Screenshots  
+- [ ] 🔵 Social Proof sammeln: erste Testimonials, Screenshots
+- [ ] 🟢 Export mit Alpha-Kanal (für Overlay-Nutzung)  
 
 ## Sep 2026 – Pro Features
 
@@ -287,15 +312,20 @@ Die folgenden 8 Punkte wurden als Lücken identifiziert und in die Timeline inte
 - [ ] 🔵 Retrospektive: Was funktioniert, was nicht?
 - [ ] 🔵 Plan für Mär–Jul adjustieren basierend auf Realität
 
-## Mär–Jul 2027 – Exit-Vorbereitung
+## Mär–Jul 2027 – Skalierung & Stabilität
 
 - [ ] 🔵 Social Proof ausbauen (Testimonials, Case Studies)
-- [ ] 🟡 Einnahmen stabilisieren
-- [ ] 🔵 Exit nur vorbereiten, wenn Projekt tragfähig
-- [ ] 🔵 Notfallplan dokumentieren (falls Exit nicht möglich)  
+- [ ] 🟡 Einnahmen stabilisieren und diversifizieren
+- [ ] 🟢 Infrastruktur-Features nur wenn Nutzung & Wiederkehr klar sind
+- [ ] 🔵 Entscheidung: Weitermachen, Pivoten, oder Pausieren?
 
-## Aug 2027 – Bedingungsabhängiger Exit / Vollzeitstelle bleibt
+## Aug–Dez 2027 – Realitäts-Check
 
-- [ ] 🟡 Exit durchführen nur, wenn Einnahmen & Sicherheit stimmen  
-- [ ] 🔵 Rad abgeleast → Freiheit  
-- [ ] 🟢 Projekt bereit für nächste Phase, unabhängig vom Jobstatus
+**Harte Fragen, ehrliche Antworten:**
+
+- [ ] 🟡 Trägt das Projekt sich selbst? (Einnahmen vs. Kosten)
+- [ ] 🔵 Gibt es wiederkehrende Nutzer? (nicht nur Einmal-Exporte)
+- [ ] 🔵 Gibt es einen klaren Wachstumspfad?
+- [ ] 🟢 Wenn ja: Vollgas. Wenn nein: Learnings mitnehmen, weitergehen.
+
+**Kein Scheitern, sondern Daten.** Ein Experiment mit klarem Ergebnis ist wertvoller als ewiges Hoffen.
