@@ -762,9 +762,9 @@ function generateAnimatedSilhouette(
   const curveHeight = Math.round(height * curveHeightPercent)
   const curveY = height - curveHeight  // Curve starts at bottom edge
 
-  // Add padding for labels - smaller values to keep curve visible
-  const leftPadding = showElevationLabels ? 80 : 20
-  const rightPadding = 20
+  // Add padding for labels - no padding when labels are off (edge-to-edge curve)
+  const leftPadding = showElevationLabels ? 80 : 0
+  const rightPadding = 0
   const bottomPadding = showDistanceLabels ? 70 : 0
 
   // Create a config for the curve area only

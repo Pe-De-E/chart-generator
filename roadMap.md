@@ -166,6 +166,13 @@ Die folgenden 8 Punkte wurden als Lücken identifiziert und in die Timeline inte
   - [x] Multiple Hintergrundtypen: Solid, Gradient, Mesh, Grid, Dots
   - [x] Kurvenfarbe wählbar
 - [ ] 🔵 2–3 eigene GPX-Tracks testen
+- [ ] 🔵 **Charts benennen** (Organisation & Übersicht)
+  - Eigene Namen für gespeicherte Charts vergeben
+  - Name in Dashboard und Chart-Übersicht anzeigen
+- [ ] 🟢 **GPX-Tracks verknüpfen** (Multi-Track Support)
+  - Mehrere GPX-Dateien zu einer Strecke kombinieren
+  - Reihenfolge der Tracks festlegen
+  - Kombinierte Höhenprofile visualisieren
 - [x] 🟣 **Theme- & Style-Layer** (Design-System statt Hardcoding)
   - [x] Definierte Themes: dark, minimal, bold, neon, sunset
   - [x] Design-Tokens: Farben, Stroke-Width, Marker-Stil, Background-Type
