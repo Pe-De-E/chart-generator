@@ -183,8 +183,8 @@ Die folgenden 8 Punkte wurden als Lücken identifiziert und in die Timeline inte
 
 **Kernfrage dieses Monats:** Drückt irgendwer freiwillig auf Bezahlen?
 
-- [ ] 🟡 **Früher Monetarisierungs-Test** (wichtigste Metrik!)
-  - "Pay what you want" oder "Support this export with 3€"
+- [x] 🟡 **Früher Monetarisierungs-Test** (wichtigste Metrik!) ✅ Jan 2026
+  - [x] "Pay what you want" Button nach erfolgreichem Export (PayPal-Link)
   - Nicht um Geld zu verdienen – um Zahlungsbereitschaft zu validieren
   - **Diese eine Zahl ist wertvoller als jede Feature-Idee**
 - [ ] 🔵 Freunde / Kollegen GPX hochladen lassen
