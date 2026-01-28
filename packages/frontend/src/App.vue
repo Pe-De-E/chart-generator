@@ -1,63 +1,27 @@
 <template>
-  <v-app>
-    <v-app-bar color="primary" elevation="2">
-      <v-app-bar-title class="text-h5 font-weight-bold d-flex align-center" style="cursor: pointer" @click="router.push('/')">
-        <img src="/Logo.png" alt="Altavio" height="32" class="mr-2" />
-        Altavio
-      </v-app-bar-title>
+  <v-app class="app-layout">
+    <!-- Sidebar Navigation -->
+    <AppSidebar />
 
-      <v-spacer></v-spacer>
-
-      <v-btn
-        v-if="isAuthenticated"
-        variant="text"
-        prepend-icon="mdi-plus-circle"
-        @click="handleNewChart"
-      >
-        New Chart
-      </v-btn>
-
-      <v-btn
-        v-if="isAdmin"
-        variant="text"
-        prepend-icon="mdi-shield-crown"
-        @click="router.push('/admin')"
-      >
-        Admin
-      </v-btn>
-
-      <v-btn
-        :icon="theme.global.current.value.dark ? 'mdi-weather-sunny' : 'mdi-weather-night'"
-        @click="toggleTheme"
-      ></v-btn>
-
-      <UserMenu />
-    </v-app-bar>
-
-    <v-main>
+    <!-- Main Content Area -->
+    <v-main class="main-content">
       <router-view v-slot="{ Component }">
-        <v-container v-if="Component" fluid class="pa-6">
+        <div v-if="Component" class="content-wrapper">
           <component :is="Component" />
-        </v-container>
+        </div>
       </router-view>
     </v-main>
   </v-app>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { onMounted } from 'vue'
 import { useTheme } from 'vuetify'
 import { useRouter } from 'vue-router'
-import UserMenu from './components/UserMenu.vue'
-import { useAuth } from './composables/useAuth'
+import AppSidebar from './components/AppSidebar.vue'
 
 const theme = useTheme()
 const router = useRouter()
-const { isAdmin } = useAuth()
-
-const isAuthenticated = computed(() => {
-  return !!sessionStorage.getItem('accessToken')
-})
 
 // Load saved theme preference from localStorage
 onMounted(() => {
@@ -72,19 +36,27 @@ onMounted(() => {
     router.push({ name: 'Login', query: { expired: 'true' } })
   })
 })
+</script>
 
-function toggleTheme() {
-  const newTheme = theme.global.current.value.dark ? 'light' : 'dark'
-  theme.change(newTheme)
-  localStorage.setItem('theme', newTheme)
+<style scoped>
+.app-layout {
+  background: rgb(var(--v-theme-background));
 }
 
-function handleNewChart() {
-  if (router.currentRoute.value.path === '/generator') {
-    // Already on generator page - dispatch reset event
-    window.dispatchEvent(new CustomEvent('chart:new'))
-  } else {
-    router.push('/generator')
+.main-content {
+  background: rgb(var(--v-theme-background));
+  min-height: 100vh;
+}
+
+.content-wrapper {
+  padding: 24px;
+  height: 100%;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .content-wrapper {
+    padding: 16px;
   }
 }
-</script>
+</style>

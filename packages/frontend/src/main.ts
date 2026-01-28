@@ -4,6 +4,9 @@ import vuetify from './plugins/vuetify'
 import router from './router'
 import { useAuth } from './composables/useAuth'
 
+// UI Redesign: Global Styles
+import './styles/variables.scss'
+
 const app = createApp(App)
 
 app.use(vuetify)

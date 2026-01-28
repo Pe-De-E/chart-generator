@@ -1,0 +1,198 @@
+// TODO [UI-REDESIGN] Phase 1: CSS Custom Properties
+//
+// Diese Datei in main.ts importieren:
+// import './styles/variables.scss'
+
+// =============================================================================
+// BORDER RADIUS SYSTEM
+// =============================================================================
+// Keine Pill-Shapes! Konsistente Rundungen zwischen 8-24px
+
+:root {
+  --radius-sm: 8px;   // Chips, kleine Elemente
+  --radius-md: 12px;  // Buttons, Inputs, Tags
+  --radius-lg: 16px;  // Cards, Panels, Dialogs
+  --radius-xl: 24px;  // Hero-Elemente, große Modals
+}
+
+// =============================================================================
+// COLOR PALETTE - Warm & Soft (inspiriert von UI_Inspo.jpg)
+// =============================================================================
+
+:root {
+  // Primary: Warmes Teal
+  --color-primary: #2D8B7A;
+  --color-primary-light: #4ECDC4;
+  --color-primary-dark: #247A6A;
+
+  // Accent Colors (Pastell)
+  --color-rose: #E8A0BF;
+  --color-gold: #F2C94C;
+  --color-mint: #7BC47F;
+  --color-sky: #7EB8DA;
+
+  // Backgrounds (warm)
+  --color-background: #F7F4EF;
+  --color-surface: #FFFFFF;
+  --color-surface-variant: #F0EBE3;
+  --color-sidebar: #2D2A26;
+
+  // Text
+  --color-text: #2D2A26;
+  --color-text-muted: #6B6560;
+
+  // Shadows (warm-tinted, weich)
+  --shadow-sm: 0 2px 8px rgba(45, 42, 38, 0.06);
+  --shadow-md: 0 4px 16px rgba(45, 42, 38, 0.08);
+  --shadow-lg: 0 8px 30px rgba(45, 42, 38, 0.10);
+  --shadow-xl: 0 16px 50px rgba(45, 42, 38, 0.14);
+
+  // Transitions
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.2s ease;
+  --transition-slow: 0.3s ease;
+}
+
+// =============================================================================
+// VUETIFY OVERRIDES
+// =============================================================================
+// Überschreibt Default-Rundungen für Vuetify-Komponenten
+
+// Buttons - KEINE Pill-Shapes
+.v-btn {
+  border-radius: var(--radius-md) !important;
+
+  &--icon {
+    border-radius: var(--radius-md) !important; // Auch Icon-Buttons nicht rund
+  }
+
+  &--size-x-small,
+  &--size-small {
+    border-radius: var(--radius-sm) !important;
+  }
+}
+
+// Cards
+.v-card {
+  border-radius: var(--radius-lg) !important;
+}
+
+// Dialogs
+.v-dialog > .v-overlay__content > .v-card {
+  border-radius: var(--radius-xl) !important;
+}
+
+// Inputs
+.v-text-field,
+.v-select,
+.v-autocomplete,
+.v-combobox,
+.v-file-input,
+.v-textarea {
+  .v-field {
+    border-radius: var(--radius-md) !important;
+  }
+}
+
+// Alerts
+.v-alert {
+  border-radius: var(--radius-lg) !important;
+}
+
+// Chips - NICHT pill-shaped
+.v-chip {
+  border-radius: var(--radius-sm) !important;
+}
+
+// Expansion Panels - Compact bar style when collapsed
+.v-expansion-panels {
+  gap: 6px !important;
+
+  .v-expansion-panel {
+    border-radius: var(--radius-md) !important;
+    border: 1px solid rgba(128, 128, 128, 0.1);
+    box-shadow: none !important;
+    margin: 0 !important;
+
+    &--active {
+      box-shadow: var(--shadow-sm) !important;
+    }
+
+    &:first-child,
+    &:last-child {
+      border-radius: var(--radius-md) !important;
+    }
+  }
+
+  // Collapsed header - thin bar
+  .v-expansion-panel-title {
+    min-height: 36px !important;
+    padding: 6px 12px !important;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+
+    &__icon {
+      margin-inline-start: 4px !important;
+    }
+  }
+
+  // Expanded header - slightly more prominent
+  .v-expansion-panel--active .v-expansion-panel-title {
+    min-height: 40px !important;
+    padding: 8px 14px !important;
+    font-weight: 600;
+  }
+
+  .v-expansion-panel-text__wrapper {
+    padding: 12px 14px 16px !important;
+  }
+}
+
+// Menus & Lists
+.v-menu > .v-overlay__content {
+  border-radius: var(--radius-lg) !important;
+}
+
+.v-list {
+  border-radius: var(--radius-lg) !important;
+}
+
+// Progress bars
+.v-progress-linear {
+  border-radius: var(--radius-sm) !important;
+}
+
+// Tooltips
+.v-tooltip > .v-overlay__content {
+  border-radius: var(--radius-sm) !important;
+}
+
+// Snackbars
+.v-snackbar__wrapper {
+  border-radius: var(--radius-lg) !important;
+}
+
+// Data tables
+.v-data-table {
+  border-radius: var(--radius-lg) !important;
+}
+
+// Navigation drawer (Sidebar)
+.v-navigation-drawer {
+  border-radius: 0 !important; // Sidebar bleibt eckig
+}
+
+// =============================================================================
+// CUSTOM UTILITY CLASSES
+// =============================================================================
+
+.rounded-sm { border-radius: var(--radius-sm) !important; }
+.rounded-md { border-radius: var(--radius-md) !important; }
+.rounded-lg { border-radius: var(--radius-lg) !important; }
+.rounded-xl { border-radius: var(--radius-xl) !important; }
+
+.shadow-sm { box-shadow: var(--shadow-sm) !important; }
+.shadow-md { box-shadow: var(--shadow-md) !important; }
+.shadow-lg { box-shadow: var(--shadow-lg) !important; }
+.shadow-xl { box-shadow: var(--shadow-xl) !important; }

@@ -1,87 +1,129 @@
 <template>
   <div class="elevation-step">
-    <!-- Main Layout: Preview + Slider + Controls -->
-    <div class="elevation-layout">
-      <!-- Reel Preview -->
-      <div class="reel-preview">
-        <div class="silhouette-container">
-          <div
-            class="silhouette-chart"
-            v-html="silhouetteSvg"
-          ></div>
+    <!-- Main Content Area with centered preview -->
+    <div class="elevation-main" :class="{ 'sidebar-collapsed': controlsCollapsed }">
+      <!-- Centered Reel Preview -->
+      <div class="preview-area">
+        <div class="reel-preview">
+          <div class="silhouette-container">
+            <div
+              class="silhouette-chart"
+              v-html="silhouetteSvg"
+            ></div>
+          </div>
         </div>
       </div>
+    </div>
 
-      <!-- Curve Height Slider -->
-      <div class="height-slider-container">
-        <v-slider
-          v-model="curveEndpoint"
-          :min="15"
-          :max="100"
-          :step="1"
-          direction="vertical"
-          hide-details
-          thumb-label
-          class="height-slider"
-        />
-        <div class="text-caption text-center mt-1">{{ curveEndpoint }}%</div>
+    <!-- Right Sidebar for Controls -->
+    <v-navigation-drawer
+      permanent
+      location="right"
+      :rail="controlsCollapsed"
+      :width="320"
+      rail-width="56"
+      class="controls-sidebar"
+    >
+      <!-- Sidebar Header -->
+      <div class="sidebar-header" :class="{ 'collapsed': controlsCollapsed }">
+        <v-btn
+          icon
+          variant="text"
+          size="small"
+          @click="controlsCollapsed = !controlsCollapsed"
+        >
+          <v-icon>{{ controlsCollapsed ? 'mdi-chevron-left' : 'mdi-chevron-right' }}</v-icon>
+        </v-btn>
+        <span v-if="!controlsCollapsed" class="text-subtitle-2 font-weight-medium ml-2">
+          Einstellungen
+        </span>
       </div>
 
-      <!-- Controls -->
-      <div class="controls-section">
-        <!-- Playback Controls (always visible) -->
-        <div class="playback-controls mb-3">
-          <div class="d-flex align-center ga-2">
-            <v-btn
-              :icon="isPlaying ? 'mdi-pause' : 'mdi-play'"
-              variant="flat"
-              color="primary"
-              size="large"
-              @click="togglePlayback"
-            />
-            <v-btn
-              icon="mdi-replay"
-              variant="text"
-              size="small"
-              @click="resetAnimation"
-              :disabled="animationProgress === 0"
-            />
+      <v-divider />
+
+      <!-- Collapsed state: Icon buttons -->
+      <div v-if="controlsCollapsed" class="collapsed-controls">
+        <v-tooltip location="left" text="Kurvenhöhe">
+          <template v-slot:activator="{ props }">
+            <v-btn v-bind="props" icon variant="text" @click="controlsCollapsed = false">
+              <v-icon>mdi-arrow-expand-vertical</v-icon>
+            </v-btn>
+          </template>
+        </v-tooltip>
+        <v-tooltip location="left" text="Animation">
+          <template v-slot:activator="{ props }">
+            <v-btn v-bind="props" icon variant="text" @click="controlsCollapsed = false; expandedPanels = ['animation']">
+              <v-icon>mdi-animation-play</v-icon>
+            </v-btn>
+          </template>
+        </v-tooltip>
+        <v-tooltip location="left" text="Farben">
+          <template v-slot:activator="{ props }">
+            <v-btn v-bind="props" icon variant="text" @click="controlsCollapsed = false; expandedPanels = ['colors']">
+              <v-icon>mdi-palette</v-icon>
+            </v-btn>
+          </template>
+        </v-tooltip>
+        <v-tooltip location="left" text="Marker & Labels">
+          <template v-slot:activator="{ props }">
+            <v-btn v-bind="props" icon variant="text" @click="controlsCollapsed = false; expandedPanels = ['markers']">
+              <v-icon>mdi-map-marker</v-icon>
+            </v-btn>
+          </template>
+        </v-tooltip>
+
+        <v-spacer />
+
+        <!-- Playback in collapsed mode -->
+        <v-tooltip location="left" :text="isPlaying ? 'Pause' : 'Abspielen'">
+          <template v-slot:activator="{ props }">
+            <v-btn v-bind="props" :icon="isPlaying ? 'mdi-pause' : 'mdi-play'" variant="flat" color="primary" @click="togglePlayback" />
+          </template>
+        </v-tooltip>
+
+        <v-divider class="my-2" />
+
+        <!-- Actions in collapsed mode -->
+        <v-tooltip location="left" text="Zurück">
+          <template v-slot:activator="{ props }">
+            <v-btn v-bind="props" icon="mdi-chevron-left" variant="text" size="small" @click="$emit('back')" />
+          </template>
+        </v-tooltip>
+        <v-tooltip location="left" text="Speichern">
+          <template v-slot:activator="{ props }">
+            <v-btn v-bind="props" icon="mdi-content-save" color="success" variant="flat" size="small" @click="$emit('save')" />
+          </template>
+        </v-tooltip>
+        <v-tooltip location="left" text="MP4 Export">
+          <template v-slot:activator="{ props }">
+            <v-btn v-bind="props" icon="mdi-video-outline" color="deep-purple" variant="flat" size="small" @click="openExportSettings" :disabled="!videoExport.isSupported.value || videoExport.isExporting.value" />
+          </template>
+        </v-tooltip>
+      </div>
+
+      <!-- Expanded state: Full controls -->
+      <div v-else class="expanded-controls">
+        <!-- Curve Height Slider -->
+        <div class="control-section">
+          <div class="section-label">Kurvenhöhe</div>
+          <div class="height-control">
             <v-slider
-              v-model="sliderProgress"
-              :min="0"
+              v-model="curveEndpoint"
+              :min="15"
               :max="100"
-              :step="0.1"
+              :step="1"
               hide-details
-              class="flex-grow-1"
+              thumb-label
               color="primary"
-              track-color="grey-lighten-2"
-              @update:model-value="onSliderChange"
             />
-            <span class="text-caption" style="min-width: 50px; font-family: monospace;">
-              {{ formattedTime }}
-            </span>
-            <v-menu>
-              <template v-slot:activator="{ props: menuProps }">
-                <v-btn v-bind="menuProps" variant="text" size="small">
-                  {{ playbackSpeed }}x
-                </v-btn>
-              </template>
-              <v-list density="compact">
-                <v-list-item
-                  v-for="speed in speedOptions"
-                  :key="speed"
-                  :active="playbackSpeed === speed"
-                  @click="setSpeed(speed)"
-                >
-                  <v-list-item-title>{{ speed }}x</v-list-item-title>
-                </v-list-item>
-              </v-list>
-            </v-menu>
+            <span class="text-caption">{{ curveEndpoint }}%</span>
           </div>
         </div>
 
+        <v-divider class="my-2" />
+
         <!-- Collapsible Settings Panels -->
-        <v-expansion-panels v-model="expandedPanels" multiple class="settings-panels mb-3">
+        <v-expansion-panels v-model="expandedPanels" multiple class="settings-panels">
           <!-- Animation Settings -->
           <v-expansion-panel value="animation">
             <v-expansion-panel-title>
@@ -365,45 +407,85 @@
           </v-expansion-panel>
         </v-expansion-panels>
 
+        <v-spacer />
+
+        <!-- Playback Controls at bottom -->
+        <div class="playback-section">
+          <v-divider class="mb-3" />
+
+          <div class="playback-row">
+            <v-btn
+              :icon="isPlaying ? 'mdi-pause' : 'mdi-play'"
+              variant="flat"
+              color="primary"
+              size="small"
+              @click="togglePlayback"
+            />
+            <v-btn
+              icon="mdi-replay"
+              variant="text"
+              size="x-small"
+              @click="resetAnimation"
+              :disabled="animationProgress === 0"
+            />
+            <v-slider
+              v-model="sliderProgress"
+              :min="0"
+              :max="100"
+              :step="0.1"
+              hide-details
+              color="primary"
+              track-color="grey-lighten-2"
+              class="mx-2"
+              @update:model-value="onSliderChange"
+            />
+            <span class="text-caption text-no-wrap" style="font-family: monospace; font-size: 11px;">
+              {{ formattedTime }}
+            </span>
+            <v-menu>
+              <template v-slot:activator="{ props: menuProps }">
+                <v-btn v-bind="menuProps" variant="text" size="x-small" class="ml-1">
+                  {{ playbackSpeed }}x
+                </v-btn>
+              </template>
+              <v-list density="compact">
+                <v-list-item
+                  v-for="speed in speedOptions"
+                  :key="speed"
+                  :active="playbackSpeed === speed"
+                  @click="setSpeed(speed)"
+                >
+                  <v-list-item-title>{{ speed }}x</v-list-item-title>
+                </v-list-item>
+              </v-list>
+            </v-menu>
+          </div>
+        </div>
+
         <!-- Action Buttons -->
         <div class="action-buttons">
-          <v-tooltip text="Zurück" location="top">
-            <template v-slot:activator="{ props: tooltipProps }">
-              <v-btn
-                v-bind="tooltipProps"
-                icon="mdi-chevron-left"
-                variant="text"
-                @click="$emit('back')"
-              />
-            </template>
-          </v-tooltip>
-          <v-spacer></v-spacer>
-          <v-tooltip text="Speichern" location="top">
-            <template v-slot:activator="{ props: tooltipProps }">
-              <v-btn
-                v-bind="tooltipProps"
-                icon="mdi-content-save"
-                color="success"
-                variant="flat"
-                @click="$emit('save')"
-              />
-            </template>
-          </v-tooltip>
-          <v-tooltip text="MP4 Export" location="top">
-            <template v-slot:activator="{ props: tooltipProps }">
-              <v-btn
-                v-bind="tooltipProps"
-                icon="mdi-video-outline"
-                color="deep-purple"
-                variant="flat"
-                @click="openExportSettings"
-                :disabled="!videoExport.isSupported.value || videoExport.isExporting.value"
-              />
-            </template>
-          </v-tooltip>
+          <v-btn
+            icon="mdi-chevron-left"
+            variant="text"
+            @click="$emit('back')"
+          />
+          <v-spacer />
+          <v-btn
+            icon="mdi-content-save"
+            color="success"
+            variant="flat"
+            @click="$emit('save')"
+          />
+          <v-btn
+            icon="mdi-video-outline"
+            color="deep-purple"
+            variant="flat"
+            @click="openExportSettings"
+            :disabled="!videoExport.isSupported.value || videoExport.isExporting.value"
+          />
         </div>
       </div>
-    </div>
+    </v-navigation-drawer>
 
     <!-- Export Settings Dialog -->
     <v-dialog v-model="showExportSettingsDialog" max-width="400">
@@ -647,6 +729,9 @@ const qualityOptions = [
 
 // Expanded panels state (all open by default)
 const expandedPanels = ref(['animation', 'colors', 'markers']);
+
+// Controls sidebar collapsed state
+const controlsCollapsed = ref(false);
 
 const easingOptions = [
   { title: 'Linear', value: 'linear' },
@@ -1026,28 +1111,44 @@ function getStageLabel(stage: string): string {
 <style scoped>
 .elevation-step {
   height: 100%;
-  padding: 12px;
-  padding-left: 0;
-  box-sizing: border-box;
+  position: relative;
   overflow: hidden;
 }
 
-.elevation-layout {
-  display: flex;
-  gap: 12px;
+/* Main content area */
+.elevation-main {
   height: 100%;
-  align-items: stretch;
+  margin-right: 320px;
+  transition: margin-right 0.2s ease;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.elevation-main.sidebar-collapsed {
+  margin-right: 56px;
+}
+
+/* Preview area - centered content */
+.preview-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  max-height: 100%;
 }
 
 /* Reel Preview - responsive height with 9:16 aspect ratio */
 .reel-preview {
   flex-shrink: 0;
-  height: 100%;
+  height: calc(100% - 120px);
+  max-height: 70vh;
   aspect-ratio: 9 / 16;
   background: #000;
-  border-radius: 8px;
+  border-radius: var(--radius-lg, 16px);
   overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-lg, 0 8px 30px rgba(45, 42, 38, 0.10));
 }
 
 .silhouette-container {
@@ -1070,95 +1171,159 @@ function getStageLabel(stage: string): string {
   display: block;
 }
 
-/* Height Slider */
-.height-slider-container {
+
+/* Right sidebar */
+.controls-sidebar {
+  border-left: 1px solid rgba(var(--v-border-color), 0.08) !important;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  min-height: 52px;
+}
+
+.sidebar-header.collapsed {
+  justify-content: center;
+}
+
+/* Collapsed controls - icon buttons */
+.collapsed-controls {
   display: flex;
   flex-direction: column;
   align-items: center;
-  height: 100%;
+  padding: 8px;
+  gap: 4px;
+  height: calc(100% - 52px);
 }
 
-.height-slider {
-  height: 100%;
-}
-
-/* Controls Section */
-.controls-section {
+.collapsed-controls .v-spacer {
   flex: 1;
-  min-width: 280px;
-  max-width: 400px;
+}
+
+/* Expanded controls */
+.expanded-controls {
+  padding: 12px;
+  height: calc(100% - 52px);
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  height: 100%;
-  overflow-y: auto;
-  overflow-x: visible;
 }
 
-.playback-controls {
-  background: rgba(var(--v-theme-surface-variant), 0.5);
-  padding: 12px;
-  border-radius: 8px;
+/* Playback section at bottom */
+.playback-section {
+  margin-top: auto;
+  padding-top: 8px;
+}
+
+.playback-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.playback-row .v-slider {
+  flex: 1;
+  min-width: 60px;
+}
+
+/* Action buttons */
+.action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 12px;
+  margin-top: 8px;
+  border-top: 1px solid rgba(var(--v-border-color), 0.08);
+}
+
+.control-section {
+  margin-bottom: 12px;
+}
+
+.section-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgb(var(--v-theme-on-surface-variant));
+  margin-bottom: 8px;
+}
+
+.height-control {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.height-control .v-slider {
+  flex: 1;
 }
 
 /* Expansion Panels */
 .settings-panels {
   flex: 1;
-  overflow-y: auto;
 }
 
-.settings-panels :deep(.v-expansion-panel-title) {
-  min-height: 44px;
-  padding: 8px 16px;
-  font-size: 0.875rem;
-}
-
-.settings-panels :deep(.v-expansion-panel-text__wrapper) {
-  padding: 8px 16px 16px;
+/* Active panel highlight with primary color */
+.settings-panels :deep(.v-expansion-panel--active .v-expansion-panel-title) {
+  background: rgba(var(--v-theme-primary), 0.08);
 }
 
 .panel-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 12px;
 }
 
 .panel-stack {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .panel-full-width {
   grid-column: 1 / -1;
 }
 
-.action-buttons {
-  display: flex;
-  gap: 8px;
-  margin-top: auto;
-  padding-top: 12px;
-  flex-shrink: 0;
-}
-
 .color-swatch {
-  width: 20px;
-  height: 20px;
-  border-radius: 4px;
-  border: 1px solid rgba(0, 0, 0, 0.2);
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-sm, 8px);
+  border: 1px solid rgba(var(--v-border-color), 0.2);
 }
 
 .color-swatch-small {
-  width: 24px;
-  height: 24px;
-  border-radius: 4px;
-  border: 1px solid rgba(0, 0, 0, 0.2);
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-sm, 8px);
+  border: 1px solid rgba(var(--v-border-color), 0.2);
 }
 
 .theme-preview-swatch {
   width: 32px;
   height: 20px;
-  border-radius: 4px;
-  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: var(--radius-sm, 8px);
+  border: 1px solid rgba(var(--v-border-color), 0.2);
   flex-shrink: 0;
+}
+
+/* Dialogs */
+.elevation-step :deep(.v-dialog > .v-overlay__content > .v-card) {
+  border-radius: var(--radius-xl, 24px) !important;
+}
+
+.elevation-step :deep(.v-card-title) {
+  padding: 20px 24px 16px;
+  font-weight: 600;
+}
+
+.elevation-step :deep(.v-card-text) {
+  padding: 0 24px 16px;
+}
+
+.elevation-step :deep(.v-card-actions) {
+  padding: 12px 24px 20px;
 }
 </style>

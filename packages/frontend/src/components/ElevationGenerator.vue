@@ -3,12 +3,13 @@
     <!-- Sidebar Navigation with 2 steps -->
     <StepNavigation
       v-model:current-step="currentStep"
+      v-model:collapsed="stepNavCollapsed"
       :steps="workflowSteps"
       :step-validations="stepValidations"
     />
 
     <!-- Main Content Area -->
-    <div class="elevation-generator-content">
+    <div class="elevation-generator-content" :class="{ 'nav-collapsed': stepNavCollapsed }">
       <v-window v-model="currentStep">
           <!-- Step 1: Upload GPX -->
           <v-window-item :value="1" eager>
@@ -203,6 +204,7 @@ const workflowSteps = [
 // Stepper state
 const currentStep = ref(1)
 const loadedChartId = ref<string | null>(null)
+const stepNavCollapsed = ref(false)
 
 // Dialogs
 const showFullscreenPreview = ref(false)
@@ -493,25 +495,23 @@ onUnmounted(() => {
 
 <style scoped>
 .elevation-generator-layout {
-  position: fixed;
-  top: 64px;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  position: relative;
+  height: calc(100vh - 48px);
+  margin: -24px;
   overflow: hidden;
 }
 
 .elevation-generator-content {
-  position: absolute;
-  left: 280px;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  padding: 12px;
-  background: rgb(var(--v-theme-surface));
+  margin-left: 280px;
+  height: 100%;
+  padding: 16px;
+  background: rgb(var(--v-theme-background));
   overflow: hidden;
-  border-left: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
-  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
+  transition: margin-left 0.2s ease;
+}
+
+.elevation-generator-content.nav-collapsed {
+  margin-left: 72px;
 }
 
 .elevation-generator-content :deep(.v-window) {
@@ -524,6 +524,11 @@ onUnmounted(() => {
 
 .elevation-generator-content :deep(.v-window-item) {
   height: 100%;
+}
+
+.elevation-generator-content :deep(.v-card) {
+  border-radius: var(--radius-lg, 16px);
+  box-shadow: var(--shadow-sm, 0 2px 8px rgba(45, 42, 38, 0.06));
 }
 
 .fullscreen-preview-container {

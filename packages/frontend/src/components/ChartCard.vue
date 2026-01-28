@@ -106,20 +106,29 @@ function encodeSvg(svgContent: string): string {
   position: relative;
   aspect-ratio: 9 / 16;
   max-width: 250px;
-  border-radius: 10px;
+  border-radius: var(--radius-lg, 16px);
   overflow: hidden;
   cursor: pointer;
   background: #1a1a1a;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform var(--transition-normal, 0.2s ease),
+              box-shadow var(--transition-normal, 0.2s ease),
+              border-color var(--transition-normal, 0.2s ease);
+  box-shadow: var(--shadow-md, 0 4px 16px rgba(45, 42, 38, 0.08));
+  border: 2px solid transparent;
 }
 
 .reel-card:hover {
-  transform: scale(1.02);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  transform: scale(1.02) translateY(-4px);
+  box-shadow: var(--shadow-lg, 0 8px 30px rgba(45, 42, 38, 0.12));
+  border-color: rgba(var(--v-theme-primary), 0.3);
 }
 
 .reel-card:hover .reel-actions {
   opacity: 1;
+}
+
+.reel-card:hover .reel-badge {
+  background: rgba(var(--v-theme-primary), 0.9);
 }
 
 .reel-background {
@@ -151,20 +160,31 @@ function encodeSvg(svgContent: string): string {
     rgba(0, 0, 0, 0) 60%
   );
   pointer-events: none;
+  transition: background var(--transition-normal, 0.2s ease);
+}
+
+.reel-card:hover .reel-gradient {
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.85) 0%,
+    rgba(0, 0, 0, 0.3) 40%,
+    rgba(0, 0, 0, 0) 70%
+  );
 }
 
 .reel-badge {
   position: absolute;
-  top: 8px;
-  left: 8px;
-  width: 26px;
-  height: 26px;
-  border-radius: 6px;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
+  top: 10px;
+  left: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md, 12px);
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: background var(--transition-normal, 0.2s ease);
 }
 
 .reel-info {
@@ -172,15 +192,15 @@ function encodeSvg(svgContent: string): string {
   bottom: 0;
   left: 0;
   right: 0;
-  padding: 10px;
+  padding: 12px;
   color: white;
 }
 
 .reel-title {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   line-height: 1.3;
-  margin-bottom: 2px;
+  margin-bottom: 4px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -190,7 +210,7 @@ function encodeSvg(svgContent: string): string {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 10px;
+  font-size: 11px;
   color: rgba(255, 255, 255, 0.7);
 }
 
@@ -205,17 +225,23 @@ function encodeSvg(svgContent: string): string {
 
 .reel-actions {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: 10px;
+  right: 10px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
   opacity: 0;
-  transition: opacity 0.2s ease;
+  transition: opacity var(--transition-normal, 0.2s ease);
 }
 
 .reel-action-btn {
-  background: rgba(0, 0, 0, 0.5) !important;
-  backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.6) !important;
+  backdrop-filter: blur(8px);
+  border-radius: var(--radius-md, 12px) !important;
+  transition: background var(--transition-fast, 0.15s ease) !important;
+}
+
+.reel-action-btn:hover {
+  background: rgba(var(--v-theme-primary), 0.9) !important;
 }
 </style>
