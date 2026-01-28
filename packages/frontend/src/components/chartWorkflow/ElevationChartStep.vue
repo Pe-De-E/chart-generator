@@ -572,6 +572,32 @@
             Export erfolgreich! Die Datei wird heruntergeladen.
           </v-alert>
 
+          <!-- Pay What You Want Section (after successful export) -->
+          <div v-if="videoExport.progress.value.stage === 'done'" class="support-section mt-4">
+            <v-divider class="mb-4" />
+            <div class="text-center">
+              <v-icon size="32" color="pink-lighten-2" class="mb-2">mdi-heart</v-icon>
+              <div class="text-body-1 font-weight-medium mb-2">
+                Gefällt dir Altavio?
+              </div>
+              <div class="text-body-2 text-medium-emphasis mb-4">
+                Dieses Projekt ist ist noch in der Entwicklung. Wenn es dir gefällt, kannst du mich mit einem kleinen Beitrag unterstützen.
+              </div>
+              <v-btn
+                color="primary"
+                variant="flat"
+                href="https://paypal.me/handcraftedshops"
+                target="_blank"
+                prepend-icon="mdi-hand-coin"
+              >
+                Pay what you want
+              </v-btn>
+              <div class="text-caption text-medium-emphasis mt-2">
+                Jeder Betrag hilft bei der Weiterentwicklung
+              </div>
+            </div>
+          </div>
+
           <template v-else>
             <div class="text-body-2 mb-2">
               {{ videoExport.progress.value.message }}
@@ -1325,5 +1351,12 @@ function getStageLabel(stage: string): string {
 
 .elevation-step :deep(.v-card-actions) {
   padding: 12px 24px 20px;
+}
+
+/* Support section in export dialog */
+.support-section {
+  background: rgba(var(--v-theme-surface-variant), 0.3);
+  border-radius: var(--radius-md, 12px);
+  padding: 20px;
 }
 </style>
