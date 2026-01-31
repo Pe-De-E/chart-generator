@@ -24,6 +24,7 @@ model User {
   refreshTokens RefreshToken[]
   charts        Chart[]
   payments      Payment[]
+  tickets       Ticket[]
 
   @@map("users")
 }
@@ -133,4 +134,38 @@ enum PaymentStatus {
   FAILED
   REFUNDED
   CANCELLED
+}
+
+// Ticket/Feedback system
+enum TicketType {
+  BUG
+  FEATURE
+  QUESTION
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+model Ticket {
+  id          String       @id @default(uuid())
+  userId      String       @map("user_id")
+  subject     String
+  message     String       @db.Text
+  type        TicketType   @default(QUESTION)
+  status      TicketStatus @default(OPEN)
+  adminNotes  String?      @db.Text @map("admin_notes")
+  resolvedAt  DateTime?    @map("resolved_at")
+  resolvedBy  String?      @map("resolved_by")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@map("tickets")
 }

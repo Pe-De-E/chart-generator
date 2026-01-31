@@ -88,6 +88,20 @@
     <div class="sidebar-footer">
       <v-divider class="sidebar-divider mb-2" />
 
+      <!-- Feedback Button -->
+      <v-list-item
+        v-if="isAuthenticated"
+        prepend-icon="mdi-message-text-outline"
+        :title="isCollapsed ? '' : 'Feedback'"
+        @click="showFeedbackDialog = true"
+        class="nav-item"
+        rounded="lg"
+      >
+        <v-tooltip v-if="isCollapsed" activator="parent" location="right">
+          Feedback
+        </v-tooltip>
+      </v-list-item>
+
       <!-- Theme Toggle -->
       <v-list-item
         :prepend-icon="isDark ? 'mdi-weather-sunny' : 'mdi-weather-night'"
@@ -158,6 +172,9 @@
         </v-tooltip>
       </v-list-item>
     </div>
+
+    <!-- Feedback Dialog -->
+    <FeedbackDialog v-model="showFeedbackDialog" />
   </v-navigation-drawer>
 </template>
 
@@ -166,6 +183,7 @@ import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useTheme } from 'vuetify'
 import { useAuth } from '../composables/useAuth'
+import FeedbackDialog from './FeedbackDialog.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -173,6 +191,7 @@ const theme = useTheme()
 const { currentUser, isAuthenticated, isAdmin, logout } = useAuth()
 
 const isCollapsed = ref(false)
+const showFeedbackDialog = ref(false)
 
 const isDark = computed(() => theme.global.current.value.dark)
 
