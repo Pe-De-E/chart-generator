@@ -1,16 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createVuetify } from 'vuetify'
-import { ref, computed } from 'vue'
 import App from './App.vue'
 
 // Create shared mocks
 const pushMock = vi.fn()
-const mockIsAdmin = ref(false)
-const mockCurrentUser = ref<{ email: string; firstName?: string; lastName?: string; isAdmin?: boolean } | null>(null)
-const mockIsAuthenticated = ref(false)
-const mockIsLoading = ref(false)
-const mockLogout = vi.fn()
 
 // Mock vue-router
 vi.mock('vue-router', () => ({
@@ -25,55 +19,31 @@ vi.mock('vue-router', () => ({
       }
     }
   })),
-  RouterView: {
-    template: '<div class="router-view"><slot :Component="null" /></div>',
-  },
-}))
-
-// Mock useAuth composable
-vi.mock('./composables/useAuth', () => ({
-  useAuth: vi.fn(() => ({
-    isAdmin: computed(() => mockIsAdmin.value),
-    currentUser: mockCurrentUser,
-    isAuthenticated: computed(() => mockIsAuthenticated.value),
-    isLoading: mockIsLoading,
-    logout: mockLogout,
+  useRoute: vi.fn(() => ({
+    path: '/',
+    name: 'home',
+    params: {},
+    query: {},
+    matched: [],
+    fullPath: '/',
+    hash: '',
+    redirectedFrom: undefined,
+    meta: {}
   })),
+  RouterLink: {
+    template: '<a :href="to"><slot /></a>',
+    props: ['to']
+  },
 }))
 
 const vuetify = createVuetify()
 
 describe('App.vue', () => {
-  let originalSessionStorage: Storage
   let originalLocalStorage: Storage
-  let sessionStorageData: Record<string, string>
   let localStorageData: Record<string, string>
 
   beforeEach(() => {
     vi.clearAllMocks()
-    mockIsAdmin.value = false
-    mockCurrentUser.value = null
-    mockIsAuthenticated.value = false
-    mockIsLoading.value = false
-
-    // Mock sessionStorage
-    sessionStorageData = {}
-    originalSessionStorage = global.sessionStorage
-    Object.defineProperty(global, 'sessionStorage', {
-      value: {
-        getItem: vi.fn((key: string) => sessionStorageData[key] || null),
-        setItem: vi.fn((key: string, value: string) => {
-          sessionStorageData[key] = value
-        }),
-        removeItem: vi.fn((key: string) => {
-          delete sessionStorageData[key]
-        }),
-        clear: vi.fn(() => {
-          sessionStorageData = {}
-        }),
-      },
-      writable: true,
-    })
 
     // Mock localStorage
     localStorageData = {}
@@ -97,7 +67,6 @@ describe('App.vue', () => {
 
   afterEach(() => {
     vi.restoreAllMocks()
-    Object.defineProperty(global, 'sessionStorage', { value: originalSessionStorage, writable: true })
     Object.defineProperty(global, 'localStorage', { value: originalLocalStorage, writable: true })
   })
 
@@ -106,31 +75,12 @@ describe('App.vue', () => {
       global: {
         plugins: [vuetify],
         stubs: {
+          AppSidebar: { template: '<div class="app-sidebar-stub">AppSidebar</div>' },
           'router-view': {
             template: '<div class="router-view"><slot :Component="null" /></div>',
           },
-          UserMenu: { template: '<div class="user-menu-stub">UserMenu</div>' },
           'v-app': { template: '<div class="v-app"><slot /></div>' },
-          'v-app-bar': { template: '<div class="v-app-bar"><slot /></div>' },
-          'v-app-bar-title': {
-            template: '<div class="v-app-bar-title" @click="$emit(\'click\')"><slot /></div>',
-          },
-          'v-spacer': { template: '<div class="v-spacer"></div>' },
-          'v-btn': {
-            template: `
-              <button
-                class="v-btn"
-                @click="$emit('click')"
-                :data-icon="prependIcon || icon"
-                :data-variant="variant"
-              >
-                <slot />
-              </button>
-            `,
-            props: ['variant', 'prependIcon', 'icon'],
-          },
           'v-main': { template: '<div class="v-main"><slot /></div>' },
-          'v-container': { template: '<div class="v-container"><slot /></div>' },
         },
       },
     })
@@ -142,128 +92,47 @@ describe('App.vue', () => {
       expect(wrapper.exists()).toBe(true)
     })
 
-    it('should display the app title', () => {
+    it('should render AppSidebar component', () => {
       const wrapper = createWrapper()
-      expect(wrapper.text()).toContain('Altavio')
+      expect(wrapper.find('.app-sidebar-stub').exists()).toBe(true)
     })
 
-    it('should render UserMenu component', () => {
+    it('should render the footer', () => {
       const wrapper = createWrapper()
-      expect(wrapper.find('.user-menu-stub').exists()).toBe(true)
+      expect(wrapper.find('.app-footer').exists()).toBe(true)
     })
 
-    it('should render theme toggle button', () => {
+    it('should render legal links in footer', () => {
       const wrapper = createWrapper()
-      const themeButton = wrapper.findAll('.v-btn').find(
-        btn => btn.attributes('data-icon')?.includes('mdi-weather')
-      )
-      expect(themeButton).toBeDefined()
-    })
-  })
-
-  describe('Authentication-based UI', () => {
-    it('should not show "New Chart" button when not authenticated', () => {
-      sessionStorageData['accessToken'] = ''
-      const wrapper = createWrapper()
-      const buttons = wrapper.findAll('.v-btn')
-      const newChartButton = buttons.find(btn => btn.text().includes('New Chart'))
-      expect(newChartButton).toBeUndefined()
+      const footer = wrapper.find('.app-footer')
+      expect(footer.text()).toContain('Impressum')
+      expect(footer.text()).toContain('Datenschutz')
+      expect(footer.text()).toContain('AGB')
     })
 
-    it('should show "New Chart" button when authenticated', async () => {
-      sessionStorageData['accessToken'] = 'valid-token'
+    it('should have correct footer link targets', () => {
       const wrapper = createWrapper()
-      await flushPromises()
-      await wrapper.vm.$nextTick()
-
-      const buttons = wrapper.findAll('.v-btn')
-      const newChartButton = buttons.find(btn => btn.text().includes('New Chart'))
-      expect(newChartButton).toBeDefined()
+      const footerHtml = wrapper.find('.app-footer').html()
+      expect(footerHtml).toContain('/impressum')
+      expect(footerHtml).toContain('/datenschutz')
+      expect(footerHtml).toContain('/agb')
     })
   })
 
-  describe('Admin-based UI', () => {
-    it('should not show "Admin" button when user is not admin', () => {
-      mockIsAdmin.value = false
-      const wrapper = createWrapper()
-      const buttons = wrapper.findAll('.v-btn')
-      const adminButton = buttons.find(btn => btn.text().includes('Admin'))
-      expect(adminButton).toBeUndefined()
-    })
-
-    it('should show "Admin" button when user is admin', async () => {
-      mockIsAdmin.value = true
-      const wrapper = createWrapper()
-      await flushPromises()
-
-      const buttons = wrapper.findAll('.v-btn')
-      const adminButton = buttons.find(btn => btn.text().includes('Admin'))
-      expect(adminButton).toBeDefined()
-    })
-
-    it('should show admin button with correct icon', async () => {
-      mockIsAdmin.value = true
-      const wrapper = createWrapper()
-      await flushPromises()
-
-      const adminButton = wrapper.findAll('.v-btn').find(
-        btn => btn.attributes('data-icon') === 'mdi-shield-crown'
-      )
-      expect(adminButton).toBeDefined()
-    })
-  })
-
-  describe('Navigation', () => {
-    it('should navigate to home when title is clicked', async () => {
-      const wrapper = createWrapper()
-      const title = wrapper.find('.v-app-bar-title')
-      await title.trigger('click')
-      expect(pushMock).toHaveBeenCalledWith('/')
-    })
-
-    it('should navigate to generator when "New Chart" button is clicked', async () => {
-      sessionStorageData['accessToken'] = 'valid-token'
-      const wrapper = createWrapper()
-      await flushPromises()
-
-      const buttons = wrapper.findAll('.v-btn')
-      const newChartButton = buttons.find(btn => btn.text().includes('New Chart'))
-      await newChartButton?.trigger('click')
-
-      expect(pushMock).toHaveBeenCalledWith('/generator')
-    })
-
-    it('should navigate to admin when "Admin" button is clicked', async () => {
-      mockIsAdmin.value = true
-      const wrapper = createWrapper()
-      await flushPromises()
-
-      const buttons = wrapper.findAll('.v-btn')
-      const adminButton = buttons.find(btn => btn.text().includes('Admin'))
-      await adminButton?.trigger('click')
-
-      expect(pushMock).toHaveBeenCalledWith('/admin')
-    })
-  })
-
-  describe('Theme Toggle', () => {
-    it('should toggle theme when theme button is clicked', async () => {
-      const wrapper = createWrapper()
-      const themeButton = wrapper.findAll('.v-btn').find(
-        btn => btn.attributes('data-icon')?.includes('mdi-weather')
-      )
-
-      await themeButton?.trigger('click')
-
-      // Should save to localStorage
-      expect(localStorage.setItem).toHaveBeenCalledWith('theme', expect.any(String))
-    })
-
+  describe('Theme Loading', () => {
     it('should load saved theme from localStorage on mount', async () => {
       localStorageData['theme'] = 'dark'
       createWrapper()
       await flushPromises()
 
+      expect(localStorage.getItem).toHaveBeenCalledWith('theme')
+    })
+
+    it('should not crash when no theme is saved', async () => {
+      const wrapper = createWrapper()
+      await flushPromises()
+
+      expect(wrapper.exists()).toBe(true)
       expect(localStorage.getItem).toHaveBeenCalledWith('theme')
     })
   })
@@ -290,17 +159,20 @@ describe('App.vue', () => {
     })
   })
 
-  describe('Button Icons', () => {
-    it('should have correct icon for New Chart button', async () => {
-      sessionStorageData['accessToken'] = 'valid-token'
+  describe('Layout Structure', () => {
+    it('should have v-app as root element', () => {
       const wrapper = createWrapper()
-      await flushPromises()
+      expect(wrapper.find('.v-app').exists()).toBe(true)
+    })
 
-      const newChartButton = wrapper.findAll('.v-btn').find(
-        btn => btn.attributes('data-icon') === 'mdi-plus-circle'
-      )
-      expect(newChartButton).toBeDefined()
-      expect(newChartButton?.text()).toContain('New Chart')
+    it('should have v-main for content area', () => {
+      const wrapper = createWrapper()
+      expect(wrapper.find('.v-main').exists()).toBe(true)
+    })
+
+    it('should have router-view for page content', () => {
+      const wrapper = createWrapper()
+      expect(wrapper.find('.router-view').exists()).toBe(true)
     })
   })
 })

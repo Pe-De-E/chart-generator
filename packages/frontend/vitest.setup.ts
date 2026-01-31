@@ -51,11 +51,11 @@ global.URL.createObjectURL = vi.fn(() => 'mock-url')
 global.URL.revokeObjectURL = vi.fn()
 
 // Mock router for components that use useRouter/useRoute
-vi.mock('vue-router', async () => {
-  const actual = await vi.importActual('vue-router')
+vi.mock('vue-router', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('vue-router')>()
   return {
     ...actual,
-    useRouter: () => ({
+    useRouter: vi.fn(() => ({
       push: vi.fn(),
       replace: vi.fn(),
       go: vi.fn(),
@@ -69,12 +69,17 @@ vi.mock('vue-router', async () => {
           query: {}
         }
       }
-    }),
-    useRoute: () => ({
+    })),
+    useRoute: vi.fn(() => ({
       path: '/',
       name: 'home',
       params: {},
-      query: {}
-    })
+      query: {},
+      matched: [],
+      fullPath: '/',
+      hash: '',
+      redirectedFrom: undefined,
+      meta: {}
+    }))
   }
 })
