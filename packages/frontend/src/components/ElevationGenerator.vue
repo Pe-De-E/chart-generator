@@ -32,7 +32,7 @@
 
                 <!-- File Preview -->
                 <v-card v-if="tableItems.length > 0" variant="outlined" class="mb-4">
-                  <v-card-title class="text-subtitle-1 bg-grey-lighten-4">
+                  <v-card-title class="text-subtitle-1 card-header-bg">
                     <v-icon icon="mdi-eye" class="mr-2"></v-icon>
                     Vorschau (erste 5 Punkte)
                   </v-card-title>
@@ -159,7 +159,7 @@
           @click="showFullscreenPreview = false"
         ></v-btn>
       </v-toolbar>
-      <v-card-text class="pa-8 d-flex align-center justify-center" style="height: calc(100vh - 64px); background: #f5f5f5;">
+      <v-card-text class="pa-8 d-flex align-center justify-center fullscreen-preview-bg">
         <div class="fullscreen-preview-container" v-html="svgContent"></div>
       </v-card-text>
     </v-card>
@@ -538,5 +538,14 @@ onUnmounted(() => {
   width: 100%;
   height: 100%;
   overflow: auto;
+}
+
+.fullscreen-preview-bg {
+  height: calc(100vh - 64px);
+  background: var(--color-surface-variant, #f5f5f5);
+}
+
+.card-header-bg {
+  background: var(--color-surface-variant, #f5f5f5);
 }
 </style>

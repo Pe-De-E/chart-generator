@@ -140,7 +140,7 @@ defineExpose({
   display: flex;
   justify-content: center;
   align-items: center;
-  background: #f5f5f5;
+  background: var(--color-surface-variant, #f5f5f5);
   padding: 16px;
 }
 
@@ -150,8 +150,8 @@ defineExpose({
 }
 
 .controls {
-  border-top: 1px solid rgba(0, 0, 0, 0.12);
-  background: #fafafa;
+  border-top: 1px solid rgba(var(--v-border-color), var(--v-border-opacity, 0.12));
+  background: rgb(var(--v-theme-surface));
 }
 
 .time-display {

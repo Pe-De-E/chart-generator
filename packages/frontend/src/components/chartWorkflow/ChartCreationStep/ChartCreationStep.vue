@@ -853,7 +853,7 @@ const emit = defineEmits<{
   justify-content: flex-start;
   align-items: center;
   min-height: 400px;
-  background: #f5f5f5;
+  background: var(--color-surface-variant, #f5f5f5);
   border-radius: 8px;
   padding: 20px;
   overflow-x: auto;
@@ -879,7 +879,7 @@ const emit = defineEmits<{
 .color-picker-full {
   width: 100%;
   height: 40px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity, 0.12));
   border-radius: 4px;
   cursor: pointer;
 }
