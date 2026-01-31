@@ -1,331 +1,173 @@
 # Sprint-Plan GPX → Insta-Reels (Feb 2026 – Ende 2027)
 
-**Legende:**
+> **Stand:** Januar 2026 | **Status:** Kernprodukt fertig, Monetarisierung läuft
 
-- 🟢 Kernprodukt
-- 🔵 UX / Feedback
-- 🟣 Style / Animation
-- 🟡 Monetarisierung / Business
-- 🧘 Stabilisierung (bewusst nichts Neues)
-
-**Neue Situation (Jan 2026):** Kündigung erhalten. Das Projekt ist kein Nebenprojekt mehr, sondern ein potenzieller Einkommenspfad. Prioritäten verschieben sich: Feedback > Eleganz, Zahlungsbereitschaft > Feature-Vollständigkeit, Geschwindigkeit > Perfektion.
+**Legende:** 🟢 Kern | 🔵 UX | 🟣 Style | 🟡 Business | 🧘 Stabilisierung
 
 ---
 
-## Belastungs-Prinzipien (verbindlich)
+## Situation & Prinzipien
 
-Diese Regeln gelten für jeden Monat – jetzt wichtiger denn je:
+**Neue Situation (Jan 2026):** Kündigung erhalten. Projekt = potenzieller Einkommenspfad.
+Prioritäten: Feedback > Eleganz, Zahlungsbereitschaft > Features, Geschwindigkeit > Perfektion.
 
-| Regel | Begründung |
-|-------|------------|
-| **Max. 2–3 schwere Themen pro Monat** | Kündigung ≠ Panik-Modus. Burnout hilft niemandem. |
-| **Stabilisierungs-Monate einplanen** | Bewusst nichts Neues bauen, nur pflegen und atmen |
-| **Energie > Features** | Ein fertiges Feature bei 70% Energie ist besser als drei angefangene bei 100% |
-| **Pause ist keine Niederlage** | Schlechte Woche? Dann Wartung statt Neubau |
-| **Klarheit > Ideen** | Ideen gibt es viele. Eine Sache richtig gut machen. |
+**Belastungs-Regeln:**
 
-**Markierte Stabilisierungs-Monate:** Jun 2026 🧘, Okt 2026 🧘, Feb 2027 🧘
+- Max. 2–3 schwere Themen pro Monat
+- Stabilisierungs-Monate: **Jun 2026 🧘, Okt 2026 🧘, Feb 2027 🧘**
+- Energie > Features, Pause ≠ Niederlage
 
----
-
-## Projekt-Eigenschaften
-
-**Drei Eigenschaften, die es verkaufbar machen:**
-1. Klarer, enger Use Case (GPX → Reel)
-2. Visuelles Ergebnis (leicht teilbar, leicht zeigbar)
-3. Creator-Zielgruppe (zahlen eher als B2C-Normalnutzer)
-
-**Erwartung:** Nischenprodukt mit 500–2000 zahlenden Nutzern. Kein Unicorn, aber stabiler Cashflow.
+**Ziel:** Nischenprodukt mit 500–2000 zahlenden Nutzern.
 
 ---
 
-## Ideen-Backlog (nicht eingeplant)
+## ✅ Abgeschlossen (Feb 2026)
 
-- Höhenmeter über das Jahr aggregiert animieren für End of Year Content
-- Trainingstimeline über Monat oder Jahr erstellen
-- **Eigene Presets speichern**
-  - Aktuelles Design als eigenes Theme speichern
-  - Name und Vorschau für gespeicherte Presets
-  - Presets in localStorage oder Account speichern
-  - Presets exportieren/importieren (JSON)
-- **Service-Integrationen** (ergänzend zum GPX-Upload, nicht ersetzend)
-  - Strava-Anbindung (OAuth2, Activity Streams API)
-  - Komoot-Anbindung
-  - Weitere Services: Garmin Connect, Wahoo, etc.
-  - Ziel: Aktivität direkt auswählen statt GPX-Datei suchen
-- **Instagram-Integration** (⚠️ Bewusst im Backlog, nicht vor 2027)
-  - Direkte Posting-Schnittstelle zu Instagram
-  - Zu viel Infrastruktur-Overhead: Auth, Policies, Rate Limits
-  - Das ist kein Feature, das ist ein zweites Produkt
-  - Exporte funktionieren bereits – manuelles Posten ist akzeptabel
-- **DevOps & Projekt-Infrastruktur**
-  - [x] Changelog einführen (CHANGELOG.md)
-    - Neuigkeiten und Updates kommunizieren
-    - Format: Keep a Changelog / Semantic Versioning
-  - [x] Versioning (Semantic Versioning)
-    - package.json Version pflegen (aktuell: 0.1.0)
-    - Git Tags für Releases
-    - [ ] Version in der App anzeigen
-  - [x] Git Branching-Strategie
-    - `feature/*` Branches für neue Features
-    - `dev` Branch für Integration
-    - `main` Branch nur für Production-Ready Code
-    - Hotfixes direkt auf `main`, dann zurück nach `dev`
-    - Pull Requests für alle Merges
+<details>
+<summary><strong>Kernprodukt komplett implementiert</strong> (klicken zum Aufklappen)</summary>
 
----
+### GPX & Datenverarbeitung
 
-## Produkt-Hygiene Punkte (eingebaut Jan 2026)
+- ✅ GPX Import + Downsampling (Douglas-Peucker, 500–1500 Punkte)
+- ✅ Coordinate-Contract (GPX → normiert 0–1 → ViewBox px)
+- ✅ Visuelle Normalisierung (Y-Axis Compression/Expansion, Überhöhung)
+- ✅ Failure Paths (Validierung, Edge Cases, deutsche Fehlermeldungen)
 
-Die folgenden 8 Punkte wurden als Lücken identifiziert und in die Timeline integriert:
+### Animation & Export
 
-| Punkt | Wo eingeplant | Kategorie |
-|-------|---------------|-----------|
-| 1. Visuelle Normalisierung (Y-Axis) | Feb 2026 | 🟢 Kern |
-| 2. Coordinate-Contract | Feb 2026 | 🟢 Kern |
-| 3. Animierbare Textlayer | Mai 2026 | 🟣 Style |
-| 4. Theme- & Style-Layer | Feb 2026 | 🟣 Style |
-| 5. Frame-Truth | Feb 2026 | 🟢 Kern |
-| 6. Audio-Entscheidung | Mär 2026 | 🔵 UX |
-| 7. Produkt-UX Basics | Apr 2026 | 🔵 UX |
-| 8. Failure Paths | ~~Mär 2026~~ Jan 2026 ✅ | 🔵 UX |
+- ✅ Frame-basierte SVG-Animation (Progress 0–1, Easing)
+- ✅ Linie + Area-Fill progressiv zeichnen
+- ✅ Marker-Punkt am aktuellen Ende
+- ✅ Preview-Player (Play/Pause, Scrubber, 0.25x–2x Speed)
+- ✅ Frame-Truth (Preview = Export, pixelgenau)
+- ✅ MP4 Export (ffmpeg.wasm, H.264, Client-seitig)
+- ✅ Export-Settings (Auflösung, FPS, Qualität)
+- ✅ Progress-Anzeige (Stages + Prozent)
+
+### Theme-System
+
+- ✅ 5 Themes: dark, minimal, bold, neon, sunset
+- ✅ 5 Background-Types: Solid, Gradient, Mesh, Grid, Dots
+- ✅ Farb-Customization (Kurve, Labels, Marker, Hintergrund)
+- ✅ Silhouette-Modus (Kurve an Rändern, Höhen-Slider 15–100%)
+
+### Monetarisierung
+
+- ✅ Pay-what-you-want Button nach Export (PayPal)
+
+### DevOps
+
+- ✅ Changelog, Semantic Versioning, Git Branching
+
+</details>
 
 ---
 
-## Feb 2026 – Technische Wahrheit + Theme-System
+## 🔄 Offen (Feb 2026)
 
-**Fokus:** Reproduzierbar schöne Videos + Design-Fundament für später
-**Kein:** Preis, Business, Landingpage-Gedanke. Reine Technik.
-
-- [x] 🟢 GPX Import + Downsampling (500–1500 Punkte)
-- [x] 🟢 **Coordinate-Contract** (saubere Datenraum-Trennung)
-  - `normalizeElevation(points)` → 0..1 (GPX → Chart-Datenraum)
-  - `scaleToViewBox(normalizedPoints, width, height, padding)` → SVG-Pixel
-  - Klare Trennung: GPX-Raum (m, km) → normiert (0–1) → ViewBox (px)
-  - Ohne das wird jedes neue Feature zur Sauerei
-- [x] 🟢 **Visuelle Normalisierung** (Wahrnehmung, nicht Performance)
-  - Automatische Y-Axis Compression/Expansion
-  - Mindest-Höhenunterschied für visuelle Spannung
-  - Optional: "Visuelle Überhöhung" (nicht lügen, aber lesbar machen)
-  - Ohne das sehen flache Strecken tot aus, steile sprengen die Skala
-- [x] 🟢 **SVG-Animation: Stroke-draw + Marker** (Frame-basiert für Video-Export)
-  - [x] 🟣 1. Animations-Architektur
-    - `generateElevationFrame(options, progress: 0-1)` Funktion erstellen
-    - Progress 0 = Start, Progress 1 = Ende
-    - Rückgabe: SVG-String für diesen Frame
-  - [x] 🟣 2. Linie progressiv zeichnen
-    - Nur Datenpunkte bis `progress * data.length` rendern
-    - Oder: clipPath mit `width = progress * chartWidth`
-  - [x] 🟣 3. Area-Fill synchron zur Linie
-    - Polygon nur bis zum aktuellen Fortschritt aufbauen
-    - Gleicher clipPath-Ansatz wie Linie
-  - [x] 🟣 4. Marker-Punkt am aktuellen Ende
-    - Position = letzter sichtbarer Punkt der Kurve
-    - Kreis mit konfigurierbarer Größe/Farbe
-  - [x] 🟣 5. Animations-Optionen in ChartOptions
-    - `animation?: { enabled: boolean, durationMs: number, fps: number, easing: 'linear' | 'ease-in-out' }`
-    - Easing-Funktion auf Progress anwenden
-  - [x] 🟣 6. Frame-Generator Utility
-    - `generateAnimationFrames(options)` → Array von SVG-Strings
-    - Berechnet alle Frames basierend auf fps + duration
-    - z.B. 30fps × 5s = 150 Frames
-  - [x] 🔵 7. Preview-Player im Generator
-    - Frames als "Daumenkino" abspielen (requestAnimationFrame)
-    - Play/Pause/Scrubber Controls
-    - Geschwindigkeitsregler (0.25x - 2x)
-  - [x] 🔵 8. Testen & Feinschliff
-    - Performance mit 500+ Datenpunkten ✅
-    - Smooth Easing testen ✅
-    - Memory-Verbrauch bei vielen Frames ✅
-    - 91 Tests, 98% Coverage für elevationChart.ts
-- [x] 🟢 **Frame-Truth** (deterministische Frame-Erzeugung)
-  - SVG ist die Single Source of Truth
-  - Gleiche Frames im Preview wie im Export (pixelgenau)
-  - Kein "Warum sieht mein Video anders aus als die Vorschau?"
-  - Vertrauen = Produkt-Qualität
-- [x] 🟢 **MP4 Export 1080×1920** (ffmpeg.wasm, Client-seitig)
-  - [x] Setup
-    - [x] ffmpeg.wasm Packages installieren (`@ffmpeg/ffmpeg`, `@ffmpeg/util`)
-    - [x] Vite-Config: SharedArrayBuffer Headers hinzufügen (COOP/COEP)
-  - [x] Composable `useVideoExport`
-    - [x] FFmpeg laden und initialisieren
-    - [x] SVG-Frames zu PNG konvertieren (via Canvas)
-    - [x] PNG-Sequenz an FFmpeg übergeben
-    - [x] FFmpeg MP4-Encoding ausführen (H.264, 30fps)
-    - [x] MP4 als Download anbieten
-  - [x] UI
-    - [x] Export-Button in ElevationChartStep hinzufügen
-    - [x] Progress-Anzeige während Export (Ladebalken + Stage-Chip)
-    - [x] Kurvenhöhe-Slider (15-60% der Reel-Höhe)
-    - [x] Export-Einstellungen Dialog (Auflösung, FPS, Qualität)
-  - [ ] Qualitätssicherung
-    - [ ] Browser-Kompatibilität prüfen (SharedArrayBuffer Support)
-    - [ ] Testen auf Chrome, Firefox, Edge
-  - [x] Instagram Reel Specs: 9:16, 1080x1920, SVG mit Gradient-Hintergrund
-- [x] 🟣 **Silhouette-Modus Customization** (Jan 2026)
-  - [x] Kurve berührt alle Ränder (links, rechts, unten)
-  - [x] Kurvenhöhe-Slider erweitert auf 15-100% der Reel-Höhe
-  - [x] Marker ein-/ausschaltbar
-  - [x] Höhenmeter-Labels mit Farbwähler
-  - [x] Kilometer-Labels mit Farbwähler
-  - [x] Hintergrundfarbe wählbar (Solid Color)
-  - [x] Multiple Hintergrundtypen: Solid, Gradient, Mesh, Grid, Dots
-  - [x] Kurvenfarbe wählbar
 - [ ] 🔵 2–3 eigene GPX-Tracks testen
-- [ ] 🔵 **Charts benennen** (Organisation & Übersicht)
-  - Eigene Namen für gespeicherte Charts vergeben
-  - Name in Dashboard und Chart-Übersicht anzeigen
-- [ ] 🟢 **GPX-Tracks verknüpfen** (Multi-Track Support)
-  - Mehrere GPX-Dateien zu einer Strecke kombinieren
-  - Reihenfolge der Tracks festlegen
-  - Kombinierte Höhenprofile visualisieren
-- [x] 🟣 **Theme- & Style-Layer** (Design-System statt Hardcoding)
-  - [x] Definierte Themes: dark, minimal, bold, neon, sunset
-  - [x] Design-Tokens: Farben, Stroke-Width, Marker-Stil, Background-Type
-  - [x] Theme-Auswahl im UI mit Vorschau
-  - [x] Fundament für Textlayer und Pro-Templates
+- [ ] 🔵 Browser-Kompatibilität prüfen (SharedArrayBuffer: Chrome, Firefox, Edge)
+- [x] 🔵 Charts benennen (Name in Dashboard anzeigen)
 
-## Mär 2026 – Feedback & Realitätstest + Weiche Bezahlschranke
+---
 
-**Kernfrage dieses Monats:** Drückt irgendwer freiwillig auf Bezahlen? Und: Kommen sie wieder?
+## Mär 2026 – Feedback & Bezahlschranke
 
-- [x] 🟡 **Früher Monetarisierungs-Test** (wichtigste Metrik!) ✅ Jan 2026
-  - [x] "Pay what you want" Button nach erfolgreichem Export (PayPal-Link)
-  - Nicht um Geld zu verdienen – um Zahlungsbereitschaft zu validieren
-  - **Diese eine Zahl ist wertvoller als jede Feature-Idee**
-- [ ] 🟡 **Weiche Bezahlschranke einführen** (kritisch!)
-  - 2–3 Exporte kostenlos, danach:
-  - Option A: Wasserzeichen ("Made with Altavio")
-  - Option B: Reduzierte Auflösung (720p statt 1080p)
-  - Option C: Wartezeit zwischen Exporten
-  - **Ziel:** Reibung testen, nicht Gier. Wer zahlt nicht aus Nettigkeit?
-- [ ] 🔵 **Freunde / Kollegen GPX hochladen lassen** (GATE, nicht Todo!)
-  - Wenn bis April niemand außerhalb deiner Bubble freiwillig postet → kein Produkt
-  - Dann brutal kürzen oder neu zuspitzen, nicht weiter polishen
+**Kernfrage:** Drückt jemand freiwillig auf Bezahlen? Kommen sie wieder?
+
+- [ ] 🟡 **Weiche Bezahlschranke** (kritisch!)
+  - 2–3 Exporte kostenlos, danach: Wasserzeichen / 720p / Wartezeit
+  - Ziel: Reibung testen, nicht Gier
+- [ ] 🔵 **Freunde testen lassen** (GATE!)
+  - Wenn niemand außerhalb der Bubble postet → kein Produkt
 - [ ] 🔵 UX-Fehler sammeln & beheben
-- [x] 🔵 **Failure Paths** (Edge Cases & Robustheit) ✅ Jan 2026
-  - Was wenn GPX nur 30 Punkte hat? → Warnung + sinnvoller Fallback
-  - Was wenn Strecke 800 km lang ist? → Auto-Downsampling + Hinweis
-  - Was wenn Höhenmeter = 0? → Flache Linie oder Hinweis
-  - Was wenn GPX kaputt ist? → Klare Fehlermeldung
-- [ ] 🔵 **Audio-Entscheidung** (bewusste Positionierung)
-  - Stummes Video? → Klar kommunizieren
-  - Klare Aussage: "Video bewusst ohne Audio – für Reels gedacht"  
+- [ ] 🔵 **Audio-Entscheidung** – klar kommunizieren: "Video ohne Audio, für Reels"
 
-## Apr 2026 – Landingpage & UX Polish
+---
+
+## Apr 2026 – Landingpage & UX
 
 - [ ] 🔵 Landingpage bauen
-- [ ] 🔵 **Produkt-UX Basics** (Upload → Klick → Posten)
-  - Presets statt Optionen-Overload
-  - "Quick Export" Button für Standardfall
-  - "Sieht gut aus"-Pfad für 80% der Nutzer
-- [ ] 🟢 Export optimieren (Encoding, Geschwindigkeit)
-- [ ] 🔵 Erste Reels posten & Feedback sammeln
-- [ ] 🟡 Monetarisierung: erste 5–10 bezahlte Exporte  
+- [ ] 🔵 **Quick Export** – "Sieht gut aus"-Pfad für 80% der Nutzer
+- [ ] 🟢 Export optimieren (Encoding, Speed)
+- [ ] 🟢 **GPX-Tracks verknüpfen** (Multi-Track zu einer Strecke kombinieren)
+- [ ] 🔵 Erste Reels posten & Feedback
+- [ ] 🟡 Erste 5–10 bezahlte Exporte
+
+---
 
 ## Mai 2026 – Textlayer
 
-**Ein schweres Thema: Animierbare Textlayer (Theme-Layer bereits in Feb erledigt)**
-
-- [ ] 🟣 **Animierbare Textlayer** (Social-Media-Gold)
-  - Strecke (km), Höhenmeter, Datum als animierbare Elemente
-  - Text fade-in bei 10–15% Progress
-  - Nutzt Design-Tokens aus Theme-Layer
+- [ ] 🟣 **Animierbare Textlayer** (km, Höhenmeter, Datum)
+  - Fade-in bei 10–15% Progress
   - Ohne Text = "nice", mit Text = **postwürdig**
-- [ ] 🟣 Erste Theme-Varianten erstellen (minimal, bold, dark, neon)
-- [ ] 🟡 Monetarisierung: Preis / Abo-Option überlegen  
+- [ ] 🟡 Preis / Abo-Option überlegen
+
+---
 
 ## Jun 2026 – Stabilisierung 🧘
 
-**Bewusst nichts Neues bauen. Atmen, pflegen, verfeinern.**
-
 - [ ] 🔵 Feedback auswerten
-- [ ] 🟣 Typo, Marker, Animationstempo verfeinern
-- [ ] 🧘 Technische Schulden aufräumen
-- [ ] 🧘 Dokumentation aktualisieren
-- [ ] 🟡 Monetarisierung: bestehende Flows optimieren (nicht neue Features)  
+- [ ] 🟣 Typo, Marker, Tempo verfeinern
+- [ ] 🧘 Tech Debt aufräumen
 
-## Jul 2026 – Zweites Feature: Landscape Mode ODER Foto-Hintergrund
+---
 
-**Regel:** Ein zweites Feature darf kein neues Problem lösen – nur das gleiche Problem in anderer Situation.
+## Jul 2026 – Zweites Feature (NUR EINES!)
 
-- [ ] 🟢 **Landscape Mode** (1920×1080 statt 1080×1920)
-  - Gleiches Bedürfnis, anderer Kontext (YouTube, Stories, Desktop)
-  - Kurven-Layout horizontal statt vertikal
-  - Export-Option im Settings-Dialog
-- [ ] 🟢 **ODER: Fotos als Hintergrund**
-  - Eigenes Foto hochladen statt Gradient/Mesh
-  - Gleicher Zweck: "mein Ride, meine Story"
-  - Foto-Overlay mit Transparenz/Blur-Optionen
+- [ ] 🟢 **Landscape Mode** (1920×1080) – YouTube, Desktop
+- [ ] 🟢 **ODER: Foto-Hintergrund** – eigenes Foto mit Blur/Transparenz
 - [ ] 🔵 Mobile UI/UX optimieren
-- [ ] 🟢 Performance: Ruckelfrei auf allen Geräten
 
-**Wichtig:** Nur EINES dieser Features, nicht beide!
+---
 
 ## Aug 2026 – Polish & Social Proof
 
-- [ ] 🟣 Zweites Feature polishen und stabilisieren
-- [ ] 🟡 Monetarisierung: Pay-per-Export + kleine Abos
-- [ ] 🔵 Social Proof sammeln: erste Testimonials, Screenshots
-- [ ] 🟢 Export mit Alpha-Kanal (für Overlay-Nutzung)  
+- [ ] 🟣 Zweites Feature stabilisieren
+- [ ] 🟡 Pay-per-Export + kleine Abos
+- [ ] 🔵 Testimonials sammeln
+- [ ] 🟢 Export mit Alpha-Kanal
+
+---
 
 ## Sep 2026 – Pro Features
 
-- [ ] 🟢 Kernprodukt stabil & skalierbar
-- [ ] 🟣 Style finalisieren
-- [ ] 🟣 „Pro Creator" Templates anbieten
+- [ ] 🟣 „Pro Creator" Templates
 - [ ] 🟡 Monetarisierung optimieren
+
+---
 
 ## Okt 2026 – Stabilisierung 🧘
 
-**Pause. Nur Bugfixes und kleine Verbesserungen.**
+- [ ] 🧘 Bugs, Performance-Monitoring, Backup
 
-- [ ] 🧘 Bugs aus September beheben
-- [ ] 🧘 Performance-Monitoring einrichten
-- [ ] 🧘 Backup/Recovery prüfen
-- [ ] 🔵 Nutzerfeedback kategorisieren (für nächste Phase)  
+---
 
-## Nov 2026 – Feedbackrunde 2
+## Nov–Dez 2026 – Feedback & Marketing
 
 - [ ] 🔵 Größere Nutzergruppe testen
-- [ ] 🟢 Bugs beheben, Performance final
-- [ ] 🔵 Feedback sammeln und priorisieren
+- [ ] 🔵 Marketing pushen
+- [ ] 🟡 Abo + Pay-per-Export offiziell
+- [ ] 🔵 Jahresrückblick
 
-## Dez 2026 – Marketing & Monetarisierung
+---
 
-- [ ] 🔵 Marketing pushen: Reichweite erhöhen
-- [ ] 🟡 Monetarisierung: Abo + Pay-per-Export offiziell
-- [ ] 🔵 Jahresrückblick: Erfolge und Learnings dokumentieren  
+## 2027 – Wachstum & Realitäts-Check
 
-## Jan 2027 – Wachstum
+**Q1:** Community aufbauen, Monetarisierung skalieren
+**Feb 🧘:** Stabilisierung, Retrospektive
+**Q2–Q3:** Social Proof, Einnahmen stabilisieren
+**Q4:** Harte Fragen – trägt sich das Projekt? Weitermachen, Pivoten, oder Pause?
 
-- [ ] 🟢 Stabilität & Export/Overlay perfektionieren
-- [ ] 🔵 Community aufbauen
-- [ ] 🟡 Monetarisierung skalieren
+> **Kein Scheitern, sondern Daten.** Ein Experiment mit klarem Ergebnis ist wertvoller als ewiges Hoffen.
 
-## Feb 2027 – Stabilisierung 🧘
+---
 
-**Halbzeit-Pause. Energie tanken vor der letzten Phase.**
+## 💡 Ideen-Backlog (nicht eingeplant)
 
-- [ ] 🧘 Nur Wartung, keine neuen Features
-- [ ] 🧘 Codebase aufräumen
-- [ ] 🔵 Retrospektive: Was funktioniert, was nicht?
-- [ ] 🔵 Plan für Mär–Jul adjustieren basierend auf Realität
-
-## Mär–Jul 2027 – Skalierung & Stabilität
-
-- [ ] 🔵 Social Proof ausbauen (Testimonials, Case Studies)
-- [ ] 🟡 Einnahmen stabilisieren und diversifizieren
-- [ ] 🟢 Infrastruktur-Features nur wenn Nutzung & Wiederkehr klar sind
-- [ ] 🔵 Entscheidung: Weitermachen, Pivoten, oder Pausieren?
-
-## Aug–Dez 2027 – Realitäts-Check
-
-**Harte Fragen, ehrliche Antworten:**
-
-- [ ] 🟡 Trägt das Projekt sich selbst? (Einnahmen vs. Kosten)
-- [ ] 🔵 Gibt es wiederkehrende Nutzer? (nicht nur Einmal-Exporte)
-- [ ] 🔵 Gibt es einen klaren Wachstumspfad?
-- [ ] 🟢 Wenn ja: Vollgas. Wenn nein: Learnings mitnehmen, weitergehen.
-
-**Kein Scheitern, sondern Daten.** Ein Experiment mit klarem Ergebnis ist wertvoller als ewiges Hoffen.
+- Höhenmeter über das Jahr aggregiert animieren (End of Year Content)
+- Trainingstimeline über Monat/Jahr
+- **Eigene Presets speichern** (Name, Vorschau, Export/Import JSON)
+- **Service-Integrationen** – Strava, Komoot, Garmin (nicht vor Produkt-Market-Fit)
+- **Instagram-Integration** – Direkt-Posting (⚠️ zu viel Overhead, nicht vor 2027)
+- [ ] Version in der App anzeigen

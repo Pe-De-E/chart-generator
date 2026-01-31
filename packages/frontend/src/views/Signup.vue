@@ -64,6 +64,22 @@
                 Das Passwort muss mindestens 8 Zeichen lang sein und einen Großbuchstaben, einen Kleinbuchstaben und eine Zahl enthalten.
               </v-alert>
 
+              <v-checkbox
+                v-model="acceptedTerms"
+                density="compact"
+                hide-details
+                class="mb-4"
+              >
+                <template v-slot:label>
+                  <span class="text-body-2">
+                    Ich akzeptiere die
+                    <router-link to="/agb" target="_blank" class="text-primary">AGB</router-link>
+                    und
+                    <router-link to="/datenschutz" target="_blank" class="text-primary">Datenschutzerklärung</router-link>
+                  </span>
+                </template>
+              </v-checkbox>
+
               <v-btn
                 type="submit"
                 color="primary"
@@ -109,6 +125,7 @@ const lastName = ref('')
 const email = ref('')
 const password = ref('')
 const confirmPassword = ref('')
+const acceptedTerms = ref(false)
 
 const emailErrors = ref<string[]>([])
 const passwordErrors = ref<string[]>([])
@@ -153,6 +170,7 @@ const isFormValid = computed(() => {
     email.value &&
     password.value &&
     confirmPassword.value &&
+    acceptedTerms.value &&
     emailErrors.value.length === 0 &&
     passwordErrors.value.length === 0 &&
     confirmPasswordErrors.value.length === 0

@@ -9,6 +9,7 @@ import ElevationGenerator from '../components/ElevationGenerator.vue'
 import Login from '../views/Login/Login.vue'
 import Signup from '../views/Signup.vue'
 import AdminDashboard from '../views/adminDashboard/AdminDashboard.vue'
+import LegalPage from '../views/LegalPage.vue'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -46,6 +47,21 @@ const routes: RouteRecordRaw[] = [
     name: 'Signup',
     component: Signup,
     meta: { requiresGuest: true },
+  },
+  {
+    path: '/impressum',
+    name: 'Impressum',
+    component: LegalPage,
+  },
+  {
+    path: '/datenschutz',
+    name: 'Datenschutz',
+    component: LegalPage,
+  },
+  {
+    path: '/agb',
+    name: 'AGB',
+    component: LegalPage,
   },
 ]
 

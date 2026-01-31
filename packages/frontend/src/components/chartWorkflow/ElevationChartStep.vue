@@ -43,6 +43,13 @@
 
       <!-- Collapsed state: Icon buttons -->
       <div v-if="controlsCollapsed" class="collapsed-controls">
+        <v-tooltip location="left" :text="chartTitle || 'Chart-Name'">
+          <template v-slot:activator="{ props }">
+            <v-btn v-bind="props" icon variant="text" @click="controlsCollapsed = false">
+              <v-icon>mdi-pencil</v-icon>
+            </v-btn>
+          </template>
+        </v-tooltip>
         <v-tooltip location="left" text="Kurvenhöhe">
           <template v-slot:activator="{ props }">
             <v-btn v-bind="props" icon variant="text" @click="controlsCollapsed = false">
@@ -103,6 +110,22 @@
 
       <!-- Expanded state: Full controls -->
       <div v-else class="expanded-controls">
+        <!-- Chart Name -->
+        <div class="control-section">
+          <v-text-field
+            :model-value="chartTitle"
+            @update:model-value="$emit('update:chartTitle', $event)"
+            label="Chart-Name"
+            variant="outlined"
+            density="compact"
+            hide-details
+            placeholder="z.B. Alpenüberquerung Tag 1"
+            prepend-inner-icon="mdi-pencil"
+          />
+        </div>
+
+        <v-divider class="my-2" />
+
         <!-- Curve Height Slider -->
         <div class="control-section">
           <div class="section-label">Kurvenhöhe</div>

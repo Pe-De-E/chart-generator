@@ -10,6 +10,15 @@
           <component :is="Component" />
         </div>
       </router-view>
+
+      <!-- Minimal Footer -->
+      <footer class="app-footer">
+        <router-link to="/impressum">Impressum</router-link>
+        <span class="divider">·</span>
+        <router-link to="/datenschutz">Datenschutz</router-link>
+        <span class="divider">·</span>
+        <router-link to="/agb">AGB</router-link>
+      </footer>
     </v-main>
   </v-app>
 </template>
@@ -58,5 +67,33 @@ onMounted(() => {
   .content-wrapper {
     padding: 16px;
   }
+}
+
+/* Minimal Footer */
+.app-footer {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  padding: 6px 16px;
+  font-size: 11px;
+  color: rgba(var(--v-theme-on-surface), 0.4);
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  z-index: 1;
+}
+
+.app-footer a {
+  color: inherit;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.app-footer a:hover {
+  color: rgba(var(--v-theme-on-surface), 0.7);
+}
+
+.app-footer .divider {
+  opacity: 0.5;
 }
 </style>
