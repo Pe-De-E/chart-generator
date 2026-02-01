@@ -21,10 +21,12 @@ model User {
   updatedAt     DateTime  @updatedAt @map("updated_at")
   lastLoginAt   DateTime? @map("last_login_at")
 
-  refreshTokens RefreshToken[]
-  charts        Chart[]
-  payments      Payment[]
-  tickets       Ticket[]
+  refreshTokens   RefreshToken[]
+  charts          Chart[]
+  payments        Payment[]
+  tickets         Ticket[]
+  chartPresets    ChartPreset[]    @relation("UserChartPresets")
+  elevationThemes ElevationTheme[] @relation("UserElevationThemes")
 
   @@map("users")
 }
@@ -168,4 +170,36 @@ model Ticket {
   @@index([userId])
   @@index([status])
   @@map("tickets")
+}
+
+// Chart Styling Presets (for Bar, Line, Scatter, Pie, Area Charts)
+model ChartPreset {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  name      String
+  config    Json     // ChartPresetConfig
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation("UserChartPresets", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("chart_presets")
+}
+
+// Elevation Chart Themes
+model ElevationTheme {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  name        String
+  description String?
+  preview     String   // CSS gradient/color for preview swatch
+  tokens      Json     // ElevationThemeTokens
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user User @relation("UserElevationThemes", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("elevation_themes")
 }

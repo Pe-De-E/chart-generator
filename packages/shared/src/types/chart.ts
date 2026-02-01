@@ -238,3 +238,121 @@ export interface UpdateChartRequest {
   svgContent?: string
   isPublic?: boolean
 }
+
+// =============================================================================
+// Chart Presets - Styling-Vorlagen für Bar, Line, Scatter, Pie, Area Charts
+// =============================================================================
+
+export interface ChartPresetColors {
+  background: string
+  series: string[]
+}
+
+export interface ChartPresetConfig {
+  chartType?: ChartType  // Optional: for filtering presets by chart type
+  colors: ChartPresetColors
+  statisticalOverlays: StatisticalOverlays
+  styleOverrides?: ChartStyleOverrides
+}
+
+export interface SavedChartPreset {
+  id: string
+  userId: string
+  name: string
+  config: ChartPresetConfig
+  createdAt: string
+  updatedAt: string
+}
+
+export interface SystemChartPreset {
+  id: string
+  name: string
+  config: ChartPresetConfig
+  isSystem: true
+}
+
+export type ChartPreset = (SavedChartPreset & { isSystem?: false }) | SystemChartPreset
+
+export interface CreateChartPresetRequest {
+  name: string
+  config: ChartPresetConfig
+}
+
+export interface UpdateChartPresetRequest {
+  name?: string
+  config?: ChartPresetConfig
+}
+
+// =============================================================================
+// Elevation Themes - Styling-Vorlagen für Elevation Charts
+// =============================================================================
+
+export type BackgroundType = 'solid' | 'gradient' | 'mesh'
+
+export interface ElevationThemeTokens {
+  curve: {
+    color: string
+    strokeWidth: number
+  }
+  marker: {
+    size: number
+    color: string
+    show: boolean
+  }
+  background: {
+    type: BackgroundType
+    color: string
+    gradientColor: string
+    meshColors: [string, string, string]
+  }
+  labels: {
+    elevationColor: string
+    distanceColor: string
+    showElevation: boolean
+    showDistance: boolean
+  }
+  pattern: {
+    color: string
+    opacity: number
+  }
+  animation: {
+    duration: number
+    easing: EasingType
+  }
+}
+
+export interface SavedElevationTheme {
+  id: string
+  userId: string
+  name: string
+  description?: string
+  preview: string
+  tokens: ElevationThemeTokens
+  createdAt: string
+  updatedAt: string
+}
+
+export interface SystemElevationTheme {
+  id: string
+  name: string
+  description: string
+  preview: string
+  tokens: ElevationThemeTokens
+  isSystem: true
+}
+
+export type ElevationTheme = (SavedElevationTheme & { isSystem?: false }) | SystemElevationTheme
+
+export interface CreateElevationThemeRequest {
+  name: string
+  description?: string
+  preview: string
+  tokens: ElevationThemeTokens
+}
+
+export interface UpdateElevationThemeRequest {
+  name?: string
+  description?: string
+  preview?: string
+  tokens?: ElevationThemeTokens
+}

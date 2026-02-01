@@ -217,6 +217,14 @@
                       {{ item.raw.name }}
                     </div>
                   </template>
+                  <template v-slot:append-item>
+                    <v-divider class="my-2" />
+                    <v-list-item
+                      prepend-icon="mdi-content-save-plus"
+                      title="Als Theme speichern"
+                      @click="showSaveThemeDialog = true"
+                    />
+                  </template>
                 </v-select>
 
                 <v-divider class="my-3" />
@@ -670,6 +678,46 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- Save Theme Dialog -->
+    <v-dialog v-model="showSaveThemeDialog" max-width="400">
+      <v-card>
+        <v-card-title>Theme speichern</v-card-title>
+        <v-card-text>
+          <v-text-field
+            v-model="newThemeName"
+            label="Theme Name"
+            variant="outlined"
+            density="comfortable"
+            :rules="[v => !!v || 'Name ist erforderlich']"
+            autofocus
+            class="mb-2"
+          />
+          <v-text-field
+            v-model="newThemeDescription"
+            label="Beschreibung (optional)"
+            variant="outlined"
+            density="comfortable"
+          />
+          <div class="text-caption text-grey mt-2">
+            Aktuelle Farben, Animation und Marker-Einstellungen werden gespeichert.
+          </div>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="showSaveThemeDialog = false">Abbrechen</v-btn>
+          <v-btn
+            color="primary"
+            variant="flat"
+            @click="handleSaveTheme"
+            :disabled="!newThemeName.trim()"
+            :loading="themesLoading"
+          >
+            Speichern
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
@@ -724,7 +772,7 @@ export const DEFAULT_ELEVATION_ANIMATION_CONFIG: ElevationAnimationConfig = {
 </script>
 
 <script setup lang="ts">
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
 import type { PropType } from "vue";
 import type { ChartColors } from "../../composables/useChartConfig";
 import type {
@@ -736,7 +784,8 @@ import { DEFAULT_ANIMATION_OPTIONS } from "@chart-generator/shared";
 import { useChartAnimation, type PlaybackSpeed } from "../../composables/useChartAnimation";
 import { useVideoExport } from "../../composables/useVideoExport";
 import { generateElevationFrame } from "../../utils/chartGenerators/elevationChart/elevationChart";
-import { ELEVATION_THEMES, type ElevationTheme } from "../../themes/elevationThemes";
+import { useElevationThemes } from "../../composables/useElevationThemes";
+import type { ElevationTheme } from "@chart-generator/shared";
 
 // View mode: 'animate' or 'static'
 const viewMode = ref<'animate' | 'static'>('animate');
@@ -799,16 +848,40 @@ const backgroundTypeOptions = [
   { title: 'Dots', value: 'dots', icon: 'mdi-dots-grid' },
 ];
 
-// Theme options for the selector
-const themeOptions = ELEVATION_THEMES.map(t => ({
-  id: t.id,
-  name: t.name,
-  description: t.description,
-  preview: t.preview
-}));
+// Use the elevation themes composable for API-based theme management
+const {
+  themes: elevationThemes,
+  systemThemes,
+  userThemes,
+  loading: themesLoading,
+  fetchThemes,
+  getThemeById,
+  createThemeFromCurrentSettings,
+} = useElevationThemes();
+
+// Save theme dialog state
+const showSaveThemeDialog = ref(false);
+const newThemeName = ref('');
+const newThemeDescription = ref('');
+
+// Theme options for the selector (computed from API data)
+const themeOptions = computed(() =>
+  elevationThemes.value.map((t) => ({
+    id: t.id,
+    name: t.name,
+    description: 'description' in t ? t.description : '',
+    preview: t.preview,
+    isSystem: 'isSystem' in t && t.isSystem,
+  }))
+);
 
 // Track currently selected theme (for UI display only)
 const selectedThemeId = ref<string | null>(null);
+
+// Fetch themes on component mount
+onMounted(() => {
+  fetchThemes();
+});
 
 const props = defineProps({
   chartTitle: {
@@ -867,7 +940,7 @@ function updateAnimationConfig(partial: Partial<ElevationAnimationConfig>) {
 
 // Apply a theme preset
 function applyTheme(themeId: string) {
-  const theme = ELEVATION_THEMES.find(t => t.id === themeId);
+  const theme = getThemeById(themeId);
   if (!theme) return;
 
   selectedThemeId.value = themeId;
@@ -893,6 +966,65 @@ function applyTheme(themeId: string) {
     patternColor: tokens.pattern.color,
     patternOpacity: tokens.pattern.opacity,
   });
+}
+
+// Save current settings as a new theme
+async function handleSaveTheme() {
+  if (!newThemeName.value.trim()) return;
+
+  const config = props.animationConfig;
+
+  // Build preview gradient/color string based on background type
+  let preview = config.backgroundColor;
+  if (config.backgroundType === 'gradient') {
+    preview = `linear-gradient(180deg, ${config.backgroundColor} 0%, ${config.gradientColor} 100%)`;
+  } else if (config.backgroundType === 'mesh') {
+    preview = `linear-gradient(135deg, ${config.meshColor1} 0%, ${config.meshColor2} 50%, ${config.meshColor3} 100%)`;
+  }
+
+  await createThemeFromCurrentSettings(
+    newThemeName.value.trim(),
+    newThemeDescription.value.trim() || `Eigenes Theme`,
+    preview,
+    {
+      curve: {
+        color: config.curveColor,
+        strokeWidth: 6,
+      },
+      marker: {
+        size: config.markerSize,
+        color: config.curveColor,
+        show: config.showMarker,
+      },
+      background: {
+        // Map 'grid' and 'dots' to 'solid' for storage (they're solid with pattern overlay)
+        type: (['solid', 'gradient', 'mesh'].includes(config.backgroundType)
+          ? config.backgroundType
+          : 'solid') as 'solid' | 'gradient' | 'mesh',
+        color: config.backgroundColor,
+        gradientColor: config.gradientColor,
+        meshColors: [config.meshColor1, config.meshColor2, config.meshColor3],
+      },
+      labels: {
+        elevationColor: config.elevationLabelColor,
+        distanceColor: config.distanceLabelColor,
+        showElevation: config.showElevationLabels,
+        showDistance: config.showDistanceLabels,
+      },
+      pattern: {
+        color: config.patternColor,
+        opacity: config.patternOpacity,
+      },
+      animation: {
+        duration: config.duration,
+        easing: config.easing,
+      },
+    }
+  );
+
+  showSaveThemeDialog.value = false;
+  newThemeName.value = '';
+  newThemeDescription.value = '';
 }
 
 // Animation settings - computed with getters/setters for two-way binding with parent

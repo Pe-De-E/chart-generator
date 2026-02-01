@@ -1,5 +1,15 @@
 <template>
   <div class="settings-content">
+    <!-- Preset Selector -->
+    <PresetSelector
+      v-if="statisticalOverlays"
+      :chart-type="chartType"
+      :colors="{ background: colors.background, series: seriesConfig?.map(s => s.color) || [] }"
+      :statistical-overlays="statisticalOverlays"
+      :style-overrides="styleOverrides"
+      @apply-preset="$emit('applyPreset', $event)"
+    />
+
     <v-row>
         <v-col cols="12" md="4">
           <v-text-field
@@ -138,7 +148,9 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
 import type { ChartType, ChartColors } from '../../../composables/useChartConfig'
-import type { SeriesConfig } from '../../../utils/chartGenerators/types'
+import type { SeriesConfig, StatisticalOverlays, ChartStyleOverrides } from '../../../utils/chartGenerators/types'
+import type { ChartPresetConfig } from '@chart-generator/shared'
+import PresetSelector from './PresetSelector.vue'
 
 defineProps({
   chartTitle: {
@@ -160,6 +172,14 @@ defineProps({
   silhouetteMode: {
     type: Boolean,
     default: false
+  },
+  statisticalOverlays: {
+    type: Object as PropType<StatisticalOverlays>,
+    default: undefined
+  },
+  styleOverrides: {
+    type: Object as PropType<ChartStyleOverrides>,
+    default: () => ({})
   }
 })
 
@@ -170,6 +190,7 @@ defineEmits<{
   'update:silhouetteMode': [value: boolean]
   updateSeriesColor: [index: number, color: string]
   regenerateColors: []
+  applyPreset: [config: ChartPresetConfig]
 }>()
 </script>
 

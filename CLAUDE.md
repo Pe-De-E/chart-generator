@@ -4,75 +4,91 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-A Vue 3 + TypeScript chart generator POC that creates SVG charts (bar, line, scatter, pie) from CSV data. The application uses Vuetify for UI components and generates pure SVG charts without external charting libraries.
+A full-stack Vue 3 + TypeScript chart generator that creates SVG charts (bar, line, scatter, pie, area, elevation) from CSV/GPX data. Uses a monorepo architecture with pnpm workspaces.
 
 ## Development Commands
 
 ```bash
-# Start development server
-npm run dev
+# Start both frontend and backend (requires Docker for PostgreSQL)
+npm run dev:all           # Sets up DB and starts both servers
 
-# Build for production
-npm run build
+# Or start individually
+npm run dev:frontend      # Frontend only at http://localhost:5173
+npm run dev:backend       # Backend only at http://localhost:3000
+
+# Database
+npm run db:start          # Start PostgreSQL container
+npm run db:stop           # Stop PostgreSQL container
+pnpm --filter @chart-generator/backend db:migrate  # Run migrations
+pnpm --filter @chart-generator/backend db:generate # Generate Prisma client
+pnpm --filter @chart-generator/backend db:seed     # Seed database
+
+# Testing
+npm test                  # Run all tests
+pnpm --filter @chart-generator/frontend test       # Frontend tests only
+pnpm --filter @chart-generator/backend test        # Backend tests only
+
+# Build
+npm run build             # Build all packages
+pnpm --filter @chart-generator/shared build        # Must build shared first
 
 # Type checking
-npm run type-check
-
-# Run tests
-npm test
-
-# Run tests with UI
-npm run test:ui
-
-# Preview production build
-npm run preview
+npm run type-check        # All packages
 ```
 
 ## Architecture
 
-### Chart Generation System
+### Monorepo Structure
 
-The core of the application is a **generator-based architecture** where each chart type has its own pure function that returns SVG strings:
+```
+packages/
+├── frontend/    # Vue 3 + Vuetify + Vite
+├── backend/     # Fastify + Prisma + PostgreSQL
+└── shared/      # TypeScript types shared between frontend/backend
+```
 
-- **Chart Generators** (`src/utils/chartGenerators/`): Each chart type (bar, line, scatter, pie) is a standalone TypeScript module that exports a `generate*Chart()` function
-- All generators follow the same signature: `(options: ChartOptions) => string`
-- Generators are **pure functions** - they take configuration and return SVG markup with no side effects
-- The `types.ts` file defines the shared data contract: `DataPoint`, `ChartColors`, and `ChartOptions`
+The `@chart-generator/shared` package must be built before frontend/backend can import its types.
 
-### Component Structure
+### Frontend Architecture
 
-- **App.vue**: Minimal root component with Vuetify app bar
-- **ChartGenerator.vue**: Main component that handles:
-  - CSV file upload and parsing (supports both `,` and `;` delimiters, detects headers)
-  - Chart type selection via button toggle
-  - Color customization for primary/secondary/background
-  - Vuetify data table display of loaded CSV data
-  - Split-pane layout (chart preview top, data table bottom) using the `splitpanes` library
-  - SVG download functionality
+**Chart Generation System**: Pure functions in `src/utils/chartGenerators/` that return SVG strings:
+- Each chart type (bar, line, scatter, pie, area, elevation) is a standalone module
+- All generators follow the signature: `(options: ChartOptions) => string`
+- Types are imported from the shared package via re-export in `types.ts`
+
+**Component Workflow**: Multi-step chart creation process:
+- `FileUploadStep` → `DataInspectionStep` → `DataCleaningStep` → `ChartCreationStep`
+- `ChartGenerator.vue` orchestrates the workflow with split-pane layout (chart preview + data table)
+
+**Composables** (`src/composables/`): Reusable Vue 3 composition functions:
+- `useAuth` - Authentication state and token management
+- `useChartConfig` - Chart configuration state
+- `useDataCleaning` - CSV data cleaning operations
+- `useVideoExport` - FFmpeg-based video export of animated charts
+
+### Backend Architecture
+
+**Fastify Server** with layered architecture:
+- `routes/` → `controllers/` → `services/` pattern
+- Validation with Zod schemas in `validators/`
+- Prisma ORM for PostgreSQL
+
+**Authentication**: JWT-based with refresh token rotation:
+- Access tokens: 15 minutes, stored in sessionStorage
+- Refresh tokens: 7 days, httpOnly cookies
+- Auth middleware in `middleware/auth.middleware.ts`
 
 ### Data Flow
 
-1. CSV file uploaded → parsed into `DataPoint[]` format
-2. User selects chart type → corresponding generator function called
-3. Generator receives data + colors + title → returns SVG string
-4. SVG rendered via `v-html` in preview pane
-5. Data simultaneously displayed in Vuetify data table
-
-### Key Design Patterns
-
-- **Reactive SVG Generation**: The `svgContent` computed property watches `chartType`, `data`, `colors`, and `chartTitle`, automatically regenerating the chart when any input changes
-- **Manual Chart Rendering**: All chart generators manually calculate coordinates, scales, and SVG elements rather than using a charting library - this gives complete control over output
-- **Large Dataset Handling**: Chart generators include logic to handle large datasets by:
-  - Showing only every nth label when data.length > 20
-  - Reducing font sizes for dense data
-  - Conditionally hiding value labels on data points when too many exist
+1. CSV/GPX uploaded → parsed into `DataPoint[]` or `SeriesDataPoint[]`
+2. Data cleaning applied (optional)
+3. User selects chart type → generator function called
+4. Generator returns SVG string → rendered via `v-html`
+5. Charts can be saved to backend (authenticated users)
 
 ## Testing
 
-The project uses Vitest with jsdom environment for testing Vue components. Test configuration is in `vitest.config.ts`. Currently no test files exist in the codebase.
-
-## TypeScript Configuration
-
-- Strict mode enabled with additional linting rules (`noUnusedLocals`, `noUnusedParameters`)
-- Module resolution set to "bundler" mode for Vite compatibility
-- Vue-specific type support included via `types: ["vite/client", "vitest/globals"]`
+- Frontend: Vitest + jsdom + @vue/test-utils
+- Backend: Vitest
+- Test files are co-located with source (`.test.ts` suffix)
+- Run single test: `pnpm --filter @chart-generator/frontend test src/path/to/file.test.ts`

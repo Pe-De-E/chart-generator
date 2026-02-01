@@ -17,6 +17,8 @@
               :colors="colors"
               :series-config="seriesConfig"
               :silhouette-mode="silhouetteMode"
+              :statistical-overlays="statisticalOverlays"
+              :style-overrides="styleOverrides"
               @update:chart-title="$emit('update:chartTitle', $event)"
               @update:chart-type="$emit('update:chartType', $event)"
               @update:colors="$emit('update:colors', $event)"
@@ -25,6 +27,7 @@
                 (index, color) => $emit('updateSeriesColor', index, color)
               "
               @regenerate-colors="$emit('regenerateColors')"
+              @apply-preset="handleApplyPreset"
             />
           </v-expansion-panel-text>
         </v-expansion-panel>
@@ -381,7 +384,7 @@ import type {
   StatisticalOverlays,
   ChartStyleOverrides,
 } from "../../../utils/chartGenerators/types";
-import type { ChartOptions, AnimationOptions } from "@chart-generator/shared";
+import type { ChartOptions, AnimationOptions, ChartPresetConfig } from "@chart-generator/shared";
 import ChartSettingsCard from "./ChartSettingsCard.vue";
 import StatisticalOverlaysCard from "./StatisticalOverlaysCard.vue";
 import AnimationPreview from "../../AnimationPreview.vue";
@@ -843,7 +846,34 @@ const emit = defineEmits<{
   "update:styleOverrides": [value: ChartStyleOverrides];
   updateSeriesColor: [index: number, color: string];
   regenerateColors: [];
+  applyPresetColors: [background: string, seriesColors: string[]];
 }>();
+
+// Handle applying a preset from the PresetSelector
+function handleApplyPreset(config: ChartPresetConfig) {
+  // Apply background color
+  emit('update:colors', {
+    ...props.colors,
+    background: config.colors.background,
+  });
+
+  // Apply series colors (emit for each series)
+  if (config.colors.series && props.seriesConfig) {
+    config.colors.series.forEach((color, index) => {
+      if (index < props.seriesConfig.length) {
+        emit('updateSeriesColor', index, color);
+      }
+    });
+  }
+
+  // Apply statistical overlays
+  emit('update:statisticalOverlays', config.statisticalOverlays);
+
+  // Apply style overrides if present
+  if (config.styleOverrides) {
+    emit('update:styleOverrides', config.styleOverrides);
+  }
+}
 
 </script>
 
