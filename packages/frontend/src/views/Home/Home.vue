@@ -37,17 +37,6 @@
 
     <!-- Charts Grid -->
     <template v-else>
-      <v-row class="mb-4">
-        <v-col cols="12" class="d-flex justify-end">
-          <v-btn
-            color="primary"
-            prepend-icon="mdi-plus"
-            @click="createChart"
-          >
-            Neuen Chart anlegen
-          </v-btn>
-        </v-col>
-      </v-row>
       <v-row>
         <v-col
           v-for="chart in charts"

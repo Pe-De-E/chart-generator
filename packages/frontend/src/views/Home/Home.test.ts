@@ -201,30 +201,9 @@ describe('Home.vue', () => {
       expect(wrapper.text()).toContain('Distribution')
     })
 
-    it('should show "Neuen Chart anlegen" button when charts exist', async () => {
-      mockGetUserCharts.mockResolvedValue(mockCharts)
-      const wrapper = createWrapper()
-      await flushPromises()
-
-      const buttons = wrapper.findAll('button')
-      const newChartButton = buttons.find(btn => btn.text().includes('Neuen Chart anlegen'))
-      expect(newChartButton).toBeDefined()
-    })
   })
 
   describe('Navigation', () => {
-    it('should open chart type dialog when "Neuen Chart anlegen" is clicked', async () => {
-      mockGetUserCharts.mockResolvedValue(mockCharts)
-      const wrapper = createWrapper()
-      await flushPromises()
-
-      const buttons = wrapper.findAll('button')
-      const newChartButton = buttons.find(btn => btn.text().includes('Neuen Chart anlegen'))
-      await newChartButton?.trigger('click')
-
-      expect(wrapper.vm.showChartTypeDialog).toBe(true)
-    })
-
     it('should navigate to generator with chart id when ChartCard emits edit', async () => {
       mockGetUserCharts.mockResolvedValue(mockCharts)
       const wrapper = createWrapper()
