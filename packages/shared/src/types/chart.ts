@@ -287,7 +287,32 @@ export interface UpdateChartPresetRequest {
 // Elevation Themes - Styling-Vorlagen für Elevation Charts
 // =============================================================================
 
-export type BackgroundType = 'solid' | 'gradient' | 'mesh'
+export type BackgroundType = 'solid' | 'gradient' | 'mesh' | 'image'
+
+// Image background position options
+export type ImageBackgroundPosition = 'cover' | 'contain' | 'center' | 'stretch'
+
+// Options for image backgrounds
+export interface ImageBackgroundOptions {
+  imageId: string              // Reference to UserImage
+  imageUrl: string             // Full URL to image
+  position: ImageBackgroundPosition
+  blur: number                 // 0-20 px
+  brightness: number           // 0.5-1.5 (1 = normal)
+  contrast: number             // 0.5-1.5 (1 = normal)
+  overlayColor: string         // e.g. 'rgba(0,0,0,0.3)' or '#000000'
+  overlayOpacity: number       // 0-1
+}
+
+// Default values for image background options
+export const DEFAULT_IMAGE_BACKGROUND_OPTIONS: Omit<ImageBackgroundOptions, 'imageId' | 'imageUrl'> = {
+  position: 'cover',
+  blur: 0,
+  brightness: 1,
+  contrast: 1,
+  overlayColor: '#000000',
+  overlayOpacity: 0.3,
+}
 
 export interface ElevationThemeTokens {
   curve: {
@@ -304,6 +329,8 @@ export interface ElevationThemeTokens {
     color: string
     gradientColor: string
     meshColors: [string, string, string]
+    // Image background options (only when type === 'image')
+    image?: ImageBackgroundOptions
   }
   labels: {
     elevationColor: string
@@ -355,4 +382,19 @@ export interface UpdateElevationThemeRequest {
   description?: string
   preview?: string
   tokens?: ElevationThemeTokens
+}
+
+// =============================================================================
+// User Images - Uploaded images for chart backgrounds
+// =============================================================================
+
+export interface UserImage {
+  id: string
+  userId: string
+  filename: string
+  mimetype: string
+  size: number
+  path: string
+  url: string
+  createdAt: string
 }

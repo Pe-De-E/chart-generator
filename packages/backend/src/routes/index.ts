@@ -4,6 +4,7 @@ import { userRoutes } from './user.routes.js'
 import { chartRoutes } from './chart.routes.js'
 import { chartPresetRoutes } from './chartPreset.routes.js'
 import { elevationThemeRoutes } from './elevationTheme.routes.js'
+import { uploadRoutes } from './upload.routes.js'
 import { adminRoutes } from './admin.routes.js'
 import { ticketRoutes } from './ticket.routes.js'
 
@@ -21,6 +22,7 @@ export async function registerRoutes(fastify: FastifyInstance) {
     await api.register(chartRoutes, { prefix: '/charts' })
     await api.register(chartPresetRoutes, { prefix: '/chart-presets' })
     await api.register(elevationThemeRoutes, { prefix: '/elevation-themes' })
+    await api.register(uploadRoutes, { prefix: '/uploads' })
     await api.register(adminRoutes, { prefix: '/admin' })
     await api.register(ticketRoutes, { prefix: '/tickets' })
   }, { prefix: '/api/v1' })

@@ -3,7 +3,14 @@ import cors from '@fastify/cors'
 import helmet from '@fastify/helmet'
 import cookie from '@fastify/cookie'
 import rateLimit from '@fastify/rate-limit'
+import multipart from '@fastify/multipart'
+import fastifyStatic from '@fastify/static'
+import path from 'path'
+import { fileURLToPath } from 'url'
 import { env } from './config/env.js'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 import { registerRoutes } from './routes/index.js'
 import { errorHandler, notFoundHandler } from './middleware/error.middleware.js'
 import { requestLogMiddleware, onResponseLog } from './middleware/requestLog.middleware.js'
@@ -43,6 +50,20 @@ await fastify.register(cookie, {
 await fastify.register(rateLimit, {
   max: env.RATE_LIMIT_MAX,
   timeWindow: env.RATE_LIMIT_WINDOW,
+})
+
+// Multipart for file uploads
+await fastify.register(multipart, {
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5 MB
+  },
+})
+
+// Static file serving for uploaded images
+await fastify.register(fastifyStatic, {
+  root: path.join(__dirname, '../uploads'),
+  prefix: '/uploads/',
+  decorateReply: false,
 })
 
 // Request logging hooks

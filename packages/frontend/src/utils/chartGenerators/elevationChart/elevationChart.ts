@@ -1,4 +1,4 @@
-import type { ChartOptions, CurveEndpoint } from '@chart-generator/shared'
+import type { ChartOptions, CurveEndpoint, ImageBackgroundOptions } from '@chart-generator/shared'
 import { renderStatisticalOverlays, hasAnyOverlayEnabled } from '../statisticalOverlayRenderer'
 import {
   gpxToViewBox,
@@ -14,7 +14,7 @@ import {
 /**
  * Background type options
  */
-export type BackgroundType = 'solid' | 'gradient' | 'mesh' | 'grid' | 'dots'
+export type BackgroundType = 'solid' | 'gradient' | 'mesh' | 'grid' | 'dots' | 'image'
 
 /**
  * Animation frame options
@@ -40,6 +40,7 @@ export interface FrameOptions {
   patternOpacity?: number   // Opacity for grid/dots pattern (0-1)
   exportWidth?: number      // Export width (for video export)
   exportHeight?: number     // Export height (for video export)
+  imageOptions?: ImageBackgroundOptions  // Options for image background (when backgroundType === 'image')
 }
 
 export function generateElevationChart(options: ChartOptions): string {
@@ -607,7 +608,8 @@ export function generateElevationFrame(
       frameOptions.patternOpacity ?? 0.1,
       frameOptions.showDistanceLabels ?? false,
       frameOptions.distanceLabelColor ?? '#ffffffb3',
-      frameOptions.totalDistanceKm
+      frameOptions.totalDistanceKm,
+      frameOptions.imageOptions
     )
   }
 
@@ -634,6 +636,19 @@ export function generateElevationFrame(
 /**
  * Generate background SVG elements based on type
  */
+/**
+ * Map image position to SVG preserveAspectRatio
+ */
+function getAspectRatio(position: string): string {
+  switch (position) {
+    case 'cover': return 'xMidYMid slice'
+    case 'contain': return 'xMidYMid meet'
+    case 'center': return 'xMidYMid meet'
+    case 'stretch': return 'none'
+    default: return 'xMidYMid slice'
+  }
+}
+
 function generateBackgroundElements(
   width: number,
   height: number,
@@ -644,13 +659,52 @@ function generateBackgroundElements(
   meshColor2: string,
   meshColor3: string,
   patternColor: string,
-  patternOpacity: number
+  patternOpacity: number,
+  imageOptions?: ImageBackgroundOptions
 ): { defs: string; elements: string } {
   const bgGradientId = 'background-gradient-anim'
   const meshGradientId = 'mesh-gradient-anim'
   const patternId = 'pattern-anim'
+  const imageFilterId = 'image-filter-anim'
 
   switch (backgroundType) {
+    case 'image':
+      if (imageOptions) {
+        // Calculate filter values
+        // brightness: 0.5-1.5, where 1 = no change
+        // contrast: 0.5-1.5, where 1 = no change
+        // The formula for brightness/contrast in SVG feComponentTransfer:
+        // slope = contrast, intercept = (1 - contrast) / 2 + (brightness - 1) * 0.5
+        const slope = imageOptions.contrast
+        const intercept = (1 - imageOptions.contrast) / 2 + (imageOptions.brightness - 1) * 0.5
+
+        return {
+          defs: `
+            <filter id="${imageFilterId}" x="0" y="0" width="100%" height="100%">
+              ${imageOptions.blur > 0 ? `<feGaussianBlur in="SourceGraphic" stdDeviation="${imageOptions.blur}" result="blur"/>` : ''}
+              <feComponentTransfer ${imageOptions.blur > 0 ? 'in="blur"' : ''}>
+                <feFuncR type="linear" slope="${slope}" intercept="${intercept}"/>
+                <feFuncG type="linear" slope="${slope}" intercept="${intercept}"/>
+                <feFuncB type="linear" slope="${slope}" intercept="${intercept}"/>
+              </feComponentTransfer>
+            </filter>`,
+          elements: `
+            <image
+              href="${imageOptions.imageUrl}"
+              x="0" y="0"
+              width="${width}"
+              height="${height}"
+              preserveAspectRatio="${getAspectRatio(imageOptions.position)}"
+              filter="url(#${imageFilterId})"
+            />
+            ${imageOptions.overlayOpacity > 0 ? `<rect width="${width}" height="${height}" fill="${imageOptions.overlayColor}" opacity="${imageOptions.overlayOpacity}"/>` : ''}`
+        }
+      }
+      // Fallback to solid if no imageOptions
+      return {
+        defs: '',
+        elements: `<rect width="${width}" height="${height}" fill="${backgroundColor}"/>`
+      }
     case 'gradient':
       return {
         defs: `
@@ -748,7 +802,8 @@ function generateAnimatedSilhouette(
   patternOpacity: number = 0.1,
   showDistanceLabels: boolean = false,
   distanceLabelColor: string = '#ffffffb3',
-  totalDistanceKm?: number
+  totalDistanceKm?: number,
+  imageOptions?: ImageBackgroundOptions
 ): string {
   if (data.length === 0) return '<svg></svg>'
 
@@ -914,7 +969,8 @@ function generateAnimatedSilhouette(
     meshColor2,
     meshColor3,
     patternColor,
-    patternOpacity
+    patternOpacity,
+    imageOptions
   )
 
   return `

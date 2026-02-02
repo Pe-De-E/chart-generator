@@ -365,6 +365,139 @@
                     class="mt-2"
                   />
                 </template>
+
+                <!-- Image Background Controls -->
+                <template v-if="backgroundType === 'image'">
+                  <!-- Image Upload / Selection -->
+                  <div class="mt-2">
+                    <v-file-input
+                      v-if="!imageOptions?.imageUrl"
+                      label="Bild hochladen"
+                      accept="image/jpeg,image/png,image/webp"
+                      prepend-icon="mdi-image-plus"
+                      variant="outlined"
+                      density="compact"
+                      hide-details
+                      @update:model-value="handleImageUpload"
+                      :loading="imageUploading"
+                    />
+                    <div v-else class="image-preview-container">
+                      <img :src="imageOptions.imageUrl" class="image-preview" alt="Background" />
+                      <v-btn
+                        icon="mdi-close"
+                        size="x-small"
+                        color="error"
+                        variant="flat"
+                        class="remove-image-btn"
+                        @click="removeBackgroundImage"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- Image Position -->
+                  <v-select
+                    v-if="imageOptions?.imageUrl"
+                    v-model="imagePosition"
+                    :items="imagePositionOptions"
+                    item-title="title"
+                    item-value="value"
+                    label="Position"
+                    variant="outlined"
+                    density="compact"
+                    hide-details
+                    class="mt-2"
+                  />
+
+                  <!-- Blur -->
+                  <v-slider
+                    v-if="imageOptions?.imageUrl"
+                    v-model="imageBlur"
+                    :min="0"
+                    :max="20"
+                    :step="1"
+                    label="Weichzeichnung"
+                    density="compact"
+                    hide-details
+                    thumb-label
+                    class="mt-2"
+                  >
+                    <template v-slot:append>
+                      <span class="text-caption">{{ imageBlur }}px</span>
+                    </template>
+                  </v-slider>
+
+                  <!-- Brightness -->
+                  <v-slider
+                    v-if="imageOptions?.imageUrl"
+                    v-model="imageBrightness"
+                    :min="0.5"
+                    :max="1.5"
+                    :step="0.05"
+                    label="Helligkeit"
+                    density="compact"
+                    hide-details
+                    thumb-label
+                    class="mt-2"
+                  >
+                    <template v-slot:append>
+                      <span class="text-caption">{{ Math.round(imageBrightness * 100) }}%</span>
+                    </template>
+                  </v-slider>
+
+                  <!-- Contrast -->
+                  <v-slider
+                    v-if="imageOptions?.imageUrl"
+                    v-model="imageContrast"
+                    :min="0.5"
+                    :max="1.5"
+                    :step="0.05"
+                    label="Kontrast"
+                    density="compact"
+                    hide-details
+                    thumb-label
+                    class="mt-2"
+                  >
+                    <template v-slot:append>
+                      <span class="text-caption">{{ Math.round(imageContrast * 100) }}%</span>
+                    </template>
+                  </v-slider>
+
+                  <!-- Overlay Color -->
+                  <v-menu v-if="imageOptions?.imageUrl" :close-on-content-click="false">
+                    <template v-slot:activator="{ props: menuProps }">
+                      <v-btn v-bind="menuProps" variant="outlined" block size="small" class="mt-2">
+                        <div
+                          class="color-swatch mr-2"
+                          :style="{ backgroundColor: imageOverlayColor }"
+                        ></div>
+                        Overlay-Farbe
+                      </v-btn>
+                    </template>
+                    <v-color-picker
+                      v-model="imageOverlayColor"
+                      mode="hexa"
+                      hide-inputs
+                    />
+                  </v-menu>
+
+                  <!-- Overlay Opacity -->
+                  <v-slider
+                    v-if="imageOptions?.imageUrl"
+                    v-model="imageOverlayOpacity"
+                    :min="0"
+                    :max="0.8"
+                    :step="0.05"
+                    label="Overlay Deckkraft"
+                    density="compact"
+                    hide-details
+                    thumb-label
+                    class="mt-2"
+                  >
+                    <template v-slot:append>
+                      <span class="text-caption">{{ Math.round(imageOverlayOpacity * 100) }}%</span>
+                    </template>
+                  </v-slider>
+                </template>
               </div>
             </v-expansion-panel-text>
           </v-expansion-panel>
@@ -723,7 +856,7 @@
 
 <script lang="ts">
 // Background type options
-export type BackgroundType = 'solid' | 'gradient' | 'mesh' | 'grid' | 'dots';
+export type BackgroundType = 'solid' | 'gradient' | 'mesh' | 'grid' | 'dots' | 'image';
 
 // Animation config interface for persistence - exported for use in parent components
 export interface ElevationAnimationConfig {
@@ -745,6 +878,17 @@ export interface ElevationAnimationConfig {
   elevationLabelColor: string;
   showDistanceLabels: boolean;
   distanceLabelColor: string;
+  // Image background options
+  imageOptions?: {
+    imageId: string;
+    imageUrl: string;
+    position: 'cover' | 'contain' | 'center' | 'stretch';
+    blur: number;
+    brightness: number;
+    contrast: number;
+    overlayColor: string;
+    overlayOpacity: number;
+  };
   // Legacy support
   useGradientBackground?: boolean;
 }
@@ -785,7 +929,8 @@ import { useChartAnimation, type PlaybackSpeed } from "../../composables/useChar
 import { useVideoExport } from "../../composables/useVideoExport";
 import { generateElevationFrame } from "../../utils/chartGenerators/elevationChart/elevationChart";
 import { useElevationThemes } from "../../composables/useElevationThemes";
-import type { ElevationTheme } from "@chart-generator/shared";
+import type { ElevationTheme, ImageBackgroundOptions } from "@chart-generator/shared";
+import { uploadService } from "../../services/upload.service";
 
 // View mode: 'animate' or 'static'
 const viewMode = ref<'animate' | 'static'>('animate');
@@ -846,6 +991,7 @@ const backgroundTypeOptions = [
   { title: 'Mesh', value: 'mesh', icon: 'mdi-blur' },
   { title: 'Grid', value: 'grid', icon: 'mdi-grid' },
   { title: 'Dots', value: 'dots', icon: 'mdi-dots-grid' },
+  { title: 'Bild', value: 'image', icon: 'mdi-image' },
 ];
 
 // Use the elevation themes composable for API-based theme management
@@ -882,6 +1028,16 @@ const selectedThemeId = ref<string | null>(null);
 onMounted(() => {
   fetchThemes();
 });
+
+// ===== Image Background =====
+const imageUploading = ref(false);
+
+const imagePositionOptions = [
+  { title: 'Ausfuellen', value: 'cover' },
+  { title: 'Einpassen', value: 'contain' },
+  { title: 'Zentriert', value: 'center' },
+  { title: 'Strecken', value: 'stretch' },
+];
 
 const props = defineProps({
   chartTitle: {
@@ -1124,6 +1280,114 @@ const patternOpacity = computed({
   set: (value: number) => updateAnimationConfig({ patternOpacity: value }),
 });
 
+// Image background options (read from animationConfig)
+const imageOptions = computed(() => props.animationConfig.imageOptions);
+
+const imagePosition = computed({
+  get: () => props.animationConfig.imageOptions?.position || 'cover',
+  set: (value: 'cover' | 'contain' | 'center' | 'stretch') => {
+    if (props.animationConfig.imageOptions) {
+      updateAnimationConfig({
+        imageOptions: { ...props.animationConfig.imageOptions, position: value }
+      });
+    }
+  },
+});
+
+const imageBlur = computed({
+  get: () => props.animationConfig.imageOptions?.blur ?? 0,
+  set: (value: number) => {
+    if (props.animationConfig.imageOptions) {
+      updateAnimationConfig({
+        imageOptions: { ...props.animationConfig.imageOptions, blur: value }
+      });
+    }
+  },
+});
+
+const imageBrightness = computed({
+  get: () => props.animationConfig.imageOptions?.brightness ?? 1,
+  set: (value: number) => {
+    if (props.animationConfig.imageOptions) {
+      updateAnimationConfig({
+        imageOptions: { ...props.animationConfig.imageOptions, brightness: value }
+      });
+    }
+  },
+});
+
+const imageContrast = computed({
+  get: () => props.animationConfig.imageOptions?.contrast ?? 1,
+  set: (value: number) => {
+    if (props.animationConfig.imageOptions) {
+      updateAnimationConfig({
+        imageOptions: { ...props.animationConfig.imageOptions, contrast: value }
+      });
+    }
+  },
+});
+
+const imageOverlayColor = computed({
+  get: () => props.animationConfig.imageOptions?.overlayColor || '#000000',
+  set: (value: string) => {
+    if (props.animationConfig.imageOptions) {
+      updateAnimationConfig({
+        imageOptions: { ...props.animationConfig.imageOptions, overlayColor: value }
+      });
+    }
+  },
+});
+
+const imageOverlayOpacity = computed({
+  get: () => props.animationConfig.imageOptions?.overlayOpacity ?? 0.3,
+  set: (value: number) => {
+    if (props.animationConfig.imageOptions) {
+      updateAnimationConfig({
+        imageOptions: { ...props.animationConfig.imageOptions, overlayOpacity: value }
+      });
+    }
+  },
+});
+
+// Handle image upload
+async function handleImageUpload(files: File[] | null) {
+  if (!files || files.length === 0) return;
+
+  const file = files[0];
+  imageUploading.value = true;
+
+  try {
+    const uploadedImage = await uploadService.uploadImage(file);
+    const imageUrl = uploadService.getImageUrl(uploadedImage);
+
+    updateAnimationConfig({
+      backgroundType: 'image',
+      imageOptions: {
+        imageId: uploadedImage.id,
+        imageUrl,
+        position: 'cover',
+        blur: 0,
+        brightness: 1,
+        contrast: 1,
+        overlayColor: '#000000',
+        overlayOpacity: 0.3,
+      },
+    });
+  } catch (error) {
+    console.error('Image upload failed:', error);
+  } finally {
+    imageUploading.value = false;
+  }
+}
+
+// Remove background image
+function removeBackgroundImage() {
+  updateAnimationConfig({
+    backgroundType: 'solid',
+    imageOptions: undefined,
+  });
+}
+
 // Animation settings for the composable
 const animationSettings = computed<AnimationOptions>(() => ({
   ...DEFAULT_ANIMATION_OPTIONS,
@@ -1186,6 +1450,7 @@ const animationSvg = computed(() => {
     meshColor3: props.animationConfig.meshColor3,
     patternColor: props.animationConfig.patternColor,
     patternOpacity: props.animationConfig.patternOpacity,
+    imageOptions: props.animationConfig.imageOptions,
   });
 });
 
@@ -1249,6 +1514,7 @@ async function startVideoExport() {
         meshColor3: props.animationConfig.meshColor3,
         patternColor: props.animationConfig.patternColor,
         patternOpacity: props.animationConfig.patternOpacity,
+        imageOptions: props.animationConfig.imageOptions,
         exportWidth: width,
         exportHeight: height,
       });
@@ -1513,5 +1779,26 @@ function getStageLabel(stage: string): string {
   background: rgba(var(--v-theme-surface-variant), 0.3);
   border-radius: var(--radius-md, 12px);
   padding: 20px;
+}
+
+/* Image background preview */
+.image-preview-container {
+  position: relative;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.image-preview {
+  width: 100%;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid rgba(var(--v-border-color), 0.2);
+}
+
+.remove-image-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
 }
 </style>

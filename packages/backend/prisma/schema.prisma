@@ -27,6 +27,7 @@ model User {
   tickets         Ticket[]
   chartPresets    ChartPreset[]    @relation("UserChartPresets")
   elevationThemes ElevationTheme[] @relation("UserElevationThemes")
+  images          UserImage[]      @relation("UserImages")
 
   @@map("users")
 }
@@ -202,4 +203,20 @@ model ElevationTheme {
 
   @@index([userId])
   @@map("elevation_themes")
+}
+
+// User uploaded images (for chart backgrounds)
+model UserImage {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  filename  String   // Original filename
+  mimetype  String   // image/jpeg, image/png, image/webp
+  size      Int      // File size in bytes
+  path      String   // Server path: /uploads/images/{userId}/{id}.ext
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation("UserImages", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("user_images")
 }
