@@ -11,13 +11,19 @@ export const apiClient = axios.create({
   },
 })
 
-// Request interceptor: Add access token to requests
+// Request interceptor: Add access token and handle Content-Type
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const token = sessionStorage.getItem('accessToken')
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`
     }
+
+    // For FormData, let axios set the Content-Type with boundary
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type']
+    }
+
     return config
   },
   (error: AxiosError) => {
