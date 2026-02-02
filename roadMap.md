@@ -66,6 +66,13 @@ Prioritäten: Feedback > Eleganz, Zahlungsbereitschaft > Features, Geschwindigke
 - ✅ Eigene Presets/Themes speichern (privat pro User)
 - ✅ 4 System-Presets fuer Charts (Corporate Blue, Minimalist, Presentation, Dark Mode)
 
+### Bild-Hintergrund (Feb 2026)
+
+- ✅ Eigenes Bild als Hintergrund hochladen (max 5MB, jpeg/png/webp)
+- ✅ Erweiterte Optionen: Position, Weichzeichnung, Helligkeit, Kontrast
+- ✅ Overlay-Farbe mit Transparenz
+- ✅ Persistente Speicherung (Backend File Storage)
+
 </details>
 
 ---
@@ -123,7 +130,7 @@ Prioritäten: Feedback > Eleganz, Zahlungsbereitschaft > Features, Geschwindigke
 ## Jul 2026 – Zweites Feature (NUR EINES!)
 
 - [ ] 🟢 **Landscape Mode** (1920×1080) – YouTube, Desktop
-- [ ] 🟢 **ODER: Foto-Hintergrund** – eigenes Foto mit Blur/Transparenz
+- [x] 🟢 ~~**ODER: Foto-Hintergrund**~~ – eigenes Foto mit Blur/Transparenz ✅ (Feb 2026)
 - [ ] 🔵 Mobile UI/UX optimieren
 
 ---
