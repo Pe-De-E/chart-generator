@@ -2,6 +2,7 @@ import { prisma } from '../config/database.js'
 import fs from 'fs/promises'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import sharp from 'sharp'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -10,9 +11,13 @@ const __dirname = path.dirname(__filename)
 const UPLOADS_DIR = path.resolve(__dirname, '../../uploads/images')
 
 // Constraints
-const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5 MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10 MB upload limit
 const MAX_IMAGES_PER_USER = 10
 const ALLOWED_MIMETYPES = ['image/jpeg', 'image/png', 'image/webp']
+
+// Image processing settings
+const MAX_IMAGE_WIDTH = 1920  // Max width for stored images
+const JPEG_QUALITY = 80       // Quality for JPEG compression
 
 export interface UserImage {
   id: string
@@ -92,25 +97,33 @@ export class UploadService {
       }
     }
 
-    // Create database entry first to get the ID
+    // Process image with sharp: resize and compress
+    const processedImage = await sharp(file.data)
+      .resize(MAX_IMAGE_WIDTH, null, {
+        withoutEnlargement: true,  // Don't upscale small images
+        fit: 'inside',
+      })
+      .jpeg({ quality: JPEG_QUALITY })
+      .toBuffer()
+
+    // Create database entry
     const image = await prisma.userImage.create({
       data: {
         userId,
         filename: file.filename,
-        mimetype: file.mimetype,
-        size: file.data.length,
+        mimetype: 'image/jpeg',  // Always store as JPEG
+        size: processedImage.length,
         path: '', // Will be updated after saving file
       },
     })
 
-    // Create file path
+    // Create file path (always .jpg after processing)
     const userDir = await this.ensureUserDir(userId)
-    const ext = this.getExtension(file.mimetype)
-    const filePath = path.join(userDir, `${image.id}${ext}`)
-    const relativePath = `/uploads/images/${userId}/${image.id}${ext}`
+    const filePath = path.join(userDir, `${image.id}.jpg`)
+    const relativePath = `/uploads/images/${userId}/${image.id}.jpg`
 
-    // Save file to disk
-    await fs.writeFile(filePath, file.data)
+    // Save processed file to disk
+    await fs.writeFile(filePath, processedImage)
 
     // Update database with file path
     const updatedImage = await prisma.userImage.update({

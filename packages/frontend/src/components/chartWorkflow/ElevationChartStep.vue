@@ -1350,15 +1350,19 @@ const imageOverlayOpacity = computed({
 });
 
 // Handle image upload
-async function handleImageUpload(files: File[] | null) {
-  if (!files || files.length === 0) return;
+async function handleImageUpload(files: File[] | File | null) {
+  // Handle both array and single file (Vuetify can return either)
+  const file = Array.isArray(files) ? files[0] : files;
+  if (!file) return;
 
-  const file = files[0];
+  console.log('Uploading file:', file.name, file.type, file.size);
   imageUploading.value = true;
 
   try {
     const uploadedImage = await uploadService.uploadImage(file);
+    console.log('Upload successful:', uploadedImage);
     const imageUrl = uploadService.getImageUrl(uploadedImage);
+    console.log('Image URL:', imageUrl);
 
     updateAnimationConfig({
       backgroundType: 'image',
@@ -1373,8 +1377,10 @@ async function handleImageUpload(files: File[] | null) {
         overlayOpacity: 0.3,
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Image upload failed:', error);
+    console.error('Response:', error.response?.data);
+    alert('Bild-Upload fehlgeschlagen: ' + (error.response?.data?.error || error.message));
   } finally {
     imageUploading.value = false;
   }

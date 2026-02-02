@@ -9,16 +9,26 @@ class UploadService {
     const formData = new FormData()
     formData.append('image', file)
 
-    const response = await api.post<{ success: true; data: UserImage }>(
-      '/uploads/image',
-      formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      }
-    )
-    return response.data.data
+    // Use fetch directly to avoid axios Content-Type issues
+    const baseUrl = api.defaults.baseURL || ''
+    const token = sessionStorage.getItem('accessToken')
+
+    const response = await fetch(`${baseUrl}/uploads/image`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+      credentials: 'include',
+    })
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Upload failed' }))
+      throw new Error(error.error || `Upload failed with status ${response.status}`)
+    }
+
+    const result = await response.json()
+    return result.data
   }
 
   /**

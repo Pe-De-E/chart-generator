@@ -55,8 +55,9 @@ await fastify.register(rateLimit, {
 // Multipart for file uploads
 await fastify.register(multipart, {
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5 MB
+    fileSize: 10 * 1024 * 1024, // 10 MB
   },
+  attachFieldsToBody: false,
 })
 
 // Static file serving for uploaded images
@@ -64,6 +65,11 @@ await fastify.register(fastifyStatic, {
   root: path.join(__dirname, '../uploads'),
   prefix: '/uploads/',
   decorateReply: false,
+  setHeaders: (res) => {
+    // Allow cross-origin access to images
+    res.setHeader('Access-Control-Allow-Origin', '*')
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin')
+  },
 })
 
 // Request logging hooks
