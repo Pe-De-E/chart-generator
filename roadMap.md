@@ -6,6 +6,38 @@
 
 ---
 
+## Produktvision (Feb 2026)
+
+> **Ich baue ein Tool, mit dem Rad-Creator die Geschichte einer Tour sichtbar machen können – nicht nur die Strecke.**
+
+### Der mentale Shift
+
+Nicht: `GPX → Reel`
+Sondern: `Moment → Kontext → Gefühl`
+
+**Strava zeigt Daten. Wir zeigen Bedeutung.**
+
+### Was das konkret heißt
+
+| Nicht | Sondern |
+|-------|---------|
+| „Höhenprofil der Tour" | „Der Moment, an dem klar wird, wie brutal dieser Tag war." |
+| „Streckenverlauf" | „Der Moment, an dem man sieht, wie weit man wirklich rausgefahren ist." |
+
+### Stärkster Einstieg
+
+Nicht ein eigenständiges Reel, sondern:
+- 👉 Ein **Baustein** für ein bestehendes Video
+- 👉 Ein **Intro**
+- 👉 Ein **Übergang**
+- 👉 Ein **emotionaler Kontextanker**
+
+### Leitfrage für jedes Feature
+
+> Hilft das Creatorn, besser zu **erzählen** – nicht nur schöner zu rendern?
+
+---
+
 ## Situation & Prinzipien
 
 **Neue Situation (Jan 2026):** Kündigung erhalten. Projekt = potenzieller Einkommenspfad.
