@@ -59,6 +59,13 @@ Prioritäten: Feedback > Eleganz, Zahlungsbereitschaft > Features, Geschwindigke
 
 - ✅ Changelog, Semantic Versioning, Git Branching
 
+### Presets & Themes
+
+- ✅ Chart Presets System (Farben, Overlays, StyleOverrides fuer Bar/Line/Scatter/Pie/Area)
+- ✅ Elevation Themes ins Backend migriert (5 System-Themes)
+- ✅ Eigene Presets/Themes speichern (privat pro User)
+- ✅ 4 System-Presets fuer Charts (Corporate Blue, Minimalist, Presentation, Dark Mode)
+
 </details>
 
 ---
@@ -167,7 +174,6 @@ Prioritäten: Feedback > Eleganz, Zahlungsbereitschaft > Features, Geschwindigke
 
 - Höhenmeter über das Jahr aggregiert animieren (End of Year Content)
 - Trainingstimeline über Monat/Jahr
-- **Eigene Presets speichern** (Name, Vorschau, Export/Import JSON)
 - **Service-Integrationen** – Strava, Komoot, Garmin (nicht vor Produkt-Market-Fit)
 - **Instagram-Integration** – Direkt-Posting (⚠️ zu viel Overhead, nicht vor 2027)
 - [ ] Version in der App anzeigen
