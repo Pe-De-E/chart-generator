@@ -132,6 +132,86 @@ export function remapProgressByTime(
 }
 
 /**
+ * Build a gradient-based time array from elevation data.
+ *
+ * Allocates animation time based on steepness:
+ * - Steep uphill segments get more time (animation slows down)
+ * - Steep downhill segments get less time (animation speeds up)
+ * - Flat segments get normal time
+ *
+ * Uses a windowed slope (~5% of route) to measure the macro trend
+ * rather than noisy per-segment gradients. This makes the effect
+ * independent of point count and naturally filters GPS noise.
+ *
+ * @param elevations - Array of elevation values from chart data
+ * @param sensitivity - How much gradient affects speed (2 = moderate, 4 = dramatic)
+ */
+export function buildGradientTimeArray(
+  elevations: number[],
+  sensitivity: number = 3
+): number[] {
+  const len = elevations.length
+  if (len <= 2) return len === 2 ? [0, 1] : [0]
+
+  // Calculate elevation range for normalization
+  const minEle = Math.min(...elevations)
+  const maxEle = Math.max(...elevations)
+  const eleRange = maxEle - minEle || 1
+
+  // Use a window of ~5% of the route to measure local slope.
+  // This gives a "macro slope" that's independent of point count:
+  // eleChange = (ele[i+w] - ele[i-w]) / eleRange
+  // Typical values: -0.3 to +0.3 for moderate terrain
+  const windowHalf = Math.max(3, Math.floor(len * 0.025))
+
+  // For each segment, calculate a "time cost" based on windowed slope
+  // Uphill (positive slope) = more time, downhill = less time
+  const timeCosts: number[] = []
+
+  for (let i = 1; i < len; i++) {
+    const lo = Math.max(0, i - windowHalf)
+    const hi = Math.min(len - 1, i + windowHalf)
+    const eleChange = (elevations[hi] - elevations[lo]) / eleRange
+
+    // Map to time cost:
+    // eleChange > 0 (uphill): factor > 1 (slower, more time)
+    // eleChange < 0 (downhill): factor < 1 (faster, less time)
+    // eleChange = 0 (flat): factor = 1 (normal)
+    const timeCost = Math.exp(eleChange * sensitivity)
+
+    // Clamp to avoid extremes (no segment faster than 5x or slower than 5x)
+    timeCosts.push(Math.max(0.2, Math.min(5.0, timeCost)))
+  }
+
+  // Integrate to get cumulative time
+  const cumulative: number[] = [0]
+  let total = 0
+  for (const cost of timeCosts) {
+    total += cost
+    cumulative.push(total)
+  }
+
+  // Normalize to 0-1
+  return cumulative.map(t => t / total)
+}
+
+/**
+ * Map time-based progress (0-1) to distance-based progress (0-1) without amplification.
+ *
+ * Used for gradient-based animation where the signal is inherently strong
+ * and doesn't need the amplification that GPS timing data requires.
+ */
+export function remapProgressDirect(
+  timeProgress: number,
+  timeArray: number[]
+): number {
+  if (timeArray.length === 0) return timeProgress
+  if (timeProgress <= 0) return 0
+  if (timeProgress >= 1) return 1
+  return lookupProgress(timeProgress, timeArray)
+}
+
+/**
  * Look up distance progress for a given time progress in the time array.
  */
 function lookupProgress(timeProgress: number, timeArray: number[]): number {

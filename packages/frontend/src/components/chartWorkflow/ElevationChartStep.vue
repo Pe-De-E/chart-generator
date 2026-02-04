@@ -174,8 +174,8 @@
                   hide-details
                 />
               </div>
-              <!-- Animation Mode Toggle (only visible when time data is available) -->
-              <div v-if="timeArray && timeArray.length > 0" class="mt-3">
+              <!-- Animation Mode Toggle -->
+              <div class="mt-3">
                 <label class="text-caption text-medium-emphasis d-block mb-1">Animationsmodus</label>
                 <v-btn-toggle
                   v-model="animationMode"
@@ -186,11 +186,12 @@
                   class="w-100"
                 >
                   <v-btn value="uniform" size="small" class="flex-grow-1">
-                    <v-icon start size="small">mdi-speedometer-slow</v-icon>
                     Gleichmäßig
                   </v-btn>
-                  <v-btn value="time-based" size="small" class="flex-grow-1">
-                    <v-icon start size="small">mdi-clock-outline</v-icon>
+                  <v-btn value="gradient" size="small" class="flex-grow-1">
+                    Steigung
+                  </v-btn>
+                  <v-btn v-if="timeArray && timeArray.length > 0" value="time-based" size="small" class="flex-grow-1">
                     Zeitbasiert
                   </v-btn>
                 </v-btn-toggle>
@@ -911,7 +912,7 @@ export interface ElevationAnimationConfig {
     overlayOpacity: number;
   };
   // Animation mode
-  animationMode: 'uniform' | 'time-based';
+  animationMode: 'uniform' | 'time-based' | 'gradient';
   // Legacy support
   useGradientBackground?: boolean;
 }
@@ -1239,7 +1240,7 @@ const curveEndpoint = computed({
 
 const animationMode = computed({
   get: () => props.animationConfig.animationMode ?? 'uniform',
-  set: (value: 'uniform' | 'time-based') => updateAnimationConfig({ animationMode: value }),
+  set: (value: 'uniform' | 'time-based' | 'gradient') => updateAnimationConfig({ animationMode: value }),
 });
 
 const silhouetteCurveColor = computed({
