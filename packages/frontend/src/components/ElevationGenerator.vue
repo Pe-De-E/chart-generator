@@ -127,6 +127,7 @@
               :series-config="selectedSeries"
               :style-overrides="styleOverrides"
               :chart-data="chartDataForAnimation"
+              :time-array="timeArray"
               @update:styleOverrides="setStyleOverrides"
               @update-series-color="updateSeriesColor"
               @regenerate-colors="regenerateColors"
@@ -180,6 +181,7 @@ import { useSeriesSelection } from '../composables/useSeriesSelection'
 import { useChartConfig } from '../composables/useChartConfig'
 import { useDataGrouping } from '../composables/useDataGrouping'
 import { chartService } from '../services/chart.service'
+import { extractNormalizedTimeArray, buildSmoothedTimeArray } from '../utils/timeMapping'
 import type { GPXParseResult } from '../composables/useCSVParser'
 
 const router = useRouter()
@@ -271,6 +273,31 @@ const chartDataForAnimation = computed(() => {
     label: d.label,
     value: d.values[firstSeriesName] ?? 0
   }))
+})
+
+// Smoothed time array for time-based animation.
+// Source 1: Fresh GPX parse (downsampled points with .time)
+// Source 2: Saved chart (tableItems with col_2 = time in ms)
+// buildSmoothedTimeArray clamps and smooths speeds so the animation
+// feels rhythmic, not jerky from raw GPS data.
+const timeArray = computed<number[] | undefined>(() => {
+  // Try from fresh GPX parse first
+  if (lastGPXResult.value) {
+    const points = lastGPXResult.value.downsampling.points
+    const raw = extractNormalizedTimeArray(points)
+    if (raw) return buildSmoothedTimeArray(raw)
+  }
+
+  // Fallback: reconstruct from tableItems (saved charts have col_2 = time)
+  if (tableItems.value.length > 0 && tableItems.value[0].col_2 != null) {
+    const lastTime = Number(tableItems.value[tableItems.value.length - 1].col_2)
+    if (lastTime > 0) {
+      const raw = tableItems.value.map(item => Number(item.col_2) / lastTime)
+      return buildSmoothedTimeArray(raw)
+    }
+  }
+
+  return undefined
 })
 
 // Downsampling info

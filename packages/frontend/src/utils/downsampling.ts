@@ -19,6 +19,7 @@ export interface DownsampleOptions {
 export interface GPXPoint {
   distance: number  // km
   elevation: number // m
+  time?: number     // ms since start of tour (0 = first point)
 }
 
 export interface DownsampleResult {

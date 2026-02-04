@@ -174,6 +174,27 @@
                   hide-details
                 />
               </div>
+              <!-- Animation Mode Toggle (only visible when time data is available) -->
+              <div v-if="timeArray && timeArray.length > 0" class="mt-3">
+                <label class="text-caption text-medium-emphasis d-block mb-1">Animationsmodus</label>
+                <v-btn-toggle
+                  v-model="animationMode"
+                  mandatory
+                  density="compact"
+                  variant="outlined"
+                  divided
+                  class="w-100"
+                >
+                  <v-btn value="uniform" size="small" class="flex-grow-1">
+                    <v-icon start size="small">mdi-speedometer-slow</v-icon>
+                    Gleichmäßig
+                  </v-btn>
+                  <v-btn value="time-based" size="small" class="flex-grow-1">
+                    <v-icon start size="small">mdi-clock-outline</v-icon>
+                    Zeitbasiert
+                  </v-btn>
+                </v-btn-toggle>
+              </div>
             </v-expansion-panel-text>
           </v-expansion-panel>
 
@@ -889,6 +910,8 @@ export interface ElevationAnimationConfig {
     overlayColor: string;
     overlayOpacity: number;
   };
+  // Animation mode
+  animationMode: 'uniform' | 'time-based';
   // Legacy support
   useGradientBackground?: boolean;
 }
@@ -912,6 +935,7 @@ export const DEFAULT_ELEVATION_ANIMATION_CONFIG: ElevationAnimationConfig = {
   meshColor3: '#f093fb',
   patternColor: '#ffffff',
   patternOpacity: 0.1,
+  animationMode: 'uniform',
 };
 </script>
 
@@ -1072,6 +1096,10 @@ const props = defineProps({
     type: Object as PropType<ElevationAnimationConfig>,
     default: () => ({ ...DEFAULT_ELEVATION_ANIMATION_CONFIG }),
   },
+  timeArray: {
+    type: Array as PropType<number[]>,
+    default: undefined,
+  },
 });
 
 const emit = defineEmits<{
@@ -1207,6 +1235,11 @@ const animationMarkerSize = computed({
 const curveEndpoint = computed({
   get: () => props.animationConfig.curveEndpoint,
   set: (value: number) => updateAnimationConfig({ curveEndpoint: value }),
+});
+
+const animationMode = computed({
+  get: () => props.animationConfig.animationMode ?? 'uniform',
+  set: (value: 'uniform' | 'time-based') => updateAnimationConfig({ animationMode: value }),
 });
 
 const silhouetteCurveColor = computed({
@@ -1457,6 +1490,8 @@ const animationSvg = computed(() => {
     patternColor: props.animationConfig.patternColor,
     patternOpacity: props.animationConfig.patternOpacity,
     imageOptions: props.animationConfig.imageOptions,
+    timeArray: props.timeArray,
+    animationMode: animationMode.value,
   });
 });
 
@@ -1523,6 +1558,8 @@ async function startVideoExport() {
         imageOptions: props.animationConfig.imageOptions,
         exportWidth: width,
         exportHeight: height,
+        timeArray: props.timeArray,
+        animationMode: animationMode.value,
       });
     }
   });

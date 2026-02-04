@@ -225,12 +225,26 @@ export function useCSVParser() {
     let cumulativeDistance = 0
     let prevLat: number | null = null
     let prevLon: number | null = null
+    let firstTimestamp: number | null = null
 
     trackPoints.forEach((point) => {
       const lat = parseFloat(point.getAttribute('lat') || '0')
       const lon = parseFloat(point.getAttribute('lon') || '0')
       const eleElement = point.querySelector('ele')
       const elevation = eleElement ? parseFloat(eleElement.textContent || '0') : 0
+
+      // Extract timestamp from <time> element
+      const timeElement = point.querySelector('time')
+      let time: number | undefined
+      if (timeElement?.textContent) {
+        const timestamp = new Date(timeElement.textContent).getTime()
+        if (!isNaN(timestamp)) {
+          if (firstTimestamp === null) {
+            firstTimestamp = timestamp
+          }
+          time = timestamp - firstTimestamp
+        }
+      }
 
       // Calculate distance from previous point
       if (prevLat !== null && prevLon !== null) {
@@ -242,7 +256,8 @@ export function useCSVParser() {
 
       allPoints.push({
         distance: distanceKm,
-        elevation: Math.round(elevation)
+        elevation: Math.round(elevation),
+        time,
       })
 
       prevLat = lat
@@ -255,11 +270,18 @@ export function useCSVParser() {
     // Apply intelligent downsampling
     const downsamplingResult = downsampleGPX(allPoints, options)
 
-    // Convert to table format
-    const items: TableItem[] = downsamplingResult.points.map(p => ({
-      col_0: p.distance,
-      col_1: p.elevation
-    }))
+    // Convert to table format (include time if available for persistence)
+    const hasTimeData = downsamplingResult.points.some(p => p.time != null)
+    const items: TableItem[] = downsamplingResult.points.map(p => {
+      const item: TableItem = {
+        col_0: p.distance,
+        col_1: p.elevation,
+      }
+      if (hasTimeData) {
+        item.col_2 = p.time ?? 0
+      }
+      return item
+    })
 
     // Update reactive state
     tableHeaders.value = headers

@@ -10,6 +10,7 @@ import {
   type ViewBoxConfig,
   type ViewBoxPoint
 } from '../../coordinateContract'
+import { remapProgressByTime } from '../../timeMapping'
 
 /**
  * Background type options
@@ -41,6 +42,8 @@ export interface FrameOptions {
   exportWidth?: number      // Export width (for video export)
   exportHeight?: number     // Export height (for video export)
   imageOptions?: ImageBackgroundOptions  // Options for image background (when backgroundType === 'image')
+  timeArray?: number[]      // Normalized time array (0-1) for time-based animation
+  animationMode?: 'uniform' | 'time-based'  // Animation mode
 }
 
 export function generateElevationChart(options: ChartOptions): string {
@@ -609,7 +612,9 @@ export function generateElevationFrame(
       frameOptions.showDistanceLabels ?? false,
       frameOptions.distanceLabelColor ?? '#ffffffb3',
       frameOptions.totalDistanceKm,
-      frameOptions.imageOptions
+      frameOptions.imageOptions,
+      frameOptions.timeArray,
+      frameOptions.animationMode
     )
   }
 
@@ -803,9 +808,16 @@ function generateAnimatedSilhouette(
   showDistanceLabels: boolean = false,
   distanceLabelColor: string = '#ffffffb3',
   totalDistanceKm?: number,
-  imageOptions?: ImageBackgroundOptions
+  imageOptions?: ImageBackgroundOptions,
+  timeArray?: number[],
+  animationMode: 'uniform' | 'time-based' = 'uniform'
 ): string {
   if (data.length === 0) return '<svg></svg>'
+
+  // Remap progress based on animation mode
+  const effectiveProgress = (animationMode === 'time-based' && timeArray && timeArray.length > 0)
+    ? remapProgressByTime(progress, timeArray)
+    : progress
 
   // Always use Instagram Reel dimensions for consistent preview/export
   const width = VIEW_BOX_PRESETS.instagramReel.width   // 1080
@@ -851,11 +863,20 @@ function generateAnimatedSilhouette(
   const gradientId = `silhouette-gradient-anim`
   const clipId = `reveal-clip-anim`
 
-  // Calculate clip width based on progress
-  const clipWidth = chartArea.width * progress
+  // In time-based mode, the fill mask slightly trails the marker.
+  // This "follow-lag" creates visual depth: the marker leads, the area follows.
+  // The lag fades out near the end so everything converges at progress=1.
+  const isTimeBased = animationMode === 'time-based' && timeArray && timeArray.length > 0
+  const maskLag = 0.03 // 3% lag
+  const maskProgress = isTimeBased
+    ? Math.max(0, effectiveProgress - maskLag * (1 - effectiveProgress))
+    : effectiveProgress
 
-  // Find marker position (interpolate between points)
-  const markerPoint = getMarkerPosition(offsetPoints, progress)
+  // Calculate clip width based on mask progress (slightly behind marker)
+  const clipWidth = chartArea.width * maskProgress
+
+  // Find marker position (at full effective progress, ahead of mask)
+  const markerPoint = getMarkerPosition(offsetPoints, effectiveProgress)
 
   // Calculate clip - start from x=0 to include the full chart area
   const clipX = 0
