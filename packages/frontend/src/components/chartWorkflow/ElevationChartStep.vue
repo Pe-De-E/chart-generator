@@ -196,6 +196,21 @@
                   </v-btn>
                 </v-btn-toggle>
               </div>
+              <!-- Gradient Sensitivity Slider -->
+              <div v-if="animationMode === 'gradient'" class="mt-3">
+                <label class="text-caption text-medium-emphasis d-block mb-1">
+                  Intensität: {{ gradientSensitivity.toFixed(1) }}
+                </label>
+                <v-slider
+                  v-model="gradientSensitivity"
+                  :min="1"
+                  :max="8"
+                  :step="0.5"
+                  density="compact"
+                  hide-details
+                  thumb-label
+                />
+              </div>
             </v-expansion-panel-text>
           </v-expansion-panel>
 
@@ -913,6 +928,7 @@ export interface ElevationAnimationConfig {
   };
   // Animation mode
   animationMode: 'uniform' | 'time-based' | 'gradient';
+  gradientSensitivity: number;
   // Legacy support
   useGradientBackground?: boolean;
 }
@@ -937,6 +953,7 @@ export const DEFAULT_ELEVATION_ANIMATION_CONFIG: ElevationAnimationConfig = {
   patternColor: '#ffffff',
   patternOpacity: 0.1,
   animationMode: 'uniform',
+  gradientSensitivity: 3,
 };
 </script>
 
@@ -1243,6 +1260,11 @@ const animationMode = computed({
   set: (value: 'uniform' | 'time-based' | 'gradient') => updateAnimationConfig({ animationMode: value }),
 });
 
+const gradientSensitivity = computed({
+  get: () => props.animationConfig.gradientSensitivity ?? 3,
+  set: (value: number) => updateAnimationConfig({ gradientSensitivity: value }),
+});
+
 const silhouetteCurveColor = computed({
   get: () => props.animationConfig.curveColor,
   set: (value: string) => updateAnimationConfig({ curveColor: value }),
@@ -1493,6 +1515,7 @@ const animationSvg = computed(() => {
     imageOptions: props.animationConfig.imageOptions,
     timeArray: props.timeArray,
     animationMode: animationMode.value,
+    gradientSensitivity: gradientSensitivity.value,
   });
 });
 
@@ -1561,6 +1584,7 @@ async function startVideoExport() {
         exportHeight: height,
         timeArray: props.timeArray,
         animationMode: animationMode.value,
+        gradientSensitivity: gradientSensitivity.value,
       });
     }
   });

@@ -44,6 +44,7 @@ export interface FrameOptions {
   imageOptions?: ImageBackgroundOptions  // Options for image background (when backgroundType === 'image')
   timeArray?: number[]      // Normalized time array (0-1) for time-based animation
   animationMode?: 'uniform' | 'time-based' | 'gradient'  // Animation mode
+  gradientSensitivity?: number  // Sensitivity for gradient animation (1-8, default 3)
 }
 
 export function generateElevationChart(options: ChartOptions): string {
@@ -614,7 +615,8 @@ export function generateElevationFrame(
       frameOptions.totalDistanceKm,
       frameOptions.imageOptions,
       frameOptions.timeArray,
-      frameOptions.animationMode
+      frameOptions.animationMode,
+      frameOptions.gradientSensitivity
     )
   }
 
@@ -810,7 +812,8 @@ function generateAnimatedSilhouette(
   totalDistanceKm?: number,
   imageOptions?: ImageBackgroundOptions,
   timeArray?: number[],
-  animationMode: 'uniform' | 'time-based' | 'gradient' = 'uniform'
+  animationMode: 'uniform' | 'time-based' | 'gradient' = 'uniform',
+  gradientSensitivity: number = 3
 ): string {
   if (data.length === 0) return '<svg></svg>'
 
@@ -820,7 +823,7 @@ function generateAnimatedSilhouette(
     effectiveProgress = remapProgressByTime(progress, timeArray)
   } else if (animationMode === 'gradient' && data.length > 2) {
     const elevations = data.map(d => d.value)
-    const gradientArray = buildGradientTimeArray(elevations)
+    const gradientArray = buildGradientTimeArray(elevations, gradientSensitivity)
     effectiveProgress = remapProgressDirect(progress, gradientArray)
   } else {
     effectiveProgress = progress
