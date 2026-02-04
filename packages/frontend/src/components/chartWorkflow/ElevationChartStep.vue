@@ -191,6 +191,9 @@
                   <v-btn value="gradient" size="small" class="flex-grow-1">
                     Steigung
                   </v-btn>
+                  <v-btn value="effort" size="small" class="flex-grow-1">
+                    Anstrengung
+                  </v-btn>
                   <v-btn v-if="timeArray && timeArray.length > 0" value="time-based" size="small" class="flex-grow-1">
                     Zeitbasiert
                   </v-btn>
@@ -209,6 +212,70 @@
                   density="compact"
                   hide-details
                   thumb-label
+                />
+              </div>
+              <!-- Effort Mode Settings -->
+              <div v-if="animationMode === 'effort'" class="mt-3">
+                <label class="text-caption text-medium-emphasis d-block mb-2">Effekte</label>
+
+                <!-- Variable Stroke -->
+                <v-checkbox
+                  v-model="effortVariableStroke"
+                  label="Linienstärke variiert"
+                  density="compact"
+                  hide-details
+                  class="mt-0"
+                />
+                <v-slider
+                  v-if="effortVariableStroke"
+                  v-model="effortVariableStrokeIntensity"
+                  :min="1"
+                  :max="8"
+                  :step="0.5"
+                  density="compact"
+                  hide-details
+                  thumb-label
+                  class="ml-6 mt-n2"
+                />
+
+                <!-- Color Gradient -->
+                <v-checkbox
+                  v-model="effortColorGradient"
+                  label="Farbverlauf (hell → dunkel)"
+                  density="compact"
+                  hide-details
+                  class="mt-1"
+                />
+                <v-slider
+                  v-if="effortColorGradient"
+                  v-model="effortColorGradientIntensity"
+                  :min="1"
+                  :max="8"
+                  :step="0.5"
+                  density="compact"
+                  hide-details
+                  thumb-label
+                  class="ml-6 mt-n2"
+                />
+
+                <!-- Glow Aura -->
+                <v-checkbox
+                  v-model="effortGlowAura"
+                  label="Glow-Aura"
+                  density="compact"
+                  hide-details
+                  class="mt-1"
+                />
+                <v-slider
+                  v-if="effortGlowAura"
+                  v-model="effortGlowAuraIntensity"
+                  :min="1"
+                  :max="8"
+                  :step="0.5"
+                  density="compact"
+                  hide-details
+                  thumb-label
+                  class="ml-6 mt-n2"
                 />
               </div>
             </v-expansion-panel-text>
@@ -927,8 +994,17 @@ export interface ElevationAnimationConfig {
     overlayOpacity: number;
   };
   // Animation mode
-  animationMode: 'uniform' | 'time-based' | 'gradient';
+  animationMode: 'uniform' | 'time-based' | 'gradient' | 'effort';
   gradientSensitivity: number;
+  // Effort mode config
+  effortConfig: {
+    variableStroke: boolean;        // Line thickness varies with gradient
+    variableStrokeIntensity: number; // 1-8
+    colorGradient: boolean;         // Line color darkens with effort
+    colorGradientIntensity: number; // 1-8
+    glowAura: boolean;              // Glow around line and marker
+    glowAuraIntensity: number;      // 1-8
+  };
   // Legacy support
   useGradientBackground?: boolean;
 }
@@ -954,6 +1030,14 @@ export const DEFAULT_ELEVATION_ANIMATION_CONFIG: ElevationAnimationConfig = {
   patternOpacity: 0.1,
   animationMode: 'uniform',
   gradientSensitivity: 3,
+  effortConfig: {
+    variableStroke: true,
+    variableStrokeIntensity: 5,
+    colorGradient: true,
+    colorGradientIntensity: 5,
+    glowAura: true,
+    glowAuraIntensity: 5,
+  },
 };
 </script>
 
@@ -1257,12 +1341,61 @@ const curveEndpoint = computed({
 
 const animationMode = computed({
   get: () => props.animationConfig.animationMode ?? 'uniform',
-  set: (value: 'uniform' | 'time-based' | 'gradient') => updateAnimationConfig({ animationMode: value }),
+  set: (value: 'uniform' | 'time-based' | 'gradient' | 'effort') => updateAnimationConfig({ animationMode: value }),
 });
 
 const gradientSensitivity = computed({
   get: () => props.animationConfig.gradientSensitivity ?? 3,
   set: (value: number) => updateAnimationConfig({ gradientSensitivity: value }),
+});
+
+// Effort mode config
+const defaultEffortConfig = {
+  variableStroke: true, variableStrokeIntensity: 5,
+  colorGradient: true, colorGradientIntensity: 5,
+  glowAura: true, glowAuraIntensity: 5
+};
+
+const effortVariableStroke = computed({
+  get: () => props.animationConfig.effortConfig?.variableStroke ?? true,
+  set: (value: boolean) => updateAnimationConfig({
+    effortConfig: { ...defaultEffortConfig, ...props.animationConfig.effortConfig, variableStroke: value }
+  }),
+});
+
+const effortVariableStrokeIntensity = computed({
+  get: () => props.animationConfig.effortConfig?.variableStrokeIntensity ?? 5,
+  set: (value: number) => updateAnimationConfig({
+    effortConfig: { ...defaultEffortConfig, ...props.animationConfig.effortConfig, variableStrokeIntensity: value }
+  }),
+});
+
+const effortColorGradient = computed({
+  get: () => props.animationConfig.effortConfig?.colorGradient ?? true,
+  set: (value: boolean) => updateAnimationConfig({
+    effortConfig: { ...defaultEffortConfig, ...props.animationConfig.effortConfig, colorGradient: value }
+  }),
+});
+
+const effortColorGradientIntensity = computed({
+  get: () => props.animationConfig.effortConfig?.colorGradientIntensity ?? 5,
+  set: (value: number) => updateAnimationConfig({
+    effortConfig: { ...defaultEffortConfig, ...props.animationConfig.effortConfig, colorGradientIntensity: value }
+  }),
+});
+
+const effortGlowAura = computed({
+  get: () => props.animationConfig.effortConfig?.glowAura ?? true,
+  set: (value: boolean) => updateAnimationConfig({
+    effortConfig: { ...defaultEffortConfig, ...props.animationConfig.effortConfig, glowAura: value }
+  }),
+});
+
+const effortGlowAuraIntensity = computed({
+  get: () => props.animationConfig.effortConfig?.glowAuraIntensity ?? 5,
+  set: (value: number) => updateAnimationConfig({
+    effortConfig: { ...defaultEffortConfig, ...props.animationConfig.effortConfig, glowAuraIntensity: value }
+  }),
 });
 
 const silhouetteCurveColor = computed({
@@ -1516,6 +1649,7 @@ const animationSvg = computed(() => {
     timeArray: props.timeArray,
     animationMode: animationMode.value,
     gradientSensitivity: gradientSensitivity.value,
+    effortConfig: props.animationConfig.effortConfig,
   });
 });
 
@@ -1585,6 +1719,7 @@ async function startVideoExport() {
         timeArray: props.timeArray,
         animationMode: animationMode.value,
         gradientSensitivity: gradientSensitivity.value,
+        effortConfig: props.animationConfig.effortConfig,
       });
     }
   });

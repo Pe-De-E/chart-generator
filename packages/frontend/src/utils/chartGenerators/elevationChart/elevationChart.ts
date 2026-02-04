@@ -43,8 +43,16 @@ export interface FrameOptions {
   exportHeight?: number     // Export height (for video export)
   imageOptions?: ImageBackgroundOptions  // Options for image background (when backgroundType === 'image')
   timeArray?: number[]      // Normalized time array (0-1) for time-based animation
-  animationMode?: 'uniform' | 'time-based' | 'gradient'  // Animation mode
+  animationMode?: 'uniform' | 'time-based' | 'gradient' | 'effort'  // Animation mode
   gradientSensitivity?: number  // Sensitivity for gradient animation (1-8, default 3)
+  effortConfig?: {                  // Configuration for effort animation mode
+    variableStroke: boolean         // Line thickness varies with gradient
+    variableStrokeIntensity: number // 1-8
+    colorGradient: boolean          // Line color darkens with effort
+    colorGradientIntensity: number  // 1-8
+    glowAura: boolean               // Glow around line and marker
+    glowAuraIntensity: number       // 1-8
+  }
 }
 
 export function generateElevationChart(options: ChartOptions): string {
@@ -616,7 +624,8 @@ export function generateElevationFrame(
       frameOptions.imageOptions,
       frameOptions.timeArray,
       frameOptions.animationMode,
-      frameOptions.gradientSensitivity
+      frameOptions.gradientSensitivity,
+      frameOptions.effortConfig
     )
   }
 
@@ -812,8 +821,16 @@ function generateAnimatedSilhouette(
   totalDistanceKm?: number,
   imageOptions?: ImageBackgroundOptions,
   timeArray?: number[],
-  animationMode: 'uniform' | 'time-based' | 'gradient' = 'uniform',
-  gradientSensitivity: number = 3
+  animationMode: 'uniform' | 'time-based' | 'gradient' | 'effort' = 'uniform',
+  gradientSensitivity: number = 3,
+  effortConfig?: {
+    variableStroke: boolean
+    variableStrokeIntensity: number
+    colorGradient: boolean
+    colorGradientIntensity: number
+    glowAura: boolean
+    glowAuraIntensity: number
+  }
 ): string {
   if (data.length === 0) return '<svg></svg>'
 
@@ -995,9 +1012,33 @@ function generateAnimatedSilhouette(
     imageOptions
   )
 
+  // Generate effort curve if in effort mode
+  const isEffortMode = animationMode === 'effort' && effortConfig
+  const effortElements = isEffortMode
+    ? generateEffortCurve(offsetPoints, data, color, effortConfig)
+    : { defs: '', curve: '', glowFilter: '' }
+
+  // Standard curve rendering
+  const standardCurve = `
+    <polygon points="${areaPath}" fill="url(#${gradientId})"/>
+    <polyline points="${linePoints}" fill="none" stroke="${color}"
+              stroke-width="${strokeWidth}" stroke-linejoin="round" stroke-linecap="round"/>
+  `
+
+  // Choose which curve to render
+  const curveContent = isEffortMode
+    ? `<polygon points="${areaPath}" fill="url(#${gradientId})"/>${effortElements.curve}`
+    : standardCurve
+
+  // Marker with optional glow in effort mode
+  const markerGlow = isEffortMode && effortConfig.glowAura
+    ? `filter="url(#${effortElements.glowFilter})"`
+    : ''
+
   return `
     <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
       <defs>${bgElements.defs}
+        ${effortElements.defs}
         <linearGradient id="${gradientId}" x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%" style="stop-color:${color};stop-opacity:0.5"/>
           <stop offset="100%" style="stop-color:${color};stop-opacity:0.1"/>
@@ -1010,16 +1051,160 @@ function generateAnimatedSilhouette(
       ${elevationLabelsHtml}
       ${distanceLabelsHtml}
       <g clip-path="url(#${clipId})">
-        <polygon points="${areaPath}" fill="url(#${gradientId})"/>
-        <polyline points="${linePoints}" fill="none" stroke="${color}"
-                  stroke-width="${strokeWidth}" stroke-linejoin="round" stroke-linecap="round"/>
+        ${curveContent}
       </g>
       ${showMarker && markerPoint ? `
-        <circle cx="${markerPoint.x}" cy="${markerPoint.y}" r="${scaledMarkerSize}"
+        <circle ${markerGlow} cx="${markerPoint.x}" cy="${markerPoint.y}" r="${scaledMarkerSize}"
                 fill="${markerColor}" stroke="${color}" stroke-width="${markerStrokeWidth}"/>
       ` : ''}
     </svg>
   `
+}
+
+/**
+ * Calculate gradient (slope) for each segment of the curve
+ * Returns normalized values 0-1 where 0=steepest descent, 1=steepest ascent
+ */
+function calculateSegmentGradients(data: Array<{ value: number }>): number[] {
+  if (data.length < 2) return []
+
+  const gradients: number[] = []
+  const minEle = Math.min(...data.map(d => d.value))
+  const maxEle = Math.max(...data.map(d => d.value))
+  const range = maxEle - minEle || 1
+
+  // Use a window for smoother gradient calculation
+  const windowHalf = Math.max(2, Math.floor(data.length * 0.02))
+
+  for (let i = 0; i < data.length - 1; i++) {
+    const lo = Math.max(0, i - windowHalf)
+    const hi = Math.min(data.length - 1, i + windowHalf + 1)
+    const eleChange = (data[hi].value - data[lo].value) / range
+
+    // Map to 0-1 range: -1 (steep descent) -> 0, +1 (steep ascent) -> 1
+    const normalized = (eleChange + 1) / 2
+    gradients.push(Math.max(0, Math.min(1, normalized)))
+  }
+
+  return gradients
+}
+
+/**
+ * Generate effort-based curve with variable stroke width, color gradient, and glow
+ */
+function generateEffortCurve(
+  points: ViewBoxPoint[],
+  data: Array<{ value: number }>,
+  baseColor: string,
+  config: {
+    variableStroke: boolean
+    variableStrokeIntensity: number
+    colorGradient: boolean
+    colorGradientIntensity: number
+    glowAura: boolean
+    glowAuraIntensity: number
+  }
+): { defs: string; curve: string; glowFilter: string } {
+  if (points.length < 2) return { defs: '', curve: '', glowFilter: '' }
+
+  const gradients = calculateSegmentGradients(data)
+
+  // Normalize intensities to ~1 at default (5)
+  const strokeIntensity = config.variableStrokeIntensity / 5
+  const colorIntensity = config.colorGradientIntensity / 5
+  const glowIntensityFactor = config.glowAuraIntensity / 5
+
+  // Parse base color to HSL for manipulation
+  const hexToHsl = (hex: string): { h: number; s: number; l: number } => {
+    const r = parseInt(hex.slice(1, 3), 16) / 255
+    const g = parseInt(hex.slice(3, 5), 16) / 255
+    const b = parseInt(hex.slice(5, 7), 16) / 255
+
+    const max = Math.max(r, g, b), min = Math.min(r, g, b)
+    let h = 0, s = 0
+    const l = (max + min) / 2
+
+    if (max !== min) {
+      const d = max - min
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+      switch (max) {
+        case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break
+        case g: h = ((b - r) / d + 2) / 6; break
+        case b: h = ((r - g) / d + 4) / 6; break
+      }
+    }
+    return { h: h * 360, s: s * 100, l: l * 100 }
+  }
+
+  const baseHsl = hexToHsl(baseColor.length === 7 ? baseColor : '#ffffff')
+
+  // Generate segments
+  const segments: string[] = []
+  let maxGradient = 0
+
+  for (let i = 0; i < points.length - 1; i++) {
+    const p1 = points[i]
+    const p2 = points[i + 1]
+    const gradient = gradients[i] ?? 0.5
+
+    // Track max gradient for glow intensity
+    if (gradient > maxGradient) maxGradient = gradient
+
+    // Calculate stroke width: 3-15 based on gradient and intensity
+    const baseStroke = 6
+    const strokeVar = config.variableStroke
+      ? baseStroke + (gradient - 0.5) * 12 * strokeIntensity
+      : baseStroke
+    const strokeWidth = Math.max(3, Math.min(15, strokeVar))
+
+    // Calculate color: lighter when easy, darker when hard
+    let segmentColor = baseColor
+    if (config.colorGradient) {
+      const lightness = baseHsl.l - (gradient - 0.5) * 30 * colorIntensity
+      const clampedL = Math.max(20, Math.min(80, lightness))
+      segmentColor = `hsl(${baseHsl.h}, ${baseHsl.s}%, ${clampedL}%)`
+    }
+
+    segments.push(`
+      <line x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}"
+            stroke="${segmentColor}" stroke-width="${strokeWidth}"
+            stroke-linecap="round"/>
+    `)
+  }
+
+  // Generate glow filter if enabled
+  let glowFilter = ''
+  let glowFilterId = ''
+  if (config.glowAura) {
+    glowFilterId = 'effort-glow-filter'
+    const glowStrength = maxGradient * glowIntensityFactor * 2
+    const blurRadius = 8 + glowStrength * 8
+
+    glowFilter = `
+      <filter id="${glowFilterId}" x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="${blurRadius}" result="blur"/>
+        <feColorMatrix in="blur" type="matrix"
+          values="1 0 0 0 0
+                  0 1 0 0 0
+                  0 0 1 0 0
+                  0 0 0 ${0.3 + glowStrength * 0.4} 0" result="glow"/>
+        <feMerge>
+          <feMergeNode in="glow"/>
+          <feMergeNode in="SourceGraphic"/>
+        </feMerge>
+      </filter>
+    `
+  }
+
+  const curveGroup = config.glowAura
+    ? `<g filter="url(#${glowFilterId})">${segments.join('')}</g>`
+    : `<g>${segments.join('')}</g>`
+
+  return {
+    defs: glowFilter,
+    curve: curveGroup,
+    glowFilter: glowFilterId
+  }
 }
 
 /**
