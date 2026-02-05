@@ -130,10 +130,91 @@ export function useVideoExport() {
     }
   }
 
+  // Cache for converted image data URLs (to avoid re-fetching for each frame)
+  const imageDataUrlCache = new Map<string, string>()
+
+  /**
+   * Convert an image URL to a Base64 data URL (with caching)
+   */
+  async function imageUrlToDataUrl(url: string): Promise<string> {
+    // Check cache first
+    const cached = imageDataUrlCache.get(url)
+    if (cached) {
+      return cached
+    }
+
+    return new Promise((resolve, reject) => {
+      const img = new Image()
+      img.crossOrigin = 'anonymous'
+
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        canvas.width = img.naturalWidth
+        canvas.height = img.naturalHeight
+        const ctx = canvas.getContext('2d')
+        if (!ctx) {
+          reject(new Error('Failed to get canvas context'))
+          return
+        }
+        ctx.drawImage(img, 0, 0)
+        const dataUrl = canvas.toDataURL('image/png')
+        // Cache the result
+        imageDataUrlCache.set(url, dataUrl)
+        resolve(dataUrl)
+      }
+
+      img.onerror = () => {
+        reject(new Error(`Failed to load image: ${url}`))
+      }
+
+      img.src = url
+    })
+  }
+
+  /**
+   * Embed external images in SVG as Base64 data URLs
+   */
+  async function embedImagesInSvg(svgString: string): Promise<string> {
+    // Find all image elements with href or xlink:href
+    const imageRegex = /<image[^>]*(?:href|xlink:href)="([^"]+)"[^>]*>/gi
+    const matches = [...svgString.matchAll(imageRegex)]
+
+    if (matches.length === 0) {
+      return svgString
+    }
+
+    let result = svgString
+
+    for (const match of matches) {
+      const fullMatch = match[0]
+      const imageUrl = match[1]
+
+      // Skip if already a data URL
+      if (imageUrl.startsWith('data:')) {
+        continue
+      }
+
+      try {
+        const dataUrl = await imageUrlToDataUrl(imageUrl)
+        // Replace the URL in the image tag
+        const newImageTag = fullMatch.replace(imageUrl, dataUrl)
+        result = result.replace(fullMatch, newImageTag)
+      } catch (e) {
+        console.warn('Failed to embed image:', imageUrl, e)
+        // Continue without embedding this image
+      }
+    }
+
+    return result
+  }
+
   /**
    * Convert SVG string to PNG data URL using Canvas
    */
   async function svgToPng(svgString: string, width: number, height: number): Promise<Uint8Array> {
+    // First, embed any external images as data URLs
+    const embeddedSvg = await embedImagesInSvg(svgString)
+
     return new Promise((resolve, reject) => {
       const canvas = document.createElement('canvas')
       canvas.width = width
@@ -146,7 +227,7 @@ export function useVideoExport() {
       }
 
       const img = new Image()
-      const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' })
+      const svgBlob = new Blob([embeddedSvg], { type: 'image/svg+xml;charset=utf-8' })
       const url = URL.createObjectURL(svgBlob)
 
       img.onload = () => {
@@ -305,6 +386,7 @@ export function useVideoExport() {
       return null
     } finally {
       isExporting.value = false
+      imageDataUrlCache.clear() // Clear image cache after export
     }
   }
 
@@ -345,6 +427,7 @@ export function useVideoExport() {
   function cancelExport() {
     cancelRequested = true
     isExporting.value = false
+    imageDataUrlCache.clear() // Clear image cache
     progress.value = {
       stage: 'idle',
       percent: 0,
@@ -490,6 +573,7 @@ export function useVideoExport() {
       }
     } finally {
       isExporting.value = false
+      imageDataUrlCache.clear() // Clear image cache after export
     }
   }
 

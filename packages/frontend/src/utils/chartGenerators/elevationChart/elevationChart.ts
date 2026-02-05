@@ -26,6 +26,7 @@ export interface FrameOptions {
   markerSize: number        // Radius of the marker dot
   markerColor: string       // Color of the marker dot
   curveEndpoint: CurveEndpoint  // Where the curve ends: natural, middle, or top
+  showAreaFill?: boolean        // Show gradient fill under the curve (default: true)
   showElevationLabels?: boolean // Show elevation labels on the left
   elevationLabelColor?: string  // Color of elevation labels
   showDistanceLabels?: boolean  // Show distance labels at the bottom
@@ -625,7 +626,8 @@ export function generateElevationFrame(
       frameOptions.timeArray,
       frameOptions.animationMode,
       frameOptions.gradientSensitivity,
-      frameOptions.effortConfig
+      frameOptions.effortConfig,
+      frameOptions.showAreaFill ?? true
     )
   }
 
@@ -830,7 +832,8 @@ function generateAnimatedSilhouette(
     colorGradientIntensity: number
     glowAura: boolean
     glowAuraIntensity: number
-  }
+  },
+  showAreaFill: boolean = true
 ): string {
   if (data.length === 0) return '<svg></svg>'
 
@@ -1018,16 +1021,20 @@ function generateAnimatedSilhouette(
     ? generateEffortCurve(offsetPoints, data, color, effortConfig)
     : { defs: '', curve: '', glowFilter: '' }
 
-  // Standard curve rendering
+  // Standard curve rendering (with optional area fill)
+  const areaFillElement = showAreaFill
+    ? `<polygon points="${areaPath}" fill="url(#${gradientId})"/>`
+    : ''
+
   const standardCurve = `
-    <polygon points="${areaPath}" fill="url(#${gradientId})"/>
+    ${areaFillElement}
     <polyline points="${linePoints}" fill="none" stroke="${color}"
               stroke-width="${strokeWidth}" stroke-linejoin="round" stroke-linecap="round"/>
   `
 
   // Choose which curve to render
   const curveContent = isEffortMode
-    ? `<polygon points="${areaPath}" fill="url(#${gradientId})"/>${effortElements.curve}`
+    ? `${areaFillElement}${effortElements.curve}`
     : standardCurve
 
   // Marker with optional glow in effort mode

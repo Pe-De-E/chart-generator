@@ -615,6 +615,13 @@
             <v-expansion-panel-text>
               <div class="panel-stack">
                 <v-checkbox
+                  v-model="showAreaFill"
+                  label="Fläche füllen"
+                  density="compact"
+                  hide-details
+                  color="primary"
+                />
+                <v-checkbox
                   v-model="animationShowMarker"
                   label="Marker anzeigen"
                   density="compact"
@@ -970,6 +977,7 @@ export interface ElevationAnimationConfig {
   markerSize: number;
   curveEndpoint: number;
   curveColor: string;
+  showAreaFill: boolean;
   backgroundColor: string;
   backgroundType: BackgroundType;
   gradientColor: string;
@@ -1015,6 +1023,7 @@ export const DEFAULT_ELEVATION_ANIMATION_CONFIG: ElevationAnimationConfig = {
   showMarker: true,
   markerSize: 6,
   curveEndpoint: 30,
+  showAreaFill: true,
   showElevationLabels: false,
   elevationLabelColor: '#ffffffb3',
   showDistanceLabels: false,
@@ -1403,6 +1412,11 @@ const silhouetteCurveColor = computed({
   set: (value: string) => updateAnimationConfig({ curveColor: value }),
 });
 
+const showAreaFill = computed({
+  get: () => props.animationConfig.showAreaFill ?? true,
+  set: (value: boolean) => updateAnimationConfig({ showAreaFill: value }),
+});
+
 const showElevationLabels = computed({
   get: () => props.animationConfig.showElevationLabels,
   set: (value: boolean) => updateAnimationConfig({ showElevationLabels: value }),
@@ -1634,6 +1648,7 @@ const animationSvg = computed(() => {
     markerSize: props.animationConfig.markerSize,
     markerColor: '#ffffff',
     curveEndpoint: props.animationConfig.curveEndpoint,
+    showAreaFill: props.animationConfig.showAreaFill ?? true,
     showElevationLabels: props.animationConfig.showElevationLabels,
     elevationLabelColor: props.animationConfig.elevationLabelColor,
     showDistanceLabels: props.animationConfig.showDistanceLabels,
@@ -1702,6 +1717,7 @@ async function startVideoExport() {
         markerSize: props.animationConfig.markerSize,
         markerColor: '#ffffff',
         curveEndpoint: props.animationConfig.curveEndpoint,
+        showAreaFill: props.animationConfig.showAreaFill ?? true,
         showElevationLabels: props.animationConfig.showElevationLabels,
         elevationLabelColor: props.animationConfig.elevationLabelColor,
         showDistanceLabels: props.animationConfig.showDistanceLabels,
