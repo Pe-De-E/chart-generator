@@ -6,19 +6,21 @@ import {
   generatePieChart,
   generateScatterChart,
   generateElevationChart,
-  type SeriesDataPoint,
-  type SeriesConfig,
-  type DataPoint,
-  type StatisticalOverlays,
-  type ChartStyleOverrides,
-  type TitleStyleOverride,
-  type AxisStyleOverride,
-  type DataPointStyleOverride,
-  type SeriesStyleOverride,
 } from '../utils/chartGenerators'
+import type {
+  SeriesDataPoint,
+  SeriesConfig,
+  DataPoint,
+  StatisticalOverlays,
+  ChartStyleOverrides,
+  TitleStyleOverride,
+  AxisStyleOverride,
+  DataPointStyleOverride,
+  SeriesStyleOverride,
+  ChartColors,
+} from '@chart-generator/shared'
 
-// Re-export ChartColors from types (for backward compatibility)
-export type { ChartColors } from '../utils/chartGenerators/types'
+export type { ChartColors }
 
 export type ChartType = 'bar' | 'line' | 'area' | 'pie' | 'scatter' | 'elevation'
 

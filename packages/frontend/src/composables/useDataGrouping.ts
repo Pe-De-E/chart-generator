@@ -1,5 +1,5 @@
 import { ref, computed, type Ref } from 'vue'
-import type { SeriesDataPoint, SeriesConfig } from '../utils/chartGenerators'
+import type { SeriesDataPoint, SeriesConfig } from '@chart-generator/shared'
 import type { TableItem } from './useCSVParser'
 import {
   analyzeGroupingPotential,

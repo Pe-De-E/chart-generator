@@ -1,4 +1,4 @@
-import type { SeriesDataPoint } from './chartGenerators'
+import type { SeriesDataPoint } from '@chart-generator/shared'
 
 export interface StatisticalMetrics {
   mean: number

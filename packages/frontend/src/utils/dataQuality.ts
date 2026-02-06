@@ -1,4 +1,4 @@
-import type { DataPoint } from './chartGenerators'
+import type { DataPoint } from '@chart-generator/shared'
 
 export interface DataQualityIssue {
   type: 'empty_labels' | 'duplicate_labels' | 'negative_values' | 'missing_values' | 'too_many_zeros' | 'column_mostly_empty' | 'too_few_rows'
