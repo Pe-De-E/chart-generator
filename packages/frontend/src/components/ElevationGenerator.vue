@@ -390,7 +390,7 @@ function handleUploadNext() {
 }
 
 function goBack() {
-  router.push('/')
+  router.push('/dashboard')
 }
 
 function resetWizard() {
@@ -443,7 +443,7 @@ async function saveChart() {
       loadedChartId.value = chart.id
       alert('Chart erfolgreich gespeichert!')
     }
-    router.push('/')
+    router.push('/dashboard')
   } catch (error) {
     console.error('Error saving chart:', error)
     alert('Fehler beim Speichern des Charts')
@@ -509,7 +509,7 @@ async function loadChartData(chartId: string) {
   } catch (error) {
     console.error('Error loading chart:', error)
     alert('Fehler beim Laden des Charts')
-    router.push('/')
+    router.push('/dashboard')
   }
 }
 

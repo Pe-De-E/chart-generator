@@ -119,8 +119,8 @@ const handleLogin = async () => {
       password: password.value,
     })
 
-    // Redirect to home page after successful login
-    router.push('/')
+    // Redirect to dashboard after successful login
+    router.push('/dashboard')
   } catch (err) {
     // Error is handled by the composable
   }

@@ -192,8 +192,8 @@ const handleSignup = async () => {
       lastName: lastName.value || undefined,
     })
 
-    // Redirect to home page after successful signup
-    router.push('/')
+    // Redirect to dashboard after successful signup
+    router.push('/dashboard')
   } catch (err) {
     // Error is handled by the composable
   }

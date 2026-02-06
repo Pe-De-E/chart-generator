@@ -1,7 +1,5 @@
 <template>
   <v-container fluid>
-    <!-- TODO Home braucht eine eigene Route, weil ich später ja noch eine Landingpage brauche -->
-
     <!-- Loading State -->
     <v-row v-if="chartsStore.loading.value">
       <v-col cols="12" class="text-center py-12">

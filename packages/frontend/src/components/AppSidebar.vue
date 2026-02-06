@@ -57,8 +57,8 @@
       <v-list-item
         prepend-icon="mdi-view-dashboard"
         :title="isCollapsed ? '' : 'Dashboard'"
-        @click="router.push('/')"
-        :active="isActiveRoute('/')"
+        @click="router.push('/dashboard')"
+        :active="isActiveRoute('/dashboard')"
         class="nav-item"
         rounded="lg"
       >
@@ -179,7 +179,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useTheme } from 'vuetify'
 import { useAuth } from '../composables/useAuth'
@@ -190,8 +190,12 @@ const route = useRoute()
 const theme = useTheme()
 const { currentUser, isAuthenticated, isAdmin, logout } = useAuth()
 
-const isCollapsed = ref(false)
+const isCollapsed = ref(route.name === 'Landing')
 const showFeedbackDialog = ref(false)
+
+watch(() => route.name, (name) => {
+  if (name === 'Landing') isCollapsed.value = true
+})
 
 const isDark = computed(() => theme.global.current.value.dark)
 

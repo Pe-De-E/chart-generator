@@ -3,6 +3,7 @@ import type { RouteRecordRaw } from 'vue-router'
 import { useAuth } from '../composables/useAuth'
 
 // Import views
+import LandingPage from '../views/LandingPage.vue'
 import Home from '../views/Home/Home.vue'
 import ChartGenerator from '../components/ChartGenerator.vue'
 import ElevationGenerator from '../components/ElevationGenerator.vue'
@@ -14,7 +15,12 @@ import LegalPage from '../views/LegalPage.vue'
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
-    name: 'Home',
+    name: 'Landing',
+    component: LandingPage,
+  },
+  {
+    path: '/dashboard',
+    name: 'Dashboard',
     component: Home,
     meta: { requiresAuth: true },
   },
@@ -87,13 +93,13 @@ router.beforeEach(async (to, _from, next) => {
 
   // Check if route requires admin
   if (to.meta.requiresAdmin && !isAdmin.value) {
-    next({ name: 'Home' })
+    next({ name: 'Dashboard' })
     return
   }
 
   // Check if route requires guest (not authenticated)
   if (to.meta.requiresGuest && isAuthenticated.value) {
-    next({ name: 'Home' })
+    next({ name: 'Dashboard' })
     return
   }
 

@@ -614,7 +614,7 @@ const saveChart = async () => {
       loadedChartId.value = chart.id
       alert('Chart erfolgreich gespeichert!')
     }
-    router.push('/')
+    router.push('/dashboard')
   } catch (error) {
     console.error('Error saving chart:', error)
     alert('Fehler beim Speichern des Charts')
@@ -680,7 +680,7 @@ const loadChartData = async (chartId: string) => {
   } catch (error) {
     console.error('Error loading chart:', error)
     alert('Fehler beim Laden des Charts')
-    router.push('/')
+    router.push('/dashboard')
   }
 }
 </script>
