@@ -1,8 +1,6 @@
 import type { ChartOptions, ChartDimensions } from '@chart-generator/shared'
 import { renderStatisticalOverlays, hasAnyOverlayEnabled } from '../statisticalOverlayRenderer'
 
-// TODO hier weiter machen um die breite der grafiken variabel zu halten
-
 // Default dimensions
 const DEFAULT_WIDTH = 600
 const DEFAULT_HEIGHT = 400
