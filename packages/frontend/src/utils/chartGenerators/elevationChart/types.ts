@@ -1,0 +1,45 @@
+import type { CurveEndpoint, ImageBackgroundOptions } from '@chart-generator/shared'
+
+/**
+ * Background type options
+ */
+export type BackgroundType = 'solid' | 'gradient' | 'mesh' | 'grid' | 'dots' | 'image'
+
+/**
+ * Animation frame options
+ */
+export interface FrameOptions {
+  progress: number          // 0-1, how much of the chart to reveal
+  showMarker: boolean       // Show a dot at the current position
+  markerSize: number        // Radius of the marker dot
+  markerColor: string       // Color of the marker dot
+  curveEndpoint: CurveEndpoint  // Where the curve ends: natural, middle, or top
+  showAreaFill?: boolean        // Show gradient fill under the curve (default: true)
+  showElevationLabels?: boolean // Show elevation labels on the left
+  elevationLabelColor?: string  // Color of elevation labels
+  showDistanceLabels?: boolean  // Show distance labels at the bottom
+  distanceLabelColor?: string   // Color of distance labels
+  totalDistanceKm?: number      // Total distance in km (from GPX data)
+  useGradientBackground?: boolean // (Legacy) Use gradient instead of solid background
+  gradientColor?: string    // Base color for the gradient background
+  backgroundType?: BackgroundType // Type of background (solid, gradient, mesh, grid, dots)
+  meshColor1?: string       // First color for mesh gradient
+  meshColor2?: string       // Second color for mesh gradient
+  meshColor3?: string       // Third color for mesh gradient
+  patternColor?: string     // Color for grid/dots pattern
+  patternOpacity?: number   // Opacity for grid/dots pattern (0-1)
+  exportWidth?: number      // Export width (for video export)
+  exportHeight?: number     // Export height (for video export)
+  imageOptions?: ImageBackgroundOptions  // Options for image background (when backgroundType === 'image')
+  timeArray?: number[]      // Normalized time array (0-1) for time-based animation
+  animationMode?: 'uniform' | 'time-based' | 'gradient' | 'effort'  // Animation mode
+  gradientSensitivity?: number  // Sensitivity for gradient animation (1-8, default 3)
+  effortConfig?: {                  // Configuration for effort animation mode
+    variableStroke: boolean         // Line thickness varies with gradient
+    variableStrokeIntensity: number // 1-8
+    colorGradient: boolean          // Line color darkens with effort
+    colorGradientIntensity: number  // 1-8
+    glowAura: boolean               // Glow around line and marker
+    glowAuraIntensity: number       // 1-8
+  }
+}
