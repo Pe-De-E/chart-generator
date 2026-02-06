@@ -1,6 +1,6 @@
 # Sprint-Plan GPX → Insta-Reels (Feb 2026 – Ende 2027)
 
-> **Stand:** Januar 2026 | **Status:** Kernprodukt fertig, Monetarisierung läuft
+> **Stand:** Februar 2026 | **Status:** Kernprodukt fertig, Monetarisierung läuft
 
 **Legende:** 🟢 Kern | 🔵 UX | 🟣 Style | 🟡 Business | 🧘 Stabilisierung
 
@@ -105,6 +105,21 @@ Prioritäten: Feedback > Eleganz, Zahlungsbereitschaft > Features, Geschwindigke
 - ✅ Overlay-Farbe mit Transparenz
 - ✅ Persistente Speicherung (Backend File Storage)
 
+### Animations-Modi (Feb 2026)
+
+- ✅ Zeitbasierter Animationsmodus für Elevation-Charts
+- ✅ Gradient-basierter Animationsmodus mit Intensitäts-Slider
+- ✅ „Anstrengung"-Modus mit semantischem visuellem Feedback
+- ✅ Area-Fill Toggle (ein-/ausblendbar)
+
+### UX & Infrastruktur (Feb 2026)
+
+- ✅ Dark Mode mit CSS Custom Properties
+- ✅ Ticket/Feedback-System für Bug Reports und Feature Requests
+- ✅ Impressum, Datenschutz, AGB (Legal Pages)
+- ✅ Nutzungsbedingungen-Akzeptanz
+- ✅ Charts benennen (Name in Dashboard anzeigen)
+
 </details>
 
 ---
@@ -113,7 +128,6 @@ Prioritäten: Feedback > Eleganz, Zahlungsbereitschaft > Features, Geschwindigke
 
 - [ ] 🔵 2–3 eigene GPX-Tracks testen
 - [ ] 🔵 Browser-Kompatibilität prüfen (SharedArrayBuffer: Chrome, Firefox, Edge)
-- [x] 🔵 Charts benennen (Name in Dashboard anzeigen)
 
 ---
 
