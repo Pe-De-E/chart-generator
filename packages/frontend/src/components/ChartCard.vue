@@ -96,8 +96,9 @@ const formattedDate = computed(() => {
 })
 
 function encodeSvg(svgContent: string): string {
-  // btoa() only supports Latin-1, so we need to encode Unicode characters first
-  return window.btoa(unescape(encodeURIComponent(svgContent)))
+  // Remove the chart title from the preview to avoid showing it twice
+  const cleaned = svgContent.replace(/<text\s+id="chart-title"[^>]*>[\s\S]*?<\/text>/, '')
+  return window.btoa(unescape(encodeURIComponent(cleaned)))
 }
 </script>
 
