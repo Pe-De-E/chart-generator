@@ -8,81 +8,16 @@
       </v-col>
     </v-row>
 
-    <!-- Empty State - No Charts yet -->
-     <!-- TODO bitte in eine eigene komponente auslagern -->
-    <v-row v-else-if="!charts.length">
+    <EmptyState v-else-if="!charts.length" @create="createChart" />
 
-      <v-col cols="12">
-        <v-card class="pa-12 text-center" variant="outlined">
-          <v-icon size="120" color="grey-lighten-1" class="mb-6">
-            mdi-chart-box-outline
-          </v-icon>
-          <h2 class="text-h5 mb-4">No charts yet</h2>
-          <p class="text-body-1 text-medium-emphasis mb-6">
-            Create your first chart by uploading a CSV file
-          </p>
-          <v-btn
-            color="primary"
-            size="large"
-            prepend-icon="mdi-plus-circle"
-            @click="createChart"
-          >
-            Create Your First Chart
-          </v-btn>
-        </v-card>
-      </v-col>
-    </v-row>
+    <ChartsGrid v-else :charts="charts" @edit="loadChart" @delete="confirmDelete" />
 
-    <!-- Charts Grid -->
-    <template v-else>
-      <v-row>
-        <v-col
-          v-for="chart in charts"
-          :key="chart.id"
-          cols="12"
-          sm="6"
-          md="4"
-          lg="3"
-        >
-          <ChartCard
-          :chart="chart"
-          @edit="loadChart"
-          @delete="confirmDelete"
-        />
-        </v-col>
-      </v-row>
-    </template>
+    <DeleteChartDialog
+      v-model="deleteDialog"
+      :chart="chartToDelete"
+      @confirm="deleteChart"
+    />
 
-    <!-- Delete Confirmation Dialog -->
-     <!-- TODO sollte in eine eigene komponente -->
-    <v-dialog v-model="deleteDialog" max-width="500">
-      <v-card>
-        <v-card-title class="text-h5">
-          Delete Chart?
-        </v-card-title>
-        <v-card-text>
-          Are you sure you want to delete "{{ chartToDelete?.title }}"? This action cannot be undone.
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn
-            variant="text"
-            @click="deleteDialog = false"
-          >
-            Cancel
-          </v-btn>
-          <v-btn
-            color="error"
-            variant="flat"
-            @click="deleteChart"
-          >
-            Delete
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-
-    <!-- Chart Type Selection Dialog -->
     <ChartTypeDialog v-model="showChartTypeDialog" />
   </v-container>
 </template>
@@ -92,20 +27,21 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { chartService } from '../../services/chart.service'
 import type { SavedChart } from '@chart-generator/shared'
-import ChartCard from '../../components/ChartCard.vue'
 import ChartTypeDialog from '../../components/ChartTypeDialog.vue'
 import { UserCharts } from '../../composables/useUserCharts'
+import EmptyState from './EmptyState.vue'
+import ChartsGrid from './ChartsGrid.vue'
+import DeleteChartDialog from './DeleteChartDialog.vue'
 
 // TODO UserCharts um optimistic delete erweitern (fühlt sich mega schnell an)
 // TODO AsyncResource so erweitern, dass Delete automatisch den Cache updated
-// TODO Home.vue weiter entschlacken (≤ 100 Zeilen Ziel)
 
 const router = useRouter()
 
 const deleteDialog = ref(false)
 const chartToDelete = ref<SavedChart | null>(null)
 const showChartTypeDialog = ref(false)
-  
+
 const chartsStore = new UserCharts(true)
 const charts = computed(() => {
   const data = chartsStore.data.value
@@ -140,5 +76,4 @@ async function deleteChart() {
     alert('Failed to delete chart')
   }
 }
-
 </script>
