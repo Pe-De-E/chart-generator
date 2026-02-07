@@ -1083,6 +1083,7 @@ import type { ChartOptions, AnimationOptions } from "@chart-generator/shared";
 import { DEFAULT_ANIMATION_OPTIONS } from "@chart-generator/shared";
 import { useChartAnimation, type PlaybackSpeed } from "../../composables/useChartAnimation";
 import { useVideoExport } from "../../composables/useVideoExport";
+import { useElevationConfig } from "../../composables/useElevationConfig";
 import { generateElevationFrame } from "../../utils/chartGenerators/elevationChart/elevationChart";
 import { generateTitleCardSvg, getTitleCardOpacity, TITLE_CARD_DURATION_MS } from "../../utils/titleCardGenerator";
 import { useElevationThemes } from "../../composables/useElevationThemes";
@@ -1344,240 +1345,47 @@ async function handleSaveTheme() {
   newThemeDescription.value = '';
 }
 
-// Animation settings - computed with getters/setters for two-way binding with parent
-const animationDuration = computed({
-  get: () => props.animationConfig.duration,
-  set: (value: number) => updateAnimationConfig({ duration: value }),
-});
-
-const animationEasing = computed({
-  get: () => props.animationConfig.easing,
-  set: (value: 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out') => updateAnimationConfig({ easing: value }),
-});
-
-const animationShowMarker = computed({
-  get: () => props.animationConfig.showMarker,
-  set: (value: boolean) => updateAnimationConfig({ showMarker: value }),
-});
-
-const animationMarkerSize = computed({
-  get: () => props.animationConfig.markerSize,
-  set: (value: number) => updateAnimationConfig({ markerSize: value }),
-});
-
-const curveEndpoint = computed({
-  get: () => props.animationConfig.curveEndpoint,
-  set: (value: number) => updateAnimationConfig({ curveEndpoint: value }),
-});
-
-const animationMode = computed({
-  get: () => props.animationConfig.animationMode ?? 'uniform',
-  set: (value: 'uniform' | 'time-based' | 'gradient' | 'effort') => updateAnimationConfig({ animationMode: value }),
-});
-
-const gradientSensitivity = computed({
-  get: () => props.animationConfig.gradientSensitivity ?? 3,
-  set: (value: number) => updateAnimationConfig({ gradientSensitivity: value }),
-});
-
-// Effort mode config
-const defaultEffortConfig = {
-  variableStroke: true, variableStrokeIntensity: 5,
-  colorGradient: true, colorGradientIntensity: 5,
-  glowAura: true, glowAuraIntensity: 5
-};
-
-const effortVariableStroke = computed({
-  get: () => props.animationConfig.effortConfig?.variableStroke ?? true,
-  set: (value: boolean) => updateAnimationConfig({
-    effortConfig: { ...defaultEffortConfig, ...props.animationConfig.effortConfig, variableStroke: value }
-  }),
-});
-
-const effortVariableStrokeIntensity = computed({
-  get: () => props.animationConfig.effortConfig?.variableStrokeIntensity ?? 5,
-  set: (value: number) => updateAnimationConfig({
-    effortConfig: { ...defaultEffortConfig, ...props.animationConfig.effortConfig, variableStrokeIntensity: value }
-  }),
-});
-
-const effortColorGradient = computed({
-  get: () => props.animationConfig.effortConfig?.colorGradient ?? true,
-  set: (value: boolean) => updateAnimationConfig({
-    effortConfig: { ...defaultEffortConfig, ...props.animationConfig.effortConfig, colorGradient: value }
-  }),
-});
-
-const effortColorGradientIntensity = computed({
-  get: () => props.animationConfig.effortConfig?.colorGradientIntensity ?? 5,
-  set: (value: number) => updateAnimationConfig({
-    effortConfig: { ...defaultEffortConfig, ...props.animationConfig.effortConfig, colorGradientIntensity: value }
-  }),
-});
-
-const effortGlowAura = computed({
-  get: () => props.animationConfig.effortConfig?.glowAura ?? true,
-  set: (value: boolean) => updateAnimationConfig({
-    effortConfig: { ...defaultEffortConfig, ...props.animationConfig.effortConfig, glowAura: value }
-  }),
-});
-
-const effortGlowAuraIntensity = computed({
-  get: () => props.animationConfig.effortConfig?.glowAuraIntensity ?? 5,
-  set: (value: number) => updateAnimationConfig({
-    effortConfig: { ...defaultEffortConfig, ...props.animationConfig.effortConfig, glowAuraIntensity: value }
-  }),
-});
-
-const silhouetteCurveColor = computed({
-  get: () => props.animationConfig.curveColor,
-  set: (value: string) => updateAnimationConfig({ curveColor: value }),
-});
-
-const titleColor = computed({
-  get: () => props.animationConfig.titleColor || '#ffffff',
-  set: (value: string) => updateAnimationConfig({ titleColor: value }),
-});
-
-const showAreaFill = computed({
-  get: () => props.animationConfig.showAreaFill ?? true,
-  set: (value: boolean) => updateAnimationConfig({ showAreaFill: value }),
-});
-
-const showElevationLabels = computed({
-  get: () => props.animationConfig.showElevationLabels,
-  set: (value: boolean) => updateAnimationConfig({ showElevationLabels: value }),
-});
-
-const elevationLabelColor = computed({
-  get: () => props.animationConfig.elevationLabelColor,
-  set: (value: string) => updateAnimationConfig({ elevationLabelColor: value }),
-});
-
-const showDistanceLabels = computed({
-  get: () => props.animationConfig.showDistanceLabels,
-  set: (value: boolean) => updateAnimationConfig({ showDistanceLabels: value }),
-});
-
-const distanceLabelColor = computed({
-  get: () => props.animationConfig.distanceLabelColor,
-  set: (value: string) => updateAnimationConfig({ distanceLabelColor: value }),
-});
-
-const backgroundColor = computed({
-  get: () => props.animationConfig.backgroundColor || '#000000',
-  set: (value: string) => updateAnimationConfig({ backgroundColor: value }),
-});
-
-const backgroundType = computed({
-  get: () => props.animationConfig.backgroundType || 'solid',
-  set: (value: BackgroundType) => updateAnimationConfig({ backgroundType: value }),
-});
-
-// Legacy support - map to backgroundType
-const useGradientBackground = computed({
-  get: () => props.animationConfig.backgroundType === 'gradient',
-  set: (value: boolean) => updateAnimationConfig({ backgroundType: value ? 'gradient' : 'solid' }),
-});
-
-const gradientColor = computed({
-  get: () => props.animationConfig.gradientColor || '#302b63',
-  set: (value: string) => updateAnimationConfig({ gradientColor: value }),
-});
-
-const meshColor1 = computed({
-  get: () => props.animationConfig.meshColor1 || '#667eea',
-  set: (value: string) => updateAnimationConfig({ meshColor1: value }),
-});
-
-const meshColor2 = computed({
-  get: () => props.animationConfig.meshColor2 || '#764ba2',
-  set: (value: string) => updateAnimationConfig({ meshColor2: value }),
-});
-
-const meshColor3 = computed({
-  get: () => props.animationConfig.meshColor3 || '#f093fb',
-  set: (value: string) => updateAnimationConfig({ meshColor3: value }),
-});
-
-const patternColor = computed({
-  get: () => props.animationConfig.patternColor || '#ffffff',
-  set: (value: string) => updateAnimationConfig({ patternColor: value }),
-});
-
-const patternOpacity = computed({
-  get: () => props.animationConfig.patternOpacity ?? 0.1,
-  set: (value: number) => updateAnimationConfig({ patternOpacity: value }),
-});
-
-// Image background options (read from animationConfig)
-const imageOptions = computed(() => props.animationConfig.imageOptions);
-
-const imagePosition = computed({
-  get: () => props.animationConfig.imageOptions?.position || 'cover',
-  set: (value: 'cover' | 'contain' | 'center' | 'stretch') => {
-    if (props.animationConfig.imageOptions) {
-      updateAnimationConfig({
-        imageOptions: { ...props.animationConfig.imageOptions, position: value }
-      });
-    }
-  },
-});
-
-const imageBlur = computed({
-  get: () => props.animationConfig.imageOptions?.blur ?? 0,
-  set: (value: number) => {
-    if (props.animationConfig.imageOptions) {
-      updateAnimationConfig({
-        imageOptions: { ...props.animationConfig.imageOptions, blur: value }
-      });
-    }
-  },
-});
-
-const imageBrightness = computed({
-  get: () => props.animationConfig.imageOptions?.brightness ?? 1,
-  set: (value: number) => {
-    if (props.animationConfig.imageOptions) {
-      updateAnimationConfig({
-        imageOptions: { ...props.animationConfig.imageOptions, brightness: value }
-      });
-    }
-  },
-});
-
-const imageContrast = computed({
-  get: () => props.animationConfig.imageOptions?.contrast ?? 1,
-  set: (value: number) => {
-    if (props.animationConfig.imageOptions) {
-      updateAnimationConfig({
-        imageOptions: { ...props.animationConfig.imageOptions, contrast: value }
-      });
-    }
-  },
-});
-
-const imageOverlayColor = computed({
-  get: () => props.animationConfig.imageOptions?.overlayColor || '#000000',
-  set: (value: string) => {
-    if (props.animationConfig.imageOptions) {
-      updateAnimationConfig({
-        imageOptions: { ...props.animationConfig.imageOptions, overlayColor: value }
-      });
-    }
-  },
-});
-
-const imageOverlayOpacity = computed({
-  get: () => props.animationConfig.imageOptions?.overlayOpacity ?? 0.3,
-  set: (value: number) => {
-    if (props.animationConfig.imageOptions) {
-      updateAnimationConfig({
-        imageOptions: { ...props.animationConfig.imageOptions, overlayOpacity: value }
-      });
-    }
-  },
-});
+// All config computed getter/setters extracted to composable
+const {
+  animationDuration,
+  animationEasing,
+  animationShowMarker,
+  animationMarkerSize,
+  curveEndpoint,
+  animationMode,
+  gradientSensitivity,
+  effortVariableStroke,
+  effortVariableStrokeIntensity,
+  effortColorGradient,
+  effortColorGradientIntensity,
+  effortGlowAura,
+  effortGlowAuraIntensity,
+  silhouetteCurveColor,
+  titleColor,
+  showAreaFill,
+  showElevationLabels,
+  elevationLabelColor,
+  showDistanceLabels,
+  distanceLabelColor,
+  backgroundColor,
+  backgroundType,
+  gradientColor,
+  meshColor1,
+  meshColor2,
+  meshColor3,
+  patternColor,
+  patternOpacity,
+  imageOptions,
+  imagePosition,
+  imageBlur,
+  imageBrightness,
+  imageContrast,
+  imageOverlayColor,
+  imageOverlayOpacity,
+} = useElevationConfig(
+  () => props.animationConfig,
+  updateAnimationConfig,
+);
 
 // Handle image upload
 async function handleImageUpload(files: File[] | File | null) {
