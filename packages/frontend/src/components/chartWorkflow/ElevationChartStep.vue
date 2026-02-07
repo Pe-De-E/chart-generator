@@ -16,6 +16,7 @@
     </div>
 
     <!-- Right Sidebar for Controls -->
+     <!-- TODO sollte eine eigene Komponente werden-->
     <v-navigation-drawer
       permanent
       location="right"
@@ -782,67 +783,15 @@
     </v-navigation-drawer>
 
     <!-- Export Settings Dialog -->
-    <v-dialog v-model="showExportSettingsDialog" max-width="400">
-      <v-card>
-        <v-card-title class="d-flex align-center">
-          <v-icon class="mr-2">mdi-cog</v-icon>
-          Export-Einstellungen
-        </v-card-title>
-        <v-card-text>
-          <v-select
-            v-model="exportSettings.resolution"
-            :items="resolutionOptions"
-            item-title="title"
-            item-value="value"
-            label="Auflösung"
-            variant="outlined"
-            density="comfortable"
-            class="mb-3"
-          />
-          <v-select
-            v-model="exportSettings.fps"
-            :items="fpsOptions"
-            item-title="title"
-            item-value="value"
-            label="Bildrate"
-            variant="outlined"
-            density="comfortable"
-            class="mb-3"
-          />
-          <v-select
-            v-model="exportSettings.quality"
-            :items="qualityOptions"
-            item-title="title"
-            item-value="value"
-            label="Qualität"
-            variant="outlined"
-            density="comfortable"
-          />
-          <v-alert
-            type="info"
-            density="compact"
-            variant="tonal"
-            class="mt-4"
-          >
-            <div class="text-caption">
-              Geschätzte Frames: {{ Math.ceil((animationDuration + (chartTitle.trim() ? TITLE_CARD_DURATION_MS / 1000 : 0)) * exportSettings.fps) + 1 }}
-            </div>
-          </v-alert>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn variant="text" @click="showExportSettingsDialog = false">
-            Abbrechen
-          </v-btn>
-          <v-btn color="deep-purple" variant="flat" @click="startVideoExport">
-            <v-icon start>mdi-export</v-icon>
-            Exportieren
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+    <ExportSettingsDialog
+      v-model="showExportSettingsDialog"
+      :animation-duration="animationDuration"
+      :chart-title="chartTitle"
+      @start-export="startVideoExport"
+    />
 
     <!-- Video Export Progress Dialog -->
+     <!-- TODO sollte eine eigene Komponente sein -->
     <v-dialog v-model="showExportDialog" persistent max-width="450">
       <v-card>
         <v-card-title class="d-flex align-center">
@@ -943,6 +892,7 @@
     </v-dialog>
 
     <!-- Save Theme Dialog -->
+     <!-- TODO eigene Komponente -->
     <v-dialog v-model="showSaveThemeDialog" max-width="400">
       <v-card>
         <v-card-title>Theme speichern</v-card-title>
@@ -1088,6 +1038,8 @@ import { generateElevationFrame } from "../../utils/chartGenerators/elevationCha
 import { generateTitleCardSvg, getTitleCardOpacity, TITLE_CARD_DURATION_MS } from "../../utils/titleCardGenerator";
 import { useElevationThemes } from "../../composables/useElevationThemes";
 import type { ElevationTheme, ImageBackgroundOptions } from "@chart-generator/shared";
+import ExportSettingsDialog from "./ExportSettingsDialog.vue";
+import type { ExportSettings } from "./ExportSettingsDialog.vue";
 import { uploadService } from "../../services/upload.service";
 
 // View mode: 'animate' or 'static'
@@ -1103,30 +1055,6 @@ const sliderProgress = ref(0);
 const showExportDialog = ref(false);
 const showExportSettingsDialog = ref(false);
 
-// Export settings
-const exportSettings = ref({
-  resolution: '1080x1920' as '1080x1920' | '720x1280' | '540x960',
-  fps: 30 as 24 | 30 | 60,
-  quality: 'high' as 'low' | 'medium' | 'high'
-});
-
-const resolutionOptions = [
-  { title: '1080 x 1920 (Full HD)', value: '1080x1920' },
-  { title: '720 x 1280 (HD)', value: '720x1280' },
-  { title: '540 x 960 (SD)', value: '540x960' },
-];
-
-const fpsOptions = [
-  { title: '24 fps (Cinematic)', value: 24 },
-  { title: '30 fps (Standard)', value: 30 },
-  { title: '60 fps (Smooth)', value: 60 },
-];
-
-const qualityOptions = [
-  { title: 'Niedrig (kleine Datei)', value: 'low' },
-  { title: 'Mittel', value: 'medium' },
-  { title: 'Hoch (beste Qualität)', value: 'high' },
-];
 
 // Expanded panels state (all open by default)
 const expandedPanels = ref(['animation', 'colors', 'markers']);
@@ -1570,12 +1498,11 @@ function openExportSettings() {
 }
 
 // Start the actual export with selected settings
-async function startVideoExport() {
-  showExportSettingsDialog.value = false;
+async function startVideoExport(settings: ExportSettings) {
   showExportDialog.value = true;
 
   // Parse resolution
-  const [width, height] = exportSettings.value.resolution.split('x').map(Number);
+  const [width, height] = settings.resolution.split('x').map(Number);
 
   // Title card phase: only if there's a title
   const hasTitleCard = !!props.chartTitle.trim();
@@ -1587,8 +1514,8 @@ async function startVideoExport() {
   await videoExport.exportVideo({
     width,
     height,
-    fps: exportSettings.value.fps,
-    quality: exportSettings.value.quality,
+    fps: settings.fps,
+    quality: settings.quality,
     durationMs: totalDurationMs,
     filename: `${props.chartTitle || 'elevation'}-reel.mp4`,
     renderFrame: (progress: number) => {
