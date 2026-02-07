@@ -225,6 +225,7 @@ Prioritäten: Feedback > Eleganz, Zahlungsbereitschaft > Features, Geschwindigke
 
 ## 💡 Ideen-Backlog (nicht eingeplant)
 
+- Color Picker / Pipette für Kurvenfarbe – Farbe direkt aus dem Hintergrundbild picken, um die Kurve passend anzupassen
 - Höhenmeter über das Jahr aggregiert animieren (End of Year Content)
 - Trainingstimeline über Monat/Jahr
 - **Service-Integrationen** – Strava, Komoot, Garmin (nicht vor Produkt-Market-Fit)
