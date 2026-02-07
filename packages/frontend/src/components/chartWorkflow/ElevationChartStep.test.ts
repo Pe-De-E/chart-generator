@@ -5,6 +5,7 @@ import { createVuetify } from 'vuetify'
 import ElevationChartStep from './ElevationChartStep.vue'
 import { DEFAULT_ELEVATION_ANIMATION_CONFIG } from './ElevationChartStep.vue'
 import type { ElevationAnimationConfig } from './ElevationChartStep.vue'
+import ElevationControlsSidebar from './ElevationControlsSidebar.vue'
 
 // ─── Mocks ───────────────────────────────────────────────
 
@@ -399,69 +400,27 @@ describe('ElevationChartStep.vue', () => {
 
   // ── 6. Theme ──
 
-  describe('Theme System', () => {
-    it('emits update:animationConfig when a theme is applied', async () => {
-      mockGetThemeById.mockReturnValue({
-        id: 'dark',
-        name: 'Dark',
-        preview: '#000',
-        tokens: {
-          curve: { color: '#00ff00', strokeWidth: 6 },
-          marker: { size: 8, color: '#00ff00', show: true },
-          background: {
-            type: 'solid',
-            color: '#111111',
-            gradientColor: '#222222',
-            meshColors: ['#333', '#444', '#555'],
-          },
-          labels: {
-            elevationColor: '#aaa',
-            distanceColor: '#bbb',
-            showElevation: true,
-            showDistance: false,
-          },
-          pattern: { color: '#fff', opacity: 0.2 },
-          animation: { duration: 4, easing: 'linear' },
-        },
-      })
-
+  describe('Sidebar Integration', () => {
+    it('forwards update:animationConfig from sidebar', async () => {
       wrapper = createWrapper()
-      // Access applyTheme via component internals (Vue 3 dev mode exposes setupState)
-      const vm = wrapper.vm as any
-      // In script setup, internal functions are accessible on the proxy in dev mode
-      if (typeof vm.applyTheme === 'function') {
-        vm.applyTheme('dark')
-      } else {
-        // Fallback: call through setupState
-        vm.$.setupState.applyTheme('dark')
-      }
+      const sidebar = wrapper.findComponent(ElevationControlsSidebar)
+      expect(sidebar.exists()).toBe(true)
+
+      const newConfig = { ...DEFAULT_ELEVATION_ANIMATION_CONFIG, curveColor: '#00ff00' }
+      sidebar.vm.$emit('update:animationConfig', newConfig)
       await wrapper.vm.$nextTick()
 
       const emitted = wrapper.emitted('update:animationConfig')
       expect(emitted).toBeTruthy()
-      expect(emitted!.length).toBeGreaterThan(0)
-
-      const config = emitted![0][0] as ElevationAnimationConfig
-      expect(config.curveColor).toBe('#00ff00')
-      expect(config.backgroundColor).toBe('#111111')
-      expect(config.duration).toBe(4)
-      expect(config.easing).toBe('linear')
+      expect(emitted![0][0]).toEqual(newConfig)
     })
 
-    it('does nothing when theme ID is not found', async () => {
-      mockGetThemeById.mockReturnValue(undefined)
+    it('passes correct props to sidebar', () => {
+      wrapper = createWrapper({ chartTitle: 'My Tour' })
+      const sidebar = wrapper.findComponent(ElevationControlsSidebar)
 
-      wrapper = createWrapper()
-      const vm = wrapper.vm as any
-      if (typeof vm.applyTheme === 'function') {
-        vm.applyTheme('nonexistent')
-      } else {
-        vm.$.setupState.applyTheme('nonexistent')
-      }
-      await wrapper.vm.$nextTick()
-
-      const emitted = wrapper.emitted('update:animationConfig')
-      expect(emitted).toBeFalsy()
+      expect(sidebar.props('chartTitle')).toBe('My Tour')
+      expect(sidebar.props('animationConfig')).toEqual(DEFAULT_ELEVATION_ANIMATION_CONFIG)
     })
   })
 })
