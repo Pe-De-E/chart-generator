@@ -806,7 +806,7 @@
             class="mt-4"
           >
             <div class="text-caption">
-              Geschätzte Frames: {{ Math.ceil(animationDuration * exportSettings.fps) + 1 }}
+              Geschätzte Frames: {{ Math.ceil((animationDuration + (chartTitle.trim() ? TITLE_CARD_DURATION_MS / 1000 : 0)) * exportSettings.fps) + 1 }}
             </div>
           </v-alert>
         </v-card-text>
@@ -1063,6 +1063,7 @@ import { DEFAULT_ANIMATION_OPTIONS } from "@chart-generator/shared";
 import { useChartAnimation, type PlaybackSpeed } from "../../composables/useChartAnimation";
 import { useVideoExport } from "../../composables/useVideoExport";
 import { generateElevationFrame } from "../../utils/chartGenerators/elevationChart/elevationChart";
+import { generateTitleCardSvg, getTitleCardOpacity, TITLE_CARD_DURATION_MS } from "../../utils/titleCardGenerator";
 import { useElevationThemes } from "../../composables/useElevationThemes";
 import type { ElevationTheme, ImageBackgroundOptions } from "@chart-generator/shared";
 import { uploadService } from "../../services/upload.service";
@@ -1597,11 +1598,21 @@ function removeBackgroundImage() {
   });
 }
 
+// Title card: include in total duration when title exists
+const hasTitleCard = computed(() => !!props.chartTitle.trim());
+const chartDurationMs = computed(() => animationDuration.value * 1000);
+const totalDurationMs = computed(() =>
+  chartDurationMs.value + (hasTitleCard.value ? TITLE_CARD_DURATION_MS : 0)
+);
+const titleRatio = computed(() =>
+  hasTitleCard.value ? TITLE_CARD_DURATION_MS / totalDurationMs.value : 0
+);
+
 // Animation settings for the composable
 const animationSettings = computed<AnimationOptions>(() => ({
   ...DEFAULT_ANIMATION_OPTIONS,
   enabled: true,
-  durationMs: animationDuration.value * 1000,
+  durationMs: totalDurationMs.value,
   fps: 30,
   easing: animationEasing.value,
   showMarker: animationShowMarker.value,
@@ -1642,8 +1653,37 @@ const {
 // Generate animation SVG using the elevation chart generator
 const animationSvg = computed(() => {
   if (props.chartData.length === 0) return '';
+
+  const progress = animationProgress.value;
+
+  // Title card phase
+  if (hasTitleCard.value && progress <= titleRatio.value) {
+    const titleProgress = titleRatio.value > 0 ? progress / titleRatio.value : 1;
+    return generateTitleCardSvg({
+      title: props.chartTitle,
+      width: 1080,
+      height: 1920,
+      opacity: getTitleCardOpacity(titleProgress),
+      textColor: props.animationConfig.curveColor || '#ffffff',
+      backgroundColor: props.animationConfig.backgroundColor || '#000000',
+      backgroundType: props.animationConfig.backgroundType || 'solid',
+      gradientColor: props.animationConfig.gradientColor || '#302b63',
+      meshColor1: props.animationConfig.meshColor1 || '#667eea',
+      meshColor2: props.animationConfig.meshColor2 || '#764ba2',
+      meshColor3: props.animationConfig.meshColor3 || '#f093fb',
+      patternColor: props.animationConfig.patternColor || '#ffffff',
+      patternOpacity: props.animationConfig.patternOpacity ?? 0.1,
+      imageOptions: props.animationConfig.imageOptions,
+    });
+  }
+
+  // Chart animation phase
+  const chartProgress = titleRatio.value < 1
+    ? (progress - titleRatio.value) / (1 - titleRatio.value)
+    : progress;
+
   return generateElevationFrame(chartOptions.value, {
-    progress: animationProgress.value,
+    progress: chartProgress,
     showMarker: props.animationConfig.showMarker,
     markerSize: props.animationConfig.markerSize,
     markerColor: '#ffffff',
@@ -1703,16 +1743,49 @@ async function startVideoExport() {
   // Parse resolution
   const [width, height] = exportSettings.value.resolution.split('x').map(Number);
 
+  // Title card phase: only if there's a title
+  const hasTitleCard = !!props.chartTitle.trim();
+  const titleDurationMs = hasTitleCard ? TITLE_CARD_DURATION_MS : 0;
+  const chartDurationMs = animationDuration.value * 1000;
+  const totalDurationMs = titleDurationMs + chartDurationMs;
+  const titleRatio = titleDurationMs / totalDurationMs;
+
   await videoExport.exportVideo({
     width,
     height,
     fps: exportSettings.value.fps,
     quality: exportSettings.value.quality,
-    durationMs: animationDuration.value * 1000,
+    durationMs: totalDurationMs,
     filename: `${props.chartTitle || 'elevation'}-reel.mp4`,
     renderFrame: (progress: number) => {
+      // Title card phase
+      if (hasTitleCard && progress <= titleRatio) {
+        const titleProgress = titleRatio > 0 ? progress / titleRatio : 1;
+        return generateTitleCardSvg({
+          title: props.chartTitle,
+          width,
+          height,
+          opacity: getTitleCardOpacity(titleProgress),
+          textColor: props.animationConfig.curveColor || '#ffffff',
+          backgroundColor: props.animationConfig.backgroundColor || '#000000',
+          backgroundType: props.animationConfig.backgroundType || 'solid',
+          gradientColor: props.animationConfig.gradientColor || '#302b63',
+          meshColor1: props.animationConfig.meshColor1 || '#667eea',
+          meshColor2: props.animationConfig.meshColor2 || '#764ba2',
+          meshColor3: props.animationConfig.meshColor3 || '#f093fb',
+          patternColor: props.animationConfig.patternColor || '#ffffff',
+          patternOpacity: props.animationConfig.patternOpacity ?? 0.1,
+          imageOptions: props.animationConfig.imageOptions,
+        });
+      }
+
+      // Chart animation phase
+      const chartProgress = titleRatio < 1
+        ? (progress - titleRatio) / (1 - titleRatio)
+        : progress;
+
       return generateElevationFrame(chartOptions.value, {
-        progress,
+        progress: chartProgress,
         showMarker: props.animationConfig.showMarker,
         markerSize: props.animationConfig.markerSize,
         markerColor: '#ffffff',
