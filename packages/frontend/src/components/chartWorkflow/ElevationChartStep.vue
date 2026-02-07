@@ -892,45 +892,11 @@
     </v-dialog>
 
     <!-- Save Theme Dialog -->
-     <!-- TODO eigene Komponente -->
-    <v-dialog v-model="showSaveThemeDialog" max-width="400">
-      <v-card>
-        <v-card-title>Theme speichern</v-card-title>
-        <v-card-text>
-          <v-text-field
-            v-model="newThemeName"
-            label="Theme Name"
-            variant="outlined"
-            density="comfortable"
-            :rules="[v => !!v || 'Name ist erforderlich']"
-            autofocus
-            class="mb-2"
-          />
-          <v-text-field
-            v-model="newThemeDescription"
-            label="Beschreibung (optional)"
-            variant="outlined"
-            density="comfortable"
-          />
-          <div class="text-caption text-grey mt-2">
-            Aktuelle Farben, Animation und Marker-Einstellungen werden gespeichert.
-          </div>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn variant="text" @click="showSaveThemeDialog = false">Abbrechen</v-btn>
-          <v-btn
-            color="primary"
-            variant="flat"
-            @click="handleSaveTheme"
-            :disabled="!newThemeName.trim()"
-            :loading="themesLoading"
-          >
-            Speichern
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+    <SaveThemeDialog
+      v-model="showSaveThemeDialog"
+      :loading="themesLoading"
+      @save="handleSaveTheme"
+    />
   </div>
 </template>
 
@@ -1040,6 +1006,7 @@ import { useElevationThemes } from "../../composables/useElevationThemes";
 import type { ElevationTheme, ImageBackgroundOptions } from "@chart-generator/shared";
 import ExportSettingsDialog from "./ExportSettingsDialog.vue";
 import type { ExportSettings } from "./ExportSettingsDialog.vue";
+import SaveThemeDialog from "./SaveThemeDialog.vue";
 import { uploadService } from "../../services/upload.service";
 
 // View mode: 'animate' or 'static'
@@ -1093,8 +1060,6 @@ const {
 
 // Save theme dialog state
 const showSaveThemeDialog = ref(false);
-const newThemeName = ref('');
-const newThemeDescription = ref('');
 
 // Theme options for the selector (computed from API data)
 const themeOptions = computed(() =>
@@ -1215,9 +1180,7 @@ function applyTheme(themeId: string) {
 }
 
 // Save current settings as a new theme
-async function handleSaveTheme() {
-  if (!newThemeName.value.trim()) return;
-
+async function handleSaveTheme(name: string, description: string) {
   const config = props.animationConfig;
 
   // Build preview gradient/color string based on background type
@@ -1229,8 +1192,8 @@ async function handleSaveTheme() {
   }
 
   await createThemeFromCurrentSettings(
-    newThemeName.value.trim(),
-    newThemeDescription.value.trim() || `Eigenes Theme`,
+    name,
+    description || `Eigenes Theme`,
     preview,
     {
       curve: {
@@ -1268,9 +1231,6 @@ async function handleSaveTheme() {
     }
   );
 
-  showSaveThemeDialog.value = false;
-  newThemeName.value = '';
-  newThemeDescription.value = '';
 }
 
 // All config computed getter/setters extracted to composable
