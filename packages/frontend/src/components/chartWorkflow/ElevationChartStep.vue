@@ -699,10 +699,11 @@
             </v-expansion-panel-text>
           </v-expansion-panel>
         </v-expansion-panels>
+      </div>
 
-        <v-spacer />
-
-        <!-- Playback Controls at bottom -->
+      <!-- Fixed bottom: Playback + Actions (always visible) -->
+      <div v-if="!controlsCollapsed" class="sidebar-bottom">
+        <!-- Playback Controls -->
         <div class="playback-section">
           <v-divider class="mb-3" />
 
@@ -1941,6 +1942,12 @@ function getStageLabel(stage: string): string {
   border-left: 1px solid rgba(var(--v-border-color), 0.08) !important;
 }
 
+.controls-sidebar :deep(.v-navigation-drawer__content) {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .sidebar-header {
   display: flex;
   align-items: center;
@@ -1959,25 +1966,30 @@ function getStageLabel(stage: string): string {
   align-items: center;
   padding: 8px;
   gap: 4px;
-  height: calc(100% - 52px);
+  flex: 1;
+  overflow-y: auto;
 }
 
 .collapsed-controls .v-spacer {
   flex: 1;
 }
 
-/* Expanded controls */
+/* Expanded controls - scrollable settings area */
 .expanded-controls {
   padding: 12px;
-  height: calc(100% - 52px);
+  flex: 1;
   overflow-y: auto;
-  display: flex;
-  flex-direction: column;
+  min-height: 0;
 }
 
-/* Playback section at bottom */
+/* Fixed bottom section for playback + actions */
+.sidebar-bottom {
+  flex-shrink: 0;
+  padding: 0 12px 12px;
+}
+
+/* Playback section */
 .playback-section {
-  margin-top: auto;
   padding-top: 8px;
 }
 
