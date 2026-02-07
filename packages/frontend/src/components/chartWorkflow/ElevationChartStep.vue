@@ -351,6 +351,24 @@
                   />
                 </v-menu>
 
+                <!-- Title Color -->
+                <v-menu :close-on-content-click="false">
+                  <template v-slot:activator="{ props: menuProps }">
+                    <v-btn v-bind="menuProps" variant="outlined" block class="mt-2">
+                      <div
+                        class="color-swatch mr-2"
+                        :style="{ backgroundColor: titleColor }"
+                      ></div>
+                      Titel
+                    </v-btn>
+                  </template>
+                  <v-color-picker
+                    v-model="titleColor"
+                    mode="hexa"
+                    hide-inputs
+                  />
+                </v-menu>
+
                 <!-- Background Type Selector -->
                 <v-select
                   v-model="backgroundType"
@@ -977,6 +995,7 @@ export interface ElevationAnimationConfig {
   markerSize: number;
   curveEndpoint: number;
   curveColor: string;
+  titleColor: string;
   showAreaFill: boolean;
   backgroundColor: string;
   backgroundType: BackgroundType;
@@ -1029,6 +1048,7 @@ export const DEFAULT_ELEVATION_ANIMATION_CONFIG: ElevationAnimationConfig = {
   showDistanceLabels: false,
   distanceLabelColor: '#ffffffb3',
   curveColor: '#ffffff',
+  titleColor: '#ffffff',
   backgroundColor: '#000000',
   backgroundType: 'solid',
   gradientColor: '#302b63',
@@ -1413,6 +1433,11 @@ const silhouetteCurveColor = computed({
   set: (value: string) => updateAnimationConfig({ curveColor: value }),
 });
 
+const titleColor = computed({
+  get: () => props.animationConfig.titleColor || '#ffffff',
+  set: (value: string) => updateAnimationConfig({ titleColor: value }),
+});
+
 const showAreaFill = computed({
   get: () => props.animationConfig.showAreaFill ?? true,
   set: (value: boolean) => updateAnimationConfig({ showAreaFill: value }),
@@ -1664,7 +1689,7 @@ const animationSvg = computed(() => {
       width: 1080,
       height: 1920,
       opacity: getTitleCardOpacity(titleProgress),
-      textColor: props.animationConfig.curveColor || '#ffffff',
+      textColor: props.animationConfig.titleColor || '#ffffff',
       backgroundColor: props.animationConfig.backgroundColor || '#000000',
       backgroundType: props.animationConfig.backgroundType || 'solid',
       gradientColor: props.animationConfig.gradientColor || '#302b63',
@@ -1766,7 +1791,7 @@ async function startVideoExport() {
           width,
           height,
           opacity: getTitleCardOpacity(titleProgress),
-          textColor: props.animationConfig.curveColor || '#ffffff',
+          textColor: props.animationConfig.titleColor || '#ffffff',
           backgroundColor: props.animationConfig.backgroundColor || '#000000',
           backgroundType: props.animationConfig.backgroundType || 'solid',
           gradientColor: props.animationConfig.gradientColor || '#302b63',
