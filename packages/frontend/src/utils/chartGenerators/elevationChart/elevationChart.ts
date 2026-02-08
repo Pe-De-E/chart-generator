@@ -586,7 +586,9 @@ export function generateElevationFrame(
       frameOptions.animationMode,
       frameOptions.gradientSensitivity,
       frameOptions.effortConfig,
-      frameOptions.showAreaFill ?? true
+      frameOptions.showAreaFill ?? true,
+      frameOptions.panZoomEnabled ?? false,
+      frameOptions.panZoomConfig
     )
   }
 

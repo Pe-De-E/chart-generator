@@ -108,6 +108,10 @@ export interface ElevationAnimationConfig {
     glowAura: boolean;              // Glow around line and marker
     glowAuraIntensity: number;      // 1-8
   };
+  // Pan-Zoom (Kamerafahrt) mode
+  panZoomEnabled: boolean;
+  panZoomZoomLevel: number;         // 1.5-5, default 3
+  panZoomZoomOutStart: number;      // 0.5-0.95, default 0.75
   // Legacy support
   useGradientBackground?: boolean;
 }
@@ -143,6 +147,9 @@ export const DEFAULT_ELEVATION_ANIMATION_CONFIG: ElevationAnimationConfig = {
     glowAura: true,
     glowAuraIntensity: 5,
   },
+  panZoomEnabled: false,
+  panZoomZoomLevel: 3,
+  panZoomZoomOutStart: 0.75,
 };
 </script>
 
@@ -339,6 +346,11 @@ const animationSvg = computed(() => {
     animationMode: props.animationConfig.animationMode,
     gradientSensitivity: props.animationConfig.gradientSensitivity,
     effortConfig: props.animationConfig.effortConfig,
+    panZoomEnabled: props.animationConfig.panZoomEnabled,
+    panZoomConfig: props.animationConfig.panZoomEnabled ? {
+      zoomLevel: props.animationConfig.panZoomZoomLevel,
+      zoomOutStart: props.animationConfig.panZoomZoomOutStart,
+    } : undefined,
   });
 });
 
@@ -442,6 +454,11 @@ async function startVideoExport(settings: ExportSettings) {
         animationMode: props.animationConfig.animationMode,
         gradientSensitivity: props.animationConfig.gradientSensitivity,
         effortConfig: props.animationConfig.effortConfig,
+        panZoomEnabled: props.animationConfig.panZoomEnabled,
+        panZoomConfig: props.animationConfig.panZoomEnabled ? {
+          zoomLevel: props.animationConfig.panZoomZoomLevel,
+          zoomOutStart: props.animationConfig.panZoomZoomOutStart,
+        } : undefined,
       });
     }
   });

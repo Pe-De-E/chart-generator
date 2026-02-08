@@ -109,6 +109,31 @@
 
       <v-divider class="my-2" />
 
+      <!-- Mode Toggle: Standard / Kamerafahrt -->
+      <div class="control-section">
+        <v-btn-toggle
+          :model-value="panZoomEnabled ? 'kamerafahrt' : 'standard'"
+          @update:model-value="panZoomEnabled = $event === 'kamerafahrt'"
+          mandatory
+          density="compact"
+          variant="outlined"
+          divided
+          class="w-100"
+          color="primary"
+        >
+          <v-btn value="standard" size="small" class="flex-grow-1">
+            <v-icon start size="small">mdi-chart-line</v-icon>
+            Standard
+          </v-btn>
+          <v-btn value="kamerafahrt" size="small" class="flex-grow-1">
+            <v-icon start size="small">mdi-video-outline</v-icon>
+            Kamerafahrt
+          </v-btn>
+        </v-btn-toggle>
+      </div>
+
+      <v-divider class="my-2" />
+
       <!-- Curve Height Slider -->
       <div class="control-section">
         <div class="section-label">Kurvenhöhe</div>
@@ -259,6 +284,34 @@
                 hide-details
                 thumb-label
                 class="ml-6 mt-n2"
+              />
+            </div>
+            <!-- Kamerafahrt Settings (when pan-zoom enabled) -->
+            <div v-if="panZoomEnabled" class="mt-3">
+              <v-divider class="mb-3" />
+              <label class="text-caption text-medium-emphasis d-block mb-1">
+                Zoom: {{ panZoomZoomLevel.toFixed(1) }}x
+              </label>
+              <v-slider
+                v-model="panZoomZoomLevel"
+                :min="1.5"
+                :max="5"
+                :step="0.5"
+                density="compact"
+                hide-details
+                thumb-label
+              />
+              <label class="text-caption text-medium-emphasis d-block mb-1 mt-2">
+                Auszoom bei: {{ Math.round(panZoomZoomOutStart * 100) }}%
+              </label>
+              <v-slider
+                v-model="panZoomZoomOutStart"
+                :min="0.5"
+                :max="0.95"
+                :step="0.05"
+                density="compact"
+                hide-details
+                thumb-label
               />
             </div>
           </v-expansion-panel-text>
@@ -873,6 +926,9 @@ const {
   effortColorGradientIntensity,
   effortGlowAura,
   effortGlowAuraIntensity,
+  panZoomEnabled,
+  panZoomZoomLevel,
+  panZoomZoomOutStart,
   silhouetteCurveColor,
   titleColor,
   showAreaFill,

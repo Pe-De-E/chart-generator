@@ -42,4 +42,16 @@ export interface FrameOptions {
     glowAura: boolean               // Glow around line and marker
     glowAuraIntensity: number       // 1-8
   }
+  panZoomEnabled?: boolean             // Enable pan-zoom camera mode
+  panZoomConfig?: PanZoomConfig        // Pan-zoom configuration
+}
+
+/**
+ * Pan-Zoom camera mode configuration
+ */
+export interface PanZoomConfig {
+  /** Zoom level at start (1 = no zoom, 3 = 3x zoom showing ~33% of width). Range: 1.5-5 */
+  zoomLevel: number
+  /** Progress value (0-1) where zoom-out phase begins. Range: 0.5-0.95 */
+  zoomOutStart: number
 }

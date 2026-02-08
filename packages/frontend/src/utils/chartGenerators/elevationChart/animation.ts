@@ -10,9 +10,10 @@ import {
   type ViewBoxPoint
 } from '../../coordinateContract'
 import { remapProgressByTime, remapProgressDirect, buildGradientTimeArray } from '../../timeMapping'
-import type { BackgroundType } from './types'
+import type { BackgroundType, PanZoomConfig } from './types'
 import { generateBackgroundElements } from './background'
 import { generateEffortCurve } from './effort'
+import { calculateCameraViewport } from './panZoom'
 
 /**
  * Placeholder - returns points unchanged for now
@@ -96,7 +97,9 @@ export function generateAnimatedSilhouette(
     glowAura: boolean
     glowAuraIntensity: number
   },
-  showAreaFill: boolean = true
+  showAreaFill: boolean = true,
+  panZoomEnabled: boolean = false,
+  panZoomConfig?: PanZoomConfig
 ): string {
   if (data.length === 0) return '<svg></svg>'
 
@@ -305,6 +308,57 @@ export function generateAnimatedSilhouette(
     ? `filter="url(#${effortElements.glowFilter})"`
     : ''
 
+  // Chart content: labels + clipped curve + marker
+  const chartContentHtml = `
+    ${elevationLabelsHtml}
+    ${distanceLabelsHtml}
+    <g clip-path="url(#${clipId})">
+      ${curveContent}
+    </g>
+  `
+
+  // Pan-Zoom: wrap chart content in nested SVG with animated viewBox
+  if (panZoomEnabled && panZoomConfig) {
+    const camera = calculateCameraViewport(
+      effectiveProgress,
+      panZoomConfig,
+      offsetChartArea,
+      markerPoint,
+      width,
+      height
+    )
+
+    // Adjust marker and stroke sizes for zoom (so they appear constant on screen)
+    const zoomedMarkerSize = scaledMarkerSize / camera.scale
+    const zoomedMarkerStroke = markerStrokeWidth / camera.scale
+
+    return `
+      <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+        <defs>${bgElements.defs}
+          ${effortElements.defs}
+          <linearGradient id="${gradientId}" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" style="stop-color:${color};stop-opacity:0.5"/>
+            <stop offset="100%" style="stop-color:${color};stop-opacity:0.1"/>
+          </linearGradient>
+          <clipPath id="${clipId}">
+            <rect x="${clipX}" y="0" width="${fullClipWidth}" height="${height}"/>
+          </clipPath>
+        </defs>
+        ${bgElements.elements}
+        <svg x="0" y="0" width="${width}" height="${height}"
+             viewBox="${camera.x} ${camera.y} ${camera.w} ${camera.h}"
+             preserveAspectRatio="xMidYMid meet">
+          ${chartContentHtml}
+          ${showMarker && markerPoint ? `
+            <circle ${markerGlow} cx="${markerPoint.x}" cy="${markerPoint.y}" r="${zoomedMarkerSize}"
+                    fill="${markerColor}" stroke="${color}" stroke-width="${zoomedMarkerStroke}"/>
+          ` : ''}
+        </svg>
+      </svg>
+    `
+  }
+
+  // Standard mode: no nested SVG
   return `
     <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
       <defs>${bgElements.defs}
@@ -318,11 +372,7 @@ export function generateAnimatedSilhouette(
         </clipPath>
       </defs>
       ${bgElements.elements}
-      ${elevationLabelsHtml}
-      ${distanceLabelsHtml}
-      <g clip-path="url(#${clipId})">
-        ${curveContent}
-      </g>
+      ${chartContentHtml}
       ${showMarker && markerPoint ? `
         <circle ${markerGlow} cx="${markerPoint.x}" cy="${markerPoint.y}" r="${scaledMarkerSize}"
                 fill="${markerColor}" stroke="${color}" stroke-width="${markerStrokeWidth}"/>

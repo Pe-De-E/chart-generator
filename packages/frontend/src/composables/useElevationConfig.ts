@@ -98,6 +98,23 @@ export function useElevationConfig(
     }),
   })
 
+  // --- Pan-Zoom (Kamerafahrt) ---
+
+  const panZoomEnabled = computed({
+    get: () => getConfig().panZoomEnabled ?? false,
+    set: (value: boolean) => updateConfig({ panZoomEnabled: value }),
+  })
+
+  const panZoomZoomLevel = computed({
+    get: () => getConfig().panZoomZoomLevel ?? 3,
+    set: (value: number) => updateConfig({ panZoomZoomLevel: value }),
+  })
+
+  const panZoomZoomOutStart = computed({
+    get: () => getConfig().panZoomZoomOutStart ?? 0.75,
+    set: (value: number) => updateConfig({ panZoomZoomOutStart: value }),
+  })
+
   // --- Colors ---
 
   const silhouetteCurveColor = computed({
@@ -258,6 +275,10 @@ export function useElevationConfig(
     effortColorGradientIntensity,
     effortGlowAura,
     effortGlowAuraIntensity,
+    // Pan-Zoom
+    panZoomEnabled,
+    panZoomZoomLevel,
+    panZoomZoomOutStart,
     // Colors
     silhouetteCurveColor,
     titleColor,
