@@ -1,13 +1,87 @@
 import { api } from './api'
 import type { UserImage } from '@chart-generator/shared'
 
+/**
+ * Compress an image client-side using the Canvas API.
+ * Scales down to maxWidth (preserving aspect ratio) and re-encodes as JPEG.
+ */
+function compressImage(
+  file: File,
+  maxWidth = 1920,
+  quality = 0.85
+): Promise<File> {
+  return new Promise((resolve, reject) => {
+    // Skip if already small enough (< 1 MB)
+    if (file.size < 1024 * 1024) {
+      resolve(file)
+      return
+    }
+
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+
+      // No resize needed if already within limits
+      if (img.width <= maxWidth) {
+        // Still re-encode as JPEG for compression
+        const canvas = document.createElement('canvas')
+        canvas.width = img.width
+        canvas.height = img.height
+        const ctx = canvas.getContext('2d')!
+        ctx.drawImage(img, 0, 0)
+
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) { reject(new Error('Canvas compression failed')); return }
+            resolve(new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' }))
+          },
+          'image/jpeg',
+          quality
+        )
+        return
+      }
+
+      // Scale down preserving aspect ratio
+      const ratio = maxWidth / img.width
+      const newWidth = maxWidth
+      const newHeight = Math.round(img.height * ratio)
+
+      const canvas = document.createElement('canvas')
+      canvas.width = newWidth
+      canvas.height = newHeight
+      const ctx = canvas.getContext('2d')!
+      ctx.drawImage(img, 0, 0, newWidth, newHeight)
+
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) { reject(new Error('Canvas compression failed')); return }
+          resolve(new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' }))
+        },
+        'image/jpeg',
+        quality
+      )
+    }
+
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      reject(new Error('Failed to load image for compression'))
+    }
+
+    img.src = url
+  })
+}
+
 class UploadService {
   /**
-   * Upload an image file
+   * Upload an image file (auto-compresses large images before upload)
    */
   async uploadImage(file: File): Promise<UserImage> {
+    const compressed = await compressImage(file)
+
     const formData = new FormData()
-    formData.append('image', file)
+    formData.append('image', compressed)
 
     // axios will handle Content-Type automatically for FormData (see api.ts interceptor)
     const response = await api.post<{ success: true; data: UserImage }>(
