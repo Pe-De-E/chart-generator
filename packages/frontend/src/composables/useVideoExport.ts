@@ -31,11 +31,11 @@ const DEFAULT_EXPORT_OPTIONS: ExportOptions = {
   quality: 'high'
 }
 
-// Quality presets for FFmpeg (CRF values - lower = better quality, larger file)
-const QUALITY_CRF: Record<ExportOptions['quality'], number> = {
-  low: 28,
-  medium: 23,
-  high: 18
+// Quality presets for FFmpeg (CRF + encoding speed preset)
+const QUALITY_PRESETS: Record<ExportOptions['quality'], { crf: number; preset: string }> = {
+  low: { crf: 28, preset: 'ultrafast' },
+  medium: { crf: 23, preset: 'veryfast' },
+  high: { crf: 18, preset: 'fast' }
 }
 
 export function useVideoExport() {
@@ -208,23 +208,31 @@ export function useVideoExport() {
     return result
   }
 
+  // Reusable canvas for frame rendering (avoids creating/destroying per frame)
+  let renderCanvas: HTMLCanvasElement | null = null
+  let renderCtx: CanvasRenderingContext2D | null = null
+
+  function getOrCreateCanvas(width: number, height: number): CanvasRenderingContext2D {
+    if (!renderCanvas || renderCanvas.width !== width || renderCanvas.height !== height) {
+      renderCanvas = document.createElement('canvas')
+      renderCanvas.width = width
+      renderCanvas.height = height
+      renderCtx = renderCanvas.getContext('2d')
+    }
+    return renderCtx!
+  }
+
   /**
-   * Convert SVG string to PNG data URL using Canvas
+   * Convert SVG string to JPEG image data using a reusable Canvas.
+   * JPEG is ~3-5x faster than PNG for intermediate frames.
    */
-  async function svgToPng(svgString: string, width: number, height: number): Promise<Uint8Array> {
-    // First, embed any external images as data URLs
+  async function svgToImage(svgString: string, width: number, height: number): Promise<Uint8Array> {
+    // Embed any external images as data URLs (cached after first call)
     const embeddedSvg = await embedImagesInSvg(svgString)
 
     return new Promise((resolve, reject) => {
-      const canvas = document.createElement('canvas')
-      canvas.width = width
-      canvas.height = height
-      const ctx = canvas.getContext('2d')
-
-      if (!ctx) {
-        reject(new Error('Failed to get canvas context'))
-        return
-      }
+      const ctx = getOrCreateCanvas(width, height)
+      ctx.clearRect(0, 0, width, height)
 
       const img = new Image()
       const svgBlob = new Blob([embeddedSvg], { type: 'image/svg+xml;charset=utf-8' })
@@ -234,7 +242,7 @@ export function useVideoExport() {
         ctx.drawImage(img, 0, 0, width, height)
         URL.revokeObjectURL(url)
 
-        canvas.toBlob(
+        renderCanvas!.toBlob(
           (blob) => {
             if (!blob) {
               reject(new Error('Failed to convert canvas to blob'))
@@ -244,7 +252,8 @@ export function useVideoExport() {
               resolve(new Uint8Array(buffer))
             })
           },
-          'image/png'
+          'image/jpeg',
+          0.92
         )
       }
 
@@ -319,9 +328,9 @@ export function useVideoExport() {
       }
 
       for (let i = 0; i < svgFrames.length; i++) {
-        const pngData = await svgToPng(svgFrames[i], opts.width, opts.height)
-        const fileName = `frame${i.toString().padStart(5, '0')}.png`
-        await ff.writeFile(fileName, pngData)
+        const imgData = await svgToImage(svgFrames[i], opts.width, opts.height)
+        const fileName = `frame${i.toString().padStart(5, '0')}.jpg`
+        await ff.writeFile(fileName, imgData)
 
         progress.value = {
           ...progress.value,
@@ -340,13 +349,13 @@ export function useVideoExport() {
         message: 'Encoding video...'
       }
 
-      const crf = QUALITY_CRF[opts.quality]
+      const { crf, preset } = QUALITY_PRESETS[opts.quality]
 
       await ff.exec([
         '-framerate', opts.fps.toString(),
-        '-i', 'frame%05d.png',
+        '-i', 'frame%05d.jpg',
         '-c:v', 'libx264',
-        '-preset', 'medium',
+        '-preset', preset,
         '-crf', crf.toString(),
         '-pix_fmt', 'yuv420p',
         '-movflags', '+faststart',
@@ -359,7 +368,7 @@ export function useVideoExport() {
 
       // Cleanup: remove all frame files
       for (let i = 0; i < svgFrames.length; i++) {
-        const fileName = `frame${i.toString().padStart(5, '0')}.png`
+        const fileName = `frame${i.toString().padStart(5, '0')}.jpg`
         await ff.deleteFile(fileName)
       }
       await ff.deleteFile('output.mp4')
@@ -386,7 +395,9 @@ export function useVideoExport() {
       return null
     } finally {
       isExporting.value = false
-      imageDataUrlCache.clear() // Clear image cache after export
+      imageDataUrlCache.clear()
+      renderCanvas = null
+      renderCtx = null
     }
   }
 
@@ -492,9 +503,9 @@ export function useVideoExport() {
         const frameProgress = i / (totalFrames - 1)
         const svgString = renderFrame(frameProgress)
 
-        const pngData = await svgToPng(svgString, width, height)
-        const fileName = `frame${i.toString().padStart(5, '0')}.png`
-        await ff.writeFile(fileName, pngData)
+        const imgData = await svgToImage(svgString, width, height)
+        const fileName = `frame${i.toString().padStart(5, '0')}.jpg`
+        await ff.writeFile(fileName, imgData)
 
         progress.value = {
           ...progress.value,
@@ -515,13 +526,13 @@ export function useVideoExport() {
         message: 'Encoding video...'
       }
 
-      const crf = QUALITY_CRF[quality]
+      const { crf, preset } = QUALITY_PRESETS[quality]
 
       await ff.exec([
         '-framerate', fps.toString(),
-        '-i', 'frame%05d.png',
+        '-i', 'frame%05d.jpg',
         '-c:v', 'libx264',
-        '-preset', 'medium',
+        '-preset', preset,
         '-crf', crf.toString(),
         '-pix_fmt', 'yuv420p',
         '-movflags', '+faststart',
@@ -539,7 +550,7 @@ export function useVideoExport() {
 
       // Cleanup: remove all frame files
       for (let i = 0; i < totalFrames; i++) {
-        const fileName = `frame${i.toString().padStart(5, '0')}.png`
+        const fileName = `frame${i.toString().padStart(5, '0')}.jpg`
         try {
           await ff.deleteFile(fileName)
         } catch {
@@ -573,7 +584,9 @@ export function useVideoExport() {
       }
     } finally {
       isExporting.value = false
-      imageDataUrlCache.clear() // Clear image cache after export
+      imageDataUrlCache.clear()
+      renderCanvas = null
+      renderCtx = null
     }
   }
 
