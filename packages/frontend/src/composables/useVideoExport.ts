@@ -137,28 +137,35 @@ export function useVideoExport() {
    * Convert an image URL to a Base64 data URL (with caching)
    */
   async function imageUrlToDataUrl(url: string): Promise<string> {
-    // Check cache first
     const cached = imageDataUrlCache.get(url)
-    if (cached) {
-      return cached
-    }
+    if (cached) return cached
 
     return new Promise((resolve, reject) => {
       const img = new Image()
       img.crossOrigin = 'anonymous'
 
       img.onload = () => {
+        // Scale down to max 1920px for export (no need for full resolution)
+        const maxDim = 1920
+        let w = img.naturalWidth
+        let h = img.naturalHeight
+        if (w > maxDim || h > maxDim) {
+          const ratio = Math.min(maxDim / w, maxDim / h)
+          w = Math.round(w * ratio)
+          h = Math.round(h * ratio)
+        }
+
         const canvas = document.createElement('canvas')
-        canvas.width = img.naturalWidth
-        canvas.height = img.naturalHeight
+        canvas.width = w
+        canvas.height = h
         const ctx = canvas.getContext('2d')
         if (!ctx) {
           reject(new Error('Failed to get canvas context'))
           return
         }
-        ctx.drawImage(img, 0, 0)
-        const dataUrl = canvas.toDataURL('image/png')
-        // Cache the result
+        ctx.drawImage(img, 0, 0, w, h)
+        // JPEG is ~10-20x smaller than PNG as base64 — critical for SVG embedding
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85)
         imageDataUrlCache.set(url, dataUrl)
         resolve(dataUrl)
       }
@@ -488,12 +495,23 @@ export function useVideoExport() {
       // Calculate total frames
       const totalFrames = Math.ceil((durationMs / 1000) * fps) + 1
 
-      // Step 2: Generate and convert frames
+      // Pre-warm: embed external images (e.g. background) into cache
+      // so the first frame doesn't pay the full fetch + encode cost
       progress.value = {
         stage: 'converting-to-png',
         percent: 0,
         currentFrame: 0,
         totalFrames,
+        message: 'Preparing images...'
+      }
+      const firstSvg = renderFrame(0)
+      await embedImagesInSvg(firstSvg)
+
+      if (cancelRequested) return
+
+      // Step 2: Generate and convert frames
+      progress.value = {
+        ...progress.value,
         message: 'Rendering frames...'
       }
 
