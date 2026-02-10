@@ -344,10 +344,10 @@ export function generateAnimatedSilhouette(
             <rect x="${clipX}" y="0" width="${fullClipWidth}" height="${height}"/>
           </clipPath>
         </defs>
-        ${bgElements.elements}
         <svg x="0" y="0" width="${width}" height="${height}"
              viewBox="${camera.x} ${camera.y} ${camera.w} ${camera.h}"
              preserveAspectRatio="xMidYMid meet">
+          ${bgElements.elements}
           ${chartContentHtml}
           ${showMarker && markerPoint ? `
             <circle ${markerGlow} cx="${markerPoint.x}" cy="${markerPoint.y}" r="${zoomedMarkerSize}"
