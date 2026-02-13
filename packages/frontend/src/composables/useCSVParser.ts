@@ -1,4 +1,5 @@
 import { ref, computed } from 'vue'
+import type { RoutePoint } from '@chart-generator/shared'
 import {
   type DownsampleOptions,
   type GPXPoint,
@@ -39,6 +40,7 @@ export interface GPXParseResult {
   items: TableItem[]
   downsampling: DownsampleResult
   validation: GPXValidationResult
+  routePoints: RoutePoint[]
 }
 
 export interface TableHeader {
@@ -203,6 +205,7 @@ export function useCSVParser() {
         items: [],
         downsampling: { points: [], originalCount: 0, downsampledCount: 0, wasDownsampled: false },
         validation: { ...emptyValidation, isValid: false },
+        routePoints: [],
       }
     }
 
@@ -217,6 +220,7 @@ export function useCSVParser() {
         items: [],
         downsampling: { points: [], originalCount: 0, downsampledCount: 0, wasDownsampled: false },
         validation: emptyValidation,
+        routePoints: [],
       }
     }
 
@@ -258,6 +262,8 @@ export function useCSVParser() {
         distance: distanceKm,
         elevation: Math.round(elevation),
         time,
+        lat,
+        lon,
       })
 
       prevLat = lat
@@ -283,6 +289,17 @@ export function useCSVParser() {
       return item
     })
 
+    // Convert downsampled GPXPoints to RoutePoints (with lat/lon)
+    const routePoints: RoutePoint[] = downsamplingResult.points
+      .filter(p => p.lat != null && p.lon != null)
+      .map(p => ({
+        lat: p.lat!,
+        lon: p.lon!,
+        elevation: p.elevation,
+        distance: p.distance,
+        time: p.time,
+      }))
+
     // Update reactive state
     tableHeaders.value = headers
     tableItems.value = items
@@ -292,6 +309,7 @@ export function useCSVParser() {
       items,
       downsampling: downsamplingResult,
       validation: validationResult,
+      routePoints,
     }
   }
 

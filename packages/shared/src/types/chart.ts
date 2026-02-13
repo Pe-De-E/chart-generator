@@ -18,6 +18,15 @@ export interface SeriesConfig {
   color: string       // Assigned color
 }
 
+// GPX route point with full coordinate data
+export interface RoutePoint {
+  lat: number        // Latitude (degrees)
+  lon: number        // Longitude (degrees)
+  elevation: number  // Elevation (meters)
+  distance: number   // Cumulative distance from start (km)
+  time?: number      // Milliseconds since start of tour
+}
+
 export interface ChartColors {
   // Legacy colors (for backward compatibility with single-series)
   primary?: string

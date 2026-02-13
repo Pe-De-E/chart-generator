@@ -20,6 +20,8 @@ export interface GPXPoint {
   distance: number  // km
   elevation: number // m
   time?: number     // ms since start of tour (0 = first point)
+  lat?: number      // Latitude (degrees) — preserved for route map visualization
+  lon?: number      // Longitude (degrees) — preserved for route map visualization
 }
 
 export interface DownsampleResult {
