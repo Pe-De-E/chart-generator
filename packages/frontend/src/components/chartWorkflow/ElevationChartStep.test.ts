@@ -72,15 +72,18 @@ vi.mock('../../utils/chartGenerators/elevationChart/elevationChart', () => ({
   generateElevationFrame: (...args: unknown[]) => mockGenerateElevationFrame(...args),
 }))
 
-const mockGenerateTitleCardSvg = vi.fn(() => '<svg>title</svg>')
 vi.mock('../../utils/titleCardGenerator', () => ({
-  generateTitleCardSvg: (...args: unknown[]) => mockGenerateTitleCardSvg(...args),
   getTitleCardOpacity: vi.fn((p: number) => {
     if (p <= 0.2) return p / 0.2
     if (p <= 0.8) return 1
     return (1 - p) / 0.2
   }),
   TITLE_CARD_DURATION_MS: 2500,
+  TRANSITION_DURATION_MS: 1500,
+}))
+
+vi.mock('../../utils/chartGenerators/elevationChart/hookDetection', () => ({
+  findHookPoint: vi.fn(() => 0.4),
 }))
 
 vi.mock('../../services/upload.service', () => ({
@@ -283,50 +286,64 @@ describe('ElevationChartStep.vue', () => {
   // ── 3. Title Card Logic ──
 
   describe('Title Card Logic', () => {
-    it('calls generateTitleCardSvg when title exists and progress is in title phase', async () => {
+    it('calls generateElevationFrame with titleOverlay during title phase', async () => {
       mockProgress.value = 0 // Start of animation = title phase
       wrapper = createWrapper({ chartTitle: 'My Tour' })
       await wrapper.vm.$nextTick()
 
       // With title 'My Tour' and duration=5:
-      // totalDuration = 5000 + 2500 = 7500
-      // titleRatio = 2500/7500 = 0.333
-      // progress=0 <= 0.333 → title card phase
-      expect(mockGenerateTitleCardSvg).toHaveBeenCalled()
+      // totalDuration = 5000 + 2500 + 1500 = 9000
+      // titleEnd = 2500/9000 ≈ 0.278
+      // progress=0 <= 0.278 → title card phase
+      expect(mockGenerateElevationFrame).toHaveBeenCalled()
+      const calls = mockGenerateElevationFrame.mock.calls
+      const titleCall = calls.find((c: any) => c[1].titleOverlay)
+      expect(titleCall).toBeDefined()
+      expect(titleCall![1].titleOverlay.text).toBe('My Tour')
+      expect(titleCall![1].progress).toBe(1) // Full terrain visible
+      expect(titleCall![1].panZoomEnabled).toBe(true)
+      expect(titleCall![1].cameraOverrideProgress).toBe(0.4) // From mock findHookPoint
     })
 
-    it('does NOT call generateTitleCardSvg when title is empty', async () => {
+    it('does NOT use titleOverlay when title is empty', async () => {
       mockProgress.value = 0
       wrapper = createWrapper({ chartTitle: '' })
       await wrapper.vm.$nextTick()
 
       // Empty title → no title card → goes straight to chart
-      expect(mockGenerateTitleCardSvg).not.toHaveBeenCalled()
+      const calls = mockGenerateElevationFrame.mock.calls
+      const titleCall = calls.find((c: any) => c[1].titleOverlay)
+      expect(titleCall).toBeUndefined()
     })
 
-    it('does NOT call generateTitleCardSvg when progress is past title phase', async () => {
-      // titleRatio for 'Test Tour' with duration=5 is 2500/7500 ≈ 0.333
-      mockProgress.value = 0.5 // Past title phase
+    it('does NOT use titleOverlay when progress is past title phase', async () => {
+      // titleEnd for 'Test Tour' with duration=5 is 2500/9000 ≈ 0.278
+      // transitionEnd = 4000/9000 ≈ 0.444
+      mockProgress.value = 0.5 // Past title + transition
       wrapper = createWrapper({ chartTitle: 'Test Tour' })
       await wrapper.vm.$nextTick()
 
-      expect(mockGenerateTitleCardSvg).not.toHaveBeenCalled()
       expect(mockGenerateElevationFrame).toHaveBeenCalled()
+      const calls = mockGenerateElevationFrame.mock.calls
+      const titleCall = calls.find((c: any) => c[1].titleOverlay)
+      expect(titleCall).toBeUndefined()
     })
 
     it('calls generateElevationFrame with remapped progress in chart phase', async () => {
-      // titleRatio = 2500/7500 = 1/3, progress = 2/3
-      // chartProgress = (2/3 - 1/3) / (1 - 1/3) = (1/3) / (2/3) = 0.5
-      mockProgress.value = 2 / 3
+      // transitionEnd = 4000/9000 ≈ 0.444
+      // At progress=0.75: chartProgress = (0.75 - 0.444) / (1 - 0.444) ≈ 0.55
+      mockProgress.value = 0.75
       wrapper = createWrapper({ chartTitle: 'Test Tour' })
       await wrapper.vm.$nextTick()
 
       expect(mockGenerateElevationFrame).toHaveBeenCalled()
-      // Find the call that has our expected progress (component may compute multiple times)
+      // Find the call that has progress (not titleOverlay, not cameraOverrideProgress)
       const calls = mockGenerateElevationFrame.mock.calls
-      const lastCall = calls[calls.length - 1]
+      const chartCalls = calls.filter((c: any) => !c[1].titleOverlay && c[1].cameraOverrideProgress === undefined)
+      expect(chartCalls.length).toBeGreaterThan(0)
+      const lastCall = chartCalls[chartCalls.length - 1]
       const frameOptions = lastCall[1]
-      expect(frameOptions.progress).toBeCloseTo(0.5, 1)
+      expect(frameOptions.progress).toBeCloseTo(0.55, 1)
     })
   })
 
@@ -342,7 +359,7 @@ describe('ElevationChartStep.vue', () => {
       mockProgress.value = 0.5
       // With empty chartData, animationSvg returns '' without calling generators
       // Check the silhouette-chart div is effectively empty (no SVG content from generators)
-      expect(mockGenerateTitleCardSvg).not.toHaveBeenCalled()
+      expect(mockGenerateElevationFrame).not.toHaveBeenCalled()
     })
 
     it('calls generateElevationFrame with direct progress when no title card', () => {
@@ -370,14 +387,14 @@ describe('ElevationChartStep.vue', () => {
   // ── 5. Export / Duration ──
 
   describe('Export Duration', () => {
-    it('animation settings include title card duration when title exists', () => {
+    it('animation settings include title + transition duration when title exists', () => {
       wrapper = createWrapper({ chartTitle: 'My Tour' })
       // useChartAnimation is called with (chartOptions, animationSettings)
-      // animationSettings.durationMs = totalDurationMs = 5000 + 2500 = 7500
+      // animationSettings.durationMs = totalDurationMs = 5000 + 2500 + 1500 = 9000
       const callArgs = mockUseChartAnimation.mock.calls
       expect(callArgs.length).toBeGreaterThan(0)
       const animSettings = callArgs[callArgs.length - 1][1]
-      expect(animSettings.value.durationMs).toBe(7500)
+      expect(animSettings.value.durationMs).toBe(9000)
     })
 
     it('animation settings use chart duration only when title is empty', () => {
@@ -393,8 +410,8 @@ describe('ElevationChartStep.vue', () => {
       wrapper = createWrapper({ chartTitle: 'Tour', animationConfig: config })
       const callArgs = mockUseChartAnimation.mock.calls
       const animSettings = callArgs[callArgs.length - 1][1]
-      // 10s chart + 2.5s title = 12500ms
-      expect(animSettings.value.durationMs).toBe(12500)
+      // 10s chart + 2.5s title + 1.5s transition = 14000ms
+      expect(animSettings.value.durationMs).toBe(14000)
     })
   })
 

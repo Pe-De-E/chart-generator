@@ -99,7 +99,10 @@ export function generateAnimatedSilhouette(
   },
   showAreaFill: boolean = true,
   panZoomEnabled: boolean = false,
-  panZoomConfig?: PanZoomConfig
+  panZoomConfig?: PanZoomConfig,
+  titleOverlay?: { text: string; opacity: number; color: string },
+  cameraOverrideProgress?: number,
+  curveOpacity: number = 1
 ): string {
   if (data.length === 0) return '<svg></svg>'
 
@@ -162,8 +165,11 @@ export function generateAnimatedSilhouette(
   // Calculate clip width based on effective progress
   const clipWidth = chartArea.width * effectiveProgress
 
-  // Marker is always at the tip of the visible curve
-  const markerPoint = getMarkerPosition(offsetPoints, effectiveProgress)
+  // Camera override: use separate progress for marker position and camera
+  const cameraProgress = cameraOverrideProgress ?? effectiveProgress
+
+  // Marker is always at the tip of the visible curve (or camera override position)
+  const markerPoint = getMarkerPosition(offsetPoints, cameraProgress)
 
   // Calculate clip - start from x=0 to include the full chart area
   const clipX = 0
@@ -317,10 +323,29 @@ export function generateAnimatedSilhouette(
     </g>
   `
 
+  // Title overlay SVG element (rendered in outer SVG, on top of everything)
+  const titleOverlayHtml = titleOverlay ? (() => {
+    const fontSize = Math.min(Math.round(width * 0.06), 72)
+    const escaped = titleOverlay.text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+    return `
+      <text
+        x="${width / 2}" y="${height / 2}"
+        text-anchor="middle" dominant-baseline="central"
+        font-size="${fontSize}" font-weight="bold"
+        fill="${titleOverlay.color}" opacity="${titleOverlay.opacity}"
+        font-family="system-ui, -apple-system, sans-serif"
+      >${escaped}</text>
+    `
+  })() : ''
+
   // Pan-Zoom: wrap chart content in nested SVG with animated viewBox
   if (panZoomEnabled && panZoomConfig) {
     const camera = calculateCameraViewport(
-      effectiveProgress,
+      cameraProgress,
       panZoomConfig,
       offsetChartArea,
       markerPoint,
@@ -344,6 +369,7 @@ export function generateAnimatedSilhouette(
             <rect x="${clipX}" y="0" width="${fullClipWidth}" height="${height}"/>
           </clipPath>
         </defs>
+        <g${curveOpacity < 1 ? ` opacity="${curveOpacity}"` : ''}>
         <svg x="0" y="0" width="${width}" height="${height}"
              viewBox="${camera.x} ${camera.y} ${camera.w} ${camera.h}"
              preserveAspectRatio="xMidYMid meet">
@@ -354,6 +380,8 @@ export function generateAnimatedSilhouette(
                     fill="${markerColor}" stroke="${color}" stroke-width="${zoomedMarkerStroke}"/>
           ` : ''}
         </svg>
+        </g>
+        ${titleOverlayHtml}
       </svg>
     `
   }
@@ -371,12 +399,15 @@ export function generateAnimatedSilhouette(
           <rect x="${clipX}" y="0" width="${fullClipWidth}" height="${height}"/>
         </clipPath>
       </defs>
+      <g${curveOpacity < 1 ? ` opacity="${curveOpacity}"` : ''}>
       ${bgElements.elements}
       ${chartContentHtml}
       ${showMarker && markerPoint ? `
         <circle ${markerGlow} cx="${markerPoint.x}" cy="${markerPoint.y}" r="${scaledMarkerSize}"
                 fill="${markerColor}" stroke="${color}" stroke-width="${markerStrokeWidth}"/>
       ` : ''}
+      </g>
+      ${titleOverlayHtml}
     </svg>
   `
 }

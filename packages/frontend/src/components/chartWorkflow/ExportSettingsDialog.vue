@@ -62,7 +62,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { TITLE_CARD_DURATION_MS } from '../../utils/titleCardGenerator'
+import { TITLE_CARD_DURATION_MS, TRANSITION_DURATION_MS } from '../../utils/titleCardGenerator'
 
 export interface ExportSettings {
   resolution: '1080x1920' | '720x1280' | '540x960'
@@ -106,8 +106,8 @@ const qualityOptions = [
 ]
 
 const estimatedFrames = computed(() => {
-  const titleDuration = props.chartTitle.trim() ? TITLE_CARD_DURATION_MS / 1000 : 0
-  return Math.ceil((props.animationDuration + titleDuration) * exportSettings.value.fps) + 1
+  const introDuration = props.chartTitle.trim() ? (TITLE_CARD_DURATION_MS + TRANSITION_DURATION_MS) / 1000 : 0
+  return Math.ceil((props.animationDuration + introDuration) * exportSettings.value.fps) + 1
 })
 
 function handleStartExport() {

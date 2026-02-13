@@ -588,7 +588,10 @@ export function generateElevationFrame(
       frameOptions.effortConfig,
       frameOptions.showAreaFill ?? true,
       frameOptions.panZoomEnabled ?? false,
-      frameOptions.panZoomConfig
+      frameOptions.panZoomConfig,
+      frameOptions.titleOverlay,
+      frameOptions.cameraOverrideProgress,
+      frameOptions.curveOpacity ?? 1
     )
   }
 

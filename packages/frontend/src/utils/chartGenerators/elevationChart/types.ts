@@ -44,6 +44,13 @@ export interface FrameOptions {
   }
   panZoomEnabled?: boolean             // Enable pan-zoom camera mode
   panZoomConfig?: PanZoomConfig        // Pan-zoom configuration
+  titleOverlay?: {                     // Overlay title text on top of the terrain
+    text: string
+    opacity: number                    // 0-1, controlled by getTitleCardOpacity()
+    color: string
+  }
+  cameraOverrideProgress?: number      // 0-1, override camera position (clip-path still uses main progress)
+  curveOpacity?: number                // 0-1, opacity of curve + fill + marker (default: 1). Used for fade transitions.
 }
 
 /**

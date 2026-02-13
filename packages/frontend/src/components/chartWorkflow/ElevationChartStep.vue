@@ -166,7 +166,8 @@ import { DEFAULT_ANIMATION_OPTIONS } from "@chart-generator/shared";
 import { useChartAnimation, type PlaybackSpeed } from "../../composables/useChartAnimation";
 import { useVideoExport } from "../../composables/useVideoExport";
 import { generateElevationFrame } from "../../utils/chartGenerators/elevationChart/elevationChart";
-import { generateTitleCardSvg, getTitleCardOpacity, TITLE_CARD_DURATION_MS } from "../../utils/titleCardGenerator";
+import { getTitleCardOpacity, TITLE_CARD_DURATION_MS, TRANSITION_DURATION_MS } from "../../utils/titleCardGenerator";
+import { findHookPoint } from "../../utils/chartGenerators/elevationChart/hookDetection";
 import ExportSettingsDialog from "./ExportSettingsDialog.vue";
 import type { ExportSettings } from "./ExportSettingsDialog.vue";
 import VideoExportProgressDialog from "./VideoExportProgressDialog.vue";
@@ -239,15 +240,24 @@ const emit = defineEmits<{
   regenerateColors: [];
 }>();
 
-// Title card: include in total duration when title exists
+// Title card: include title + transition in total duration when title exists
 const hasTitleCard = computed(() => !!props.chartTitle.trim());
 const chartDurationMs = computed(() => props.animationConfig.duration * 1000);
-const totalDurationMs = computed(() =>
-  chartDurationMs.value + (hasTitleCard.value ? TITLE_CARD_DURATION_MS : 0)
+const introDurationMs = computed(() =>
+  hasTitleCard.value ? TITLE_CARD_DURATION_MS + TRANSITION_DURATION_MS : 0
 );
-const titleRatio = computed(() =>
+const totalDurationMs = computed(() =>
+  chartDurationMs.value + introDurationMs.value
+);
+// Phase boundaries as ratios of total duration (0-1)
+const titleEnd = computed(() =>
   hasTitleCard.value ? TITLE_CARD_DURATION_MS / totalDurationMs.value : 0
 );
+const transitionEnd = computed(() =>
+  hasTitleCard.value ? introDurationMs.value / totalDurationMs.value : 0
+);
+// Keep titleRatio for backward compatibility with tests
+const titleRatio = titleEnd;
 
 // Animation settings for the composable
 const animationSettings = computed<AnimationOptions>(() => ({
@@ -280,6 +290,9 @@ const chartOptions = computed<ChartOptions>(() => ({
   styleOverrides: props.styleOverrides,
 }));
 
+// Auto-detect the most visually interesting point for the title hook
+const hookProgress = computed(() => findHookPoint(props.chartData));
+
 // Use the animation composable
 const animation = useChartAnimation(chartOptions, animationSettings);
 const {
@@ -291,37 +304,90 @@ const {
   reset: resetAnimation,
 } = animation;
 
+// Shared FrameOptions for the intro phases (title + transition)
+function buildIntroFrameOptions(overrides: Record<string, unknown> = {}) {
+  return {
+    progress: 1 as number, // Full curve visible (static terrain backdrop)
+    showMarker: false,
+    markerSize: props.animationConfig.markerSize,
+    markerColor: '#ffffff',
+    curveEndpoint: props.animationConfig.curveEndpoint,
+    showAreaFill: props.animationConfig.showAreaFill ?? true,
+    showElevationLabels: false,
+    showDistanceLabels: false,
+    backgroundType: props.animationConfig.backgroundType,
+    gradientColor: props.animationConfig.gradientColor,
+    meshColor1: props.animationConfig.meshColor1,
+    meshColor2: props.animationConfig.meshColor2,
+    meshColor3: props.animationConfig.meshColor3,
+    patternColor: props.animationConfig.patternColor,
+    patternOpacity: props.animationConfig.patternOpacity,
+    imageOptions: props.animationConfig.imageOptions,
+    panZoomEnabled: true, // Always zoom during intro
+    panZoomConfig: {
+      zoomLevel: props.animationConfig.panZoomZoomLevel || 3,
+      zoomOutStart: 1, // Never zoom out during intro
+    },
+    ...overrides,
+  };
+}
+
+// Camera pan window: one continuous motion spanning title fade-out + transition
+// Starts at 80% through the title phase, ends at the end of the transition
+const panStart = computed(() => titleEnd.value * 0.8);
+const panEnd = computed(() => transitionEnd.value);
+
 // Generate animation SVG using the elevation chart generator
 const animationSvg = computed(() => {
   if (props.chartData.length === 0) return '';
 
   const progress = animationProgress.value;
 
-  // Title card phase
-  if (hasTitleCard.value && progress <= titleRatio.value) {
-    const titleProgress = titleRatio.value > 0 ? progress / titleRatio.value : 1;
-    return generateTitleCardSvg({
-      title: props.chartTitle,
-      width: 1080,
-      height: 1920,
-      opacity: getTitleCardOpacity(titleProgress),
-      textColor: props.animationConfig.titleColor || '#ffffff',
-      backgroundColor: props.animationConfig.backgroundColor || '#000000',
-      backgroundType: props.animationConfig.backgroundType || 'solid',
-      gradientColor: props.animationConfig.gradientColor || '#302b63',
-      meshColor1: props.animationConfig.meshColor1 || '#667eea',
-      meshColor2: props.animationConfig.meshColor2 || '#764ba2',
-      meshColor3: props.animationConfig.meshColor3 || '#f093fb',
-      patternColor: props.animationConfig.patternColor || '#ffffff',
-      patternOpacity: props.animationConfig.patternOpacity ?? 0.1,
-      imageOptions: props.animationConfig.imageOptions,
-    });
+  // Phase 1: Title card — terrain zoomed to hook point with title overlay
+  if (hasTitleCard.value && progress <= titleEnd.value) {
+    const titleProgress = titleEnd.value > 0 ? progress / titleEnd.value : 1;
+    // Camera starts moving during title fade-out (last 20%)
+    let cameraProg = hookProgress.value;
+    if (progress > panStart.value && panEnd.value > panStart.value) {
+      const panT = (progress - panStart.value) / (panEnd.value - panStart.value);
+      cameraProg = hookProgress.value * (1 - panT);
+    }
+    return generateElevationFrame(chartOptions.value, buildIntroFrameOptions({
+      cameraOverrideProgress: cameraProg,
+      titleOverlay: {
+        text: props.chartTitle,
+        opacity: getTitleCardOpacity(titleProgress),
+        color: props.animationConfig.titleColor || '#ffffff',
+      },
+    }));
   }
 
-  // Chart animation phase
-  const chartProgress = titleRatio.value < 1
-    ? (progress - titleRatio.value) / (1 - titleRatio.value)
+  // Phase 2: Transition — camera continues panning (constant speed), curve fades
+  if (hasTitleCard.value && progress <= transitionEnd.value) {
+    // Camera pan: continuous linear motion (no easing — fades provide softness)
+    const panT = panEnd.value > panStart.value
+      ? (progress - panStart.value) / (panEnd.value - panStart.value)
+      : 1;
+    const cameraProg = hookProgress.value * (1 - panT);
+    // Curve fades out over last 60% of transition
+    const t = (progress - titleEnd.value) / (transitionEnd.value - titleEnd.value);
+    const fadeT = Math.max(0, (t - 0.4) / 0.6);
+    const opacity = 1 - fadeT * fadeT;
+    return generateElevationFrame(chartOptions.value, buildIntroFrameOptions({
+      cameraOverrideProgress: cameraProg,
+      curveOpacity: opacity,
+    }));
+  }
+
+  // Phase 3: Chart animation
+  const chartProgress = transitionEnd.value < 1
+    ? (progress - transitionEnd.value) / (1 - transitionEnd.value)
     : progress;
+
+  // Fade-in at the start of the animation (first 10%)
+  const fadeInDuration = 0.10;
+  const fadeInT = Math.min(1, chartProgress / fadeInDuration);
+  const fadeIn = fadeInT * fadeInT; // ease-in quadratic for smooth onset
 
   return generateElevationFrame(chartOptions.value, {
     progress: chartProgress,
@@ -351,6 +417,7 @@ const animationSvg = computed(() => {
       zoomLevel: props.animationConfig.panZoomZoomLevel,
       zoomOutStart: props.animationConfig.panZoomZoomOutStart,
     } : undefined,
+    curveOpacity: hasTitleCard.value ? fadeIn : undefined,
   });
 });
 
@@ -388,46 +455,79 @@ async function startVideoExport(settings: ExportSettings) {
   // Parse resolution
   const [width, height] = settings.resolution.split('x').map(Number);
 
-  // Title card phase: only if there's a title
-  const hasTitleCard = !!props.chartTitle.trim();
-  const titleDurationMs = hasTitleCard ? TITLE_CARD_DURATION_MS : 0;
-  const chartDurationMs = props.animationConfig.duration * 1000;
-  const totalDurationMs = titleDurationMs + chartDurationMs;
-  const titleRatio = titleDurationMs / totalDurationMs;
+  // Phase durations for export
+  const hasTitle = !!props.chartTitle.trim();
+  const titleMs = hasTitle ? TITLE_CARD_DURATION_MS : 0;
+  const transitionMs = hasTitle ? TRANSITION_DURATION_MS : 0;
+  const chartMs = props.animationConfig.duration * 1000;
+  const totalMs = titleMs + transitionMs + chartMs;
+  const exportTitleEnd = titleMs / totalMs;
+  const exportTransitionEnd = (titleMs + transitionMs) / totalMs;
+
+  // Continuous camera pan window for export (same as preview)
+  const exportPanStart = exportTitleEnd * 0.8;
+  const exportPanEnd = exportTransitionEnd;
 
   await videoExport.exportVideo({
     width,
     height,
     fps: settings.fps,
     quality: settings.quality,
-    durationMs: totalDurationMs,
+    durationMs: totalMs,
     filename: `${props.chartTitle || 'elevation'}-reel.mp4`,
     renderFrame: (progress: number) => {
-      // Title card phase
-      if (hasTitleCard && progress <= titleRatio) {
-        const titleProgress = titleRatio > 0 ? progress / titleRatio : 1;
-        return generateTitleCardSvg({
-          title: props.chartTitle,
-          width,
-          height,
-          opacity: getTitleCardOpacity(titleProgress),
-          textColor: props.animationConfig.titleColor || '#ffffff',
-          backgroundColor: props.animationConfig.backgroundColor || '#000000',
-          backgroundType: props.animationConfig.backgroundType || 'solid',
-          gradientColor: props.animationConfig.gradientColor || '#302b63',
-          meshColor1: props.animationConfig.meshColor1 || '#667eea',
-          meshColor2: props.animationConfig.meshColor2 || '#764ba2',
-          meshColor3: props.animationConfig.meshColor3 || '#f093fb',
-          patternColor: props.animationConfig.patternColor || '#ffffff',
-          patternOpacity: props.animationConfig.patternOpacity ?? 0.1,
-          imageOptions: props.animationConfig.imageOptions,
+      // Phase 1: Title — terrain zoomed to hook point with title overlay
+      if (hasTitle && progress <= exportTitleEnd) {
+        const titleProgress = exportTitleEnd > 0 ? progress / exportTitleEnd : 1;
+        // Camera starts moving during title fade-out (last 20%)
+        let cameraProg = hookProgress.value;
+        if (progress > exportPanStart && exportPanEnd > exportPanStart) {
+          const panT = (progress - exportPanStart) / (exportPanEnd - exportPanStart);
+          cameraProg = hookProgress.value * (1 - panT);
+        }
+        return generateElevationFrame(chartOptions.value, {
+          ...buildIntroFrameOptions({
+            exportWidth: width,
+            exportHeight: height,
+            cameraOverrideProgress: cameraProg,
+            titleOverlay: {
+              text: props.chartTitle,
+              opacity: getTitleCardOpacity(titleProgress),
+              color: props.animationConfig.titleColor || '#ffffff',
+            },
+          }),
         });
       }
 
-      // Chart animation phase
-      const chartProgress = titleRatio < 1
-        ? (progress - titleRatio) / (1 - titleRatio)
+      // Phase 2: Transition — camera continues panning (constant speed), curve fades
+      if (hasTitle && progress <= exportTransitionEnd) {
+        // Camera pan: continuous linear motion (no easing — fades provide softness)
+        const panT = exportPanEnd > exportPanStart
+          ? (progress - exportPanStart) / (exportPanEnd - exportPanStart)
+          : 1;
+        const cameraProg = hookProgress.value * (1 - panT);
+        // Curve fades out over last 60% of transition
+        const t = (progress - exportTitleEnd) / (exportTransitionEnd - exportTitleEnd);
+        const fadeT = Math.max(0, (t - 0.4) / 0.6);
+        const opacity = 1 - fadeT * fadeT;
+        return generateElevationFrame(chartOptions.value, {
+          ...buildIntroFrameOptions({
+            exportWidth: width,
+            exportHeight: height,
+            cameraOverrideProgress: cameraProg,
+            curveOpacity: opacity,
+          }),
+        });
+      }
+
+      // Phase 3: Chart animation
+      const chartProgress = exportTransitionEnd < 1
+        ? (progress - exportTransitionEnd) / (1 - exportTransitionEnd)
         : progress;
+
+      const fadeInDuration = 0.10;
+      const fadeInT = Math.min(1, chartProgress / fadeInDuration);
+      const fadeIn = fadeInT * fadeInT;
 
       return generateElevationFrame(chartOptions.value, {
         progress: chartProgress,
@@ -459,6 +559,7 @@ async function startVideoExport(settings: ExportSettings) {
           zoomLevel: props.animationConfig.panZoomZoomLevel,
           zoomOutStart: props.animationConfig.panZoomZoomOutStart,
         } : undefined,
+        curveOpacity: hasTitle ? fadeIn : undefined,
       });
     }
   });
