@@ -239,6 +239,102 @@ describe('generateCombinedFrame - labels', () => {
   })
 })
 
+describe('generateCombinedFrame - title overlay', () => {
+  it('renders title text when titleOverlay provided', () => {
+    const svg = generateCombinedFrame({
+      ...baseOptions,
+      titleOverlay: { text: 'Alpenueberquerung', opacity: 1, color: '#ffffff' },
+    })
+    expect(svg).toContain('Alpenueberquerung')
+    expect(svg).toContain('<text')
+    expect(svg).toContain('text-anchor="middle"')
+  })
+
+  it('applies title opacity', () => {
+    const svg = generateCombinedFrame({
+      ...baseOptions,
+      titleOverlay: { text: 'Test', opacity: 0.75, color: '#ffffff' },
+    })
+    expect(svg).toContain('opacity="0.75"')
+  })
+
+  it('applies title color', () => {
+    const svg = generateCombinedFrame({
+      ...baseOptions,
+      titleOverlay: { text: 'Test', opacity: 1, color: '#ff0000' },
+    })
+    expect(svg).toContain('fill="#ff0000"')
+  })
+
+  it('does not render title when opacity is 0', () => {
+    const svg = generateCombinedFrame({
+      ...baseOptions,
+      titleOverlay: { text: 'Hidden', opacity: 0, color: '#ffffff' },
+    })
+    expect(svg).not.toContain('Hidden')
+  })
+
+  it('does not render title when text is empty', () => {
+    const svg = generateCombinedFrame({
+      ...baseOptions,
+      titleOverlay: { text: '', opacity: 1, color: '#ffffff' },
+    })
+    // Should not have a title <text> element (only other text elements may exist)
+    expect(svg).not.toContain('text-anchor="middle" dominant-baseline="central"')
+  })
+
+  it('escapes XML characters in title', () => {
+    const svg = generateCombinedFrame({
+      ...baseOptions,
+      titleOverlay: { text: 'A & B <3', opacity: 1, color: '#ffffff' },
+    })
+    expect(svg).toContain('A &amp; B &lt;3')
+    expect(svg).not.toContain('A & B <3')
+  })
+
+  it('title renders outside opacity group', () => {
+    const svg = generateCombinedFrame({
+      ...baseOptions,
+      sceneOpacity: 0.5,
+      titleOverlay: { text: 'Visible Title', opacity: 1, color: '#ffffff' },
+    })
+    // Title should be visible even when scene has low opacity
+    expect(svg).toContain('Visible Title')
+    // The title text should appear after the opacity group closes
+    const opacityCloseIdx = svg.lastIndexOf('</g>')
+    const titleIdx = svg.indexOf('Visible Title')
+    expect(titleIdx).toBeGreaterThan(opacityCloseIdx)
+  })
+})
+
+describe('generateCombinedFrame - elevation coloring', () => {
+  it('renders colored line segments when elevation coloring enabled', () => {
+    const svg = generateCombinedFrame({
+      ...baseOptions,
+      routeStyle: {
+        ...DEFAULT_ROUTE_LINE_STYLE,
+        elevationColoring: true,
+        elevationColorIntensity: 5,
+      },
+    })
+    // Should contain <line> elements instead of only <polyline>
+    expect(svg).toContain('<line')
+    expect(svg).toContain('hsl(')
+  })
+
+  it('does not render colored segments when elevation coloring disabled', () => {
+    const svg = generateCombinedFrame({
+      ...baseOptions,
+      routeStyle: {
+        ...DEFAULT_ROUTE_LINE_STYLE,
+        elevationColoring: false,
+      },
+    })
+    // Map section should use polyline, not individual line segments with hsl
+    expect(svg).not.toContain('hsl(')
+  })
+})
+
 describe('generateCombinedFrame - opacity', () => {
   it('wraps in opacity group when sceneOpacity set', () => {
     const svg = generateCombinedFrame({

@@ -31,23 +31,22 @@
             </v-card>
           </v-col>
 
-          <!-- CSV Chart Option (disabled for now) -->
+          <!-- Route Map Option -->
           <v-col cols="12" sm="6">
             <v-card
               variant="outlined"
-              class="chart-type-card pa-4 text-center disabled-card"
-              disabled
+              class="chart-type-card pa-4 text-center"
+              :class="{ 'selected': selectedType === 'route-map' }"
+              @click="selectType('route-map')"
+              hover
             >
-              <v-icon size="64" color="grey-lighten-1" class="mb-3">
-                mdi-chart-bar
+              <v-icon size="64" color="primary" class="mb-3">
+                mdi-map-marker-path
               </v-icon>
-              <div class="text-h6 mb-2 text-grey">Daten-Chart (CSV)</div>
-              <div class="text-caption text-grey">
-                Demnächst verfügbar
+              <div class="text-h6 mb-2">Routenkarte (GPX)</div>
+              <div class="text-caption text-medium-emphasis">
+                Karte + Hoehenprofil aus einer GPX-Datei
               </div>
-              <v-chip size="small" color="grey" class="mt-2">
-                Coming Soon
-              </v-chip>
             </v-card>
           </v-col>
         </v-row>
@@ -94,9 +93,9 @@ const dialogVisible = computed({
   set: (value) => emit('update:modelValue', value)
 })
 
-const selectedType = ref<'elevation' | null>(null)
+const selectedType = ref<'elevation' | 'route-map' | null>(null)
 
-function selectType(type: 'elevation') {
+function selectType(type: 'elevation' | 'route-map') {
   selectedType.value = type
 }
 
@@ -108,6 +107,8 @@ function closeDialog() {
 function confirmSelection() {
   if (selectedType.value === 'elevation') {
     router.push({ name: 'Elevation' })
+  } else if (selectedType.value === 'route-map') {
+    router.push({ name: 'RouteMap' })
   }
   closeDialog()
 }

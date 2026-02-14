@@ -54,7 +54,9 @@ function createChart() {
 
 function loadChart(chartId: string) {
   const chart = charts.value.find(c => c.id === chartId)
-  const routeName = chart?.type === 'elevation' ? 'Elevation' : 'Generator'
+  const routeName = chart?.type === 'elevation' ? 'Elevation'
+    : chart?.type === 'route-map' ? 'RouteMap'
+    : 'Generator'
   router.push({ name: routeName, query: { id: chartId } })
 }
 

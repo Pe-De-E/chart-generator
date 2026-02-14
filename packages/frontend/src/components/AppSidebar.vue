@@ -185,6 +185,10 @@ import { useTheme } from 'vuetify'
 import { useAuth } from '../composables/useAuth'
 import FeedbackDialog from './FeedbackDialog.vue'
 
+const emit = defineEmits<{
+  'new-chart': []
+}>()
+
 const router = useRouter()
 const route = useRoute()
 const theme = useTheme()
@@ -228,8 +232,7 @@ function toggleTheme() {
 }
 
 function handleNewChart() {
-  // Direkt zum Elevation Generator navigieren (später: ChartTypeDialog wenn mehr Typen verfügbar)
-  router.push({ name: 'Elevation' })
+  emit('new-chart')
 }
 
 async function handleLogout() {

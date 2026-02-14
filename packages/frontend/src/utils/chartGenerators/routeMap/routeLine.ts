@@ -20,6 +20,10 @@ export interface RouteLineStyle {
   trailDash?: string
   /** Opacity of the unrevealed trail */
   trailOpacity?: number
+  /** Color segments by elevation (blue=low, green=mid, red=high) */
+  elevationColoring?: boolean
+  /** Intensity of elevation coloring (1-8, default 5) */
+  elevationColorIntensity?: number
 }
 
 export const DEFAULT_ROUTE_LINE_STYLE: RouteLineStyle = {
@@ -38,6 +42,43 @@ export const DEFAULT_ROUTE_LINE_STYLE: RouteLineStyle = {
  */
 export function mapPointsToPolyline(points: MapPoint[]): string {
   return points.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')
+}
+
+/**
+ * Convert hex color to HSL components.
+ */
+function hexToHsl(hex: string): { h: number; s: number; l: number } {
+  const r = parseInt(hex.slice(1, 3), 16) / 255
+  const g = parseInt(hex.slice(3, 5), 16) / 255
+  const b = parseInt(hex.slice(5, 7), 16) / 255
+
+  const max = Math.max(r, g, b), min = Math.min(r, g, b)
+  let h = 0, s = 0
+  const l = (max + min) / 2
+
+  if (max !== min) {
+    const d = max - min
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break
+      case g: h = ((b - r) / d + 2) / 6; break
+      case b: h = ((r - g) / d + 4) / 6; break
+    }
+  }
+  return { h: h * 360, s: s * 100, l: l * 100 }
+}
+
+/**
+ * Get elevation-based color for a normalized elevation value (0-1).
+ * Maps from blue (low) through green (mid) to red (high).
+ */
+function elevationToColor(normalizedElev: number, intensity: number): string {
+  // Hue: 240 (blue) → 120 (green) → 0 (red)
+  const hue = 240 - normalizedElev * 240
+  // Saturation scales with intensity
+  const sat = 50 + (intensity / 8) * 40  // 50-90%
+  const lightness = 45 + (1 - intensity / 8) * 15  // 45-60%
+  return `hsl(${hue.toFixed(0)}, ${sat.toFixed(0)}%, ${lightness.toFixed(0)}%)`
 }
 
 /**
@@ -109,6 +150,74 @@ function partialPolyline(points: MapPoint[], progress: number): string {
 }
 
 /**
+ * Get the last visible point index for the given progress.
+ */
+function getLastRevealedIndex(points: MapPoint[], progress: number): number {
+  if (progress <= 0) return -1
+  const exactIndex = progress * (points.length - 1)
+  return Math.floor(exactIndex)
+}
+
+/**
+ * Generate elevation-colored route segments as individual <line> elements.
+ */
+function generateColoredSegments(
+  points: MapPoint[],
+  progress: number,
+  style: RouteLineStyle,
+  isGlow: boolean,
+): string {
+  const lastIndex = getLastRevealedIndex(points, progress)
+  if (lastIndex < 0) return ''
+
+  // Calculate elevation range
+  const elevations = points.map(p => p.elevation)
+  const minElev = Math.min(...elevations)
+  const maxElev = Math.max(...elevations)
+  const range = maxElev - minElev
+
+  const intensity = style.elevationColorIntensity ?? 5
+  const segments: string[] = []
+  const strokeWidth = isGlow ? style.width + 4 : style.width
+  const opacity = isGlow ? 0.3 : style.opacity
+
+  for (let i = 0; i < lastIndex && i < points.length - 1; i++) {
+    const p1 = points[i]
+    const p2 = points[i + 1]
+    const avgElev = (p1.elevation + p2.elevation) / 2
+    const normalizedElev = range > 0 ? (avgElev - minElev) / range : 0.5
+    const color = elevationToColor(normalizedElev, intensity)
+
+    segments.push(`
+      <line x1="${p1.x.toFixed(1)}" y1="${p1.y.toFixed(1)}" x2="${p2.x.toFixed(1)}" y2="${p2.y.toFixed(1)}"
+            stroke="${color}" stroke-width="${strokeWidth}" stroke-opacity="${opacity}"
+            stroke-linecap="round"/>
+    `)
+  }
+
+  // Handle fractional last segment
+  const exactIndex = progress * (points.length - 1)
+  const fraction = exactIndex - lastIndex
+  if (fraction > 0 && lastIndex + 1 < points.length) {
+    const p1 = points[lastIndex]
+    const p2 = points[lastIndex + 1]
+    const endX = p1.x + (p2.x - p1.x) * fraction
+    const endY = p1.y + (p2.y - p1.y) * fraction
+    const avgElev = (p1.elevation + p2.elevation) / 2
+    const normalizedElev = range > 0 ? (avgElev - minElev) / range : 0.5
+    const color = elevationToColor(normalizedElev, intensity)
+
+    segments.push(`
+      <line x1="${p1.x.toFixed(1)}" y1="${p1.y.toFixed(1)}" x2="${endX.toFixed(1)}" y2="${endY.toFixed(1)}"
+            stroke="${color}" stroke-width="${strokeWidth}" stroke-opacity="${opacity}"
+            stroke-linecap="round"/>
+    `)
+  }
+
+  return segments.join('\n')
+}
+
+/**
  * Generate the SVG elements for the route line.
  *
  * Returns an object with defs (filters) and elements (the visible SVG content).
@@ -145,31 +254,42 @@ export function generateRouteLine(
     `)
   }
 
-  // Revealed portion of the route (solid line up to progress)
-  const revealedPoints = partialPolyline(points, progress)
-  if (revealedPoints) {
+  // Revealed portion of the route
+  if (style.elevationColoring) {
+    // Elevation-colored: individual <line> segments per point pair
     const filterAttr = style.glow ? ' filter="url(#route-glow)"' : ''
-    elements.push(`
-      <polyline
-        points="${revealedPoints}"
-        fill="none"
-        stroke="${style.glowColor}"
-        stroke-width="${style.width + 4}"
-        stroke-opacity="${style.glow ? 0.3 : 0}"
-        stroke-linejoin="round"
-        stroke-linecap="round"
-        ${filterAttr}
-      />
-      <polyline
-        points="${revealedPoints}"
-        fill="none"
-        stroke="${style.color}"
-        stroke-width="${style.width}"
-        stroke-opacity="${style.opacity}"
-        stroke-linejoin="round"
-        stroke-linecap="round"
-      />
-    `)
+
+    if (style.glow) {
+      elements.push(`<g${filterAttr}>${generateColoredSegments(points, progress, style, true)}</g>`)
+    }
+    elements.push(generateColoredSegments(points, progress, style, false))
+  } else {
+    // Monochrome: single <polyline>
+    const revealedPoints = partialPolyline(points, progress)
+    if (revealedPoints) {
+      const filterAttr = style.glow ? ' filter="url(#route-glow)"' : ''
+      elements.push(`
+        <polyline
+          points="${revealedPoints}"
+          fill="none"
+          stroke="${style.glowColor}"
+          stroke-width="${style.width + 4}"
+          stroke-opacity="${style.glow ? 0.3 : 0}"
+          stroke-linejoin="round"
+          stroke-linecap="round"
+          ${filterAttr}
+        />
+        <polyline
+          points="${revealedPoints}"
+          fill="none"
+          stroke="${style.color}"
+          stroke-width="${style.width}"
+          stroke-opacity="${style.opacity}"
+          stroke-linejoin="round"
+          stroke-linecap="round"
+        />
+      `)
+    }
   }
 
   return { defs, elements: elements.join('\n') }

@@ -1,7 +1,8 @@
 <template>
   <v-app class="app-layout">
     <!-- Sidebar Navigation -->
-    <AppSidebar />
+    <AppSidebar @new-chart="showChartTypeDialog = true" />
+    <ChartTypeDialog v-model="showChartTypeDialog" />
 
     <!-- Main Content Area -->
     <v-main class="main-content">
@@ -24,11 +25,13 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useTheme } from 'vuetify'
 import { useRouter } from 'vue-router'
 import AppSidebar from './components/AppSidebar.vue'
+import ChartTypeDialog from './components/ChartTypeDialog.vue'
 
+const showChartTypeDialog = ref(false)
 const theme = useTheme()
 const router = useRouter()
 

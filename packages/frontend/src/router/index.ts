@@ -7,6 +7,7 @@ import LandingPage from '../views/LandingPage.vue'
 import Home from '../views/Home/Home.vue'
 import ChartGenerator from '../components/ChartGenerator.vue'
 import ElevationGenerator from '../components/ElevationGenerator.vue'
+import RouteMapGenerator from '../components/RouteMapGenerator.vue'
 import Login from '../views/Login/Login.vue'
 import Signup from '../views/Signup.vue'
 import AdminDashboard from '../views/adminDashboard/AdminDashboard.vue'
@@ -34,6 +35,12 @@ const routes: RouteRecordRaw[] = [
     path: '/elevation',
     name: 'Elevation',
     component: ElevationGenerator,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/route-map',
+    name: 'RouteMap',
+    component: RouteMapGenerator,
     meta: { requiresAuth: true },
   },
   {

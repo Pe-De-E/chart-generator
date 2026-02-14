@@ -88,6 +88,13 @@ export interface CombinedFrameOptions {
 
   // Overall opacity (for fade transitions)
   sceneOpacity?: number
+
+  // Title overlay (rendered on top of everything)
+  titleOverlay?: {
+    text: string
+    opacity: number    // 0-1, controlled by getTitleCardOpacity()
+    color: string
+  }
 }
 
 export const DEFAULT_COMBINED_FRAME_OPTIONS: Partial<CombinedFrameOptions> = {
@@ -313,6 +320,8 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     dividerWidth = 2,
     // Opacity
     sceneOpacity,
+    // Title
+    titleOverlay,
   } = options
 
   // Layout split
@@ -491,6 +500,27 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
             stroke="${dividerColor}" stroke-width="${dividerWidth}"/>`
     : ''
 
+  // ── Title Overlay ──
+  let titleHtml = ''
+  if (titleOverlay && titleOverlay.text && titleOverlay.opacity > 0) {
+    const fontSize = Math.min(Math.round(width * 0.06), 72)
+    const escapedText = titleOverlay.text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+    titleHtml = `
+      <text
+        x="${width / 2}" y="${height / 2}"
+        text-anchor="middle" dominant-baseline="central"
+        font-size="${fontSize}" font-weight="bold"
+        fill="${titleOverlay.color}"
+        opacity="${titleOverlay.opacity.toFixed(2)}"
+        font-family="system-ui, -apple-system, sans-serif"
+      >${escapedText}</text>
+    `
+  }
+
   // ── Compose ──
   const allDefs = [bg.defs, mapDefs, elevDefs].filter(Boolean).join('\n')
   const hasSceneOpacity = sceneOpacity != null && sceneOpacity < 1
@@ -506,5 +536,6 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     ${elevContent}
     ${dividerHtml}
     ${opacityClose}
+    ${titleHtml}
   </svg>`
 }

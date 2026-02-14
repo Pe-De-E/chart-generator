@@ -90,6 +90,55 @@ describe('generateRouteLine', () => {
   })
 })
 
+describe('generateRouteLine - elevation coloring', () => {
+  const colorStyle = {
+    ...DEFAULT_ROUTE_LINE_STYLE,
+    elevationColoring: true,
+    elevationColorIntensity: 5,
+  }
+
+  it('renders <line> segments instead of polyline for revealed route', () => {
+    const result = generateRouteLine(mapPoints, 0.5, colorStyle, 500, 500)
+    expect(result.elements).toContain('<line')
+    expect(result.elements).toContain('hsl(')
+  })
+
+  it('still renders trail as polyline', () => {
+    const result = generateRouteLine(mapPoints, 0.5, colorStyle, 500, 500)
+    // Trail polyline should still exist
+    expect(result.elements).toContain('stroke-dasharray')
+  })
+
+  it('renders glow layer when glow is on', () => {
+    const result = generateRouteLine(mapPoints, 0.5, colorStyle, 500, 500)
+    expect(result.elements).toContain('filter="url(#route-glow)"')
+  })
+
+  it('no colored segments at progress 0', () => {
+    const result = generateRouteLine(mapPoints, 0, colorStyle, 500, 500)
+    expect(result.elements).not.toContain('hsl(')
+  })
+
+  it('uses higher saturation with higher intensity', () => {
+    const lowIntensity = { ...colorStyle, elevationColorIntensity: 1 }
+    const highIntensity = { ...colorStyle, elevationColorIntensity: 8 }
+    const resultLow = generateRouteLine(mapPoints, 1, lowIntensity, 500, 500)
+    const resultHigh = generateRouteLine(mapPoints, 1, highIntensity, 500, 500)
+    // Both should contain hsl colors
+    expect(resultLow.elements).toContain('hsl(')
+    expect(resultHigh.elements).toContain('hsl(')
+    // They should be different (different intensity produces different saturation)
+    expect(resultLow.elements).not.toBe(resultHigh.elements)
+  })
+
+  it('falls back to monochrome when elevationColoring is false', () => {
+    const mono = { ...DEFAULT_ROUTE_LINE_STYLE, elevationColoring: false }
+    const result = generateRouteLine(mapPoints, 0.5, mono, 500, 500)
+    expect(result.elements).not.toContain('hsl(')
+    expect(result.elements).toContain('<polyline')
+  })
+})
+
 describe('generateRouteMarker', () => {
   it('returns empty for empty points', () => {
     expect(generateRouteMarker([], 0.5, 8, '#fff', '#fff')).toBe('')

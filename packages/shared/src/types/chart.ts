@@ -215,7 +215,7 @@ export interface SeriesStyleOverride {
 }
 
 // Chart persistence types
-export type ChartType = 'bar' | 'line' | 'scatter' | 'pie' | 'area' | 'elevation'
+export type ChartType = 'bar' | 'line' | 'scatter' | 'pie' | 'area' | 'elevation' | 'route-map'
 
 export interface SavedChart {
   id: string
