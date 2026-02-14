@@ -9,3 +9,6 @@ export type { MapCameraViewport, MapCameraConfig } from './mapCamera'
 
 export { generateMapFrame, DEFAULT_MAP_FRAME_OPTIONS } from './mapGenerator'
 export type { MapFrameOptions } from './mapGenerator'
+
+export { generateCombinedFrame, DEFAULT_COMBINED_FRAME_OPTIONS } from './combinedFrame'
+export type { CombinedFrameOptions } from './combinedFrame'
