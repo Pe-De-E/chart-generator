@@ -142,7 +142,7 @@ function selectCities(
   //   extent ~ 1°    → 100K
   //   extent ~ 3°    → 300K
   //   extent > 5°    → 500K+
-  const minPop = Math.max(30000, Math.round(extent * 100000))
+  const minPop = Math.max(5000, Math.round(extent * 100000))
 
   // Filter by bounds + population
   const candidates = cities.filter(c =>
