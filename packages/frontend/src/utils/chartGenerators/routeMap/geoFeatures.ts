@@ -124,7 +124,7 @@ export function filterFeaturesByBounds(
  * 5. Cap at MAX_CITIES to avoid visual clutter.
  */
 const MAX_CITIES = 8
-const MIN_CITY_SPACING_PX = 80
+const MIN_CITY_SPACING_PX = 100
 
 function selectCities(
   cities: CityPoint[],
@@ -443,14 +443,120 @@ function renderRivers(
 }
 
 /**
+ * Check if a text label bounding box overlaps with the route polyline.
+ * Uses a fast point-in-box test against route points.
+ */
+function labelOverlapsRoute(
+  labelX: number, labelY: number,
+  labelWidth: number, labelHeight: number,
+  routePoints: ReadonlyArray<{ x: number; y: number }>,
+  margin = 6,
+): boolean {
+  const x1 = labelX - margin
+  const y1 = labelY - labelHeight - margin
+  const x2 = labelX + labelWidth + margin
+  const y2 = labelY + margin
+  for (const p of routePoints) {
+    if (p.x >= x1 && p.x <= x2 && p.y >= y1 && p.y <= y2) return true
+  }
+  return false
+}
+
+/**
+ * Check if a horizontal label would extend outside the visible viewport.
+ */
+function labelExceedsViewport(
+  labelX: number, labelY: number,
+  labelWidth: number, labelHeight: number,
+  viewWidth: number, viewHeight: number,
+): boolean {
+  return labelX + labelWidth > viewWidth
+    || labelY - labelHeight < 0
+    || labelX < 0
+    || labelY > viewHeight
+}
+
+/**
+ * Pick the best label placement for a city.
+ * Tries up to 4 strategies to avoid route overlap and viewport overflow:
+ *   1. Horizontal right of dot (default)
+ *   2. Rotated -45° right of dot (text goes up-right)
+ *   3. Rotated +45° right of dot (text goes down-right)
+ *   4. Horizontal left of dot (text-anchor: end)
+ *
+ * Returns { textX, textY, angle, anchor } for the first placement that fits,
+ * or the best fallback if none is perfect.
+ */
+function pickLabelPlacement(
+  x: number, y: number, r: number, fontSize: number,
+  cityName: string,
+  viewWidth: number, viewHeight: number,
+  routePoints?: ReadonlyArray<{ x: number; y: number }>,
+): { textX: number; textY: number; angle: number; anchor: string } {
+  const approxWidth = cityName.length * fontSize * 0.6
+  const gap = r + 5
+
+  const candidates = [
+    // 1. Horizontal right
+    { textX: x + gap, textY: y + fontSize / 3, angle: 0, anchor: 'start' },
+    // 2. Rotated -45° right (up-right diagonal)
+    { textX: x + gap, textY: y + fontSize / 3, angle: -45, anchor: 'start' },
+    // 3. Rotated +45° right (down-right diagonal)
+    { textX: x + gap, textY: y + fontSize / 3, angle: 45, anchor: 'start' },
+    // 4. Horizontal left
+    { textX: x - gap, textY: y + fontSize / 3, angle: 0, anchor: 'end' },
+  ]
+
+  for (const c of candidates) {
+    // Compute the effective bounding box of this placement
+    let bx: number, by: number, bw: number, bh: number
+    if (c.angle === 0 && c.anchor === 'start') {
+      bx = c.textX; by = c.textY; bw = approxWidth; bh = fontSize
+    } else if (c.angle === 0 && c.anchor === 'end') {
+      bx = c.textX - approxWidth; by = c.textY; bw = approxWidth; bh = fontSize
+    } else {
+      // Rotated: the label extends diagonally — use a rough bbox
+      // At ±45° the text occupies roughly width*0.7 in both x and y
+      const diag = approxWidth * 0.71
+      bx = c.textX
+      if (c.angle < 0) {
+        by = c.textY - diag; bw = diag; bh = diag
+      } else {
+        by = c.textY; bw = diag; bh = diag
+      }
+    }
+
+    const hitsEdge = labelExceedsViewport(bx, by, bw, bh, viewWidth, viewHeight)
+    const hitsRoute = routePoints && routePoints.length > 0
+      && labelOverlapsRoute(bx, by, bw, bh, routePoints)
+
+    if (!hitsEdge && !hitsRoute) return c
+  }
+
+  // Fallback: use the strategy that best fits the position
+  // Top half → +45° (down), bottom half → -45° (up), right edge → left
+  if (x + gap + approxWidth > viewWidth && x - gap - approxWidth >= 0) {
+    return candidates[3] // horizontal left
+  }
+  if (y < viewHeight / 2) {
+    return candidates[2] // +45° down-right
+  }
+  return candidates[1] // -45° up-right
+}
+
+/**
  * Render cities as SVG circles and text labels.
  * Sizes scale with population for visual hierarchy.
+ * Labels are smartly placed to avoid overlapping the route or exceeding the viewport.
  */
 function renderCities(
   cities: CityPoint[],
   params: ProjectionParams,
   color: string,
   opacity: number,
+  routePoints?: ReadonlyArray<{ x: number; y: number }>,
+  viewWidth = 1080,
+  viewHeight = 1152,
 ): string {
   if (cities.length === 0) return ''
   const elements: string[] = []
@@ -461,15 +567,28 @@ function renderCities(
   for (const city of cities) {
     const { x, y } = projectGeoCoord(city.lon, city.lat, params)
 
-    // Scale: largest city gets r=7/font=28, smallest gets r=4/font=20
+    // Scale: largest city gets r=8/font=40, smallest gets r=5/font=30
     const t = maxPop > 0 ? Math.sqrt(city.pop / maxPop) : 0.5
-    const r = 4 + t * 3
-    const fontSize = Math.round(20 + t * 8)
+    const r = 5 + t * 3
+    const fontSize = Math.round(30 + t * 10)
+
+    const placement = pickLabelPlacement(x, y, r, fontSize, city.name, viewWidth, viewHeight, routePoints)
 
     elements.push(
       `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(1)}" fill="${color}" opacity="${opacity.toFixed(2)}"/>`,
-      `<text x="${(x + r + 4).toFixed(1)}" y="${(y + fontSize / 3).toFixed(1)}" fill="${color}" opacity="${opacity.toFixed(2)}" font-size="${fontSize}" font-family="system-ui, sans-serif">${city.name}</text>`,
     )
+
+    const anchorAttr = placement.anchor === 'end' ? ' text-anchor="end"' : ''
+    if (placement.angle !== 0) {
+      const pivotX = (x + (placement.anchor === 'end' ? -(r + 3) : r + 3)).toFixed(1)
+      elements.push(
+        `<text x="${placement.textX.toFixed(1)}" y="${placement.textY.toFixed(1)}" fill="${color}" opacity="${opacity.toFixed(2)}" font-size="${fontSize}" font-family="system-ui, sans-serif"${anchorAttr} transform="rotate(${placement.angle} ${pivotX} ${y.toFixed(1)})">${city.name}</text>`,
+      )
+    } else {
+      elements.push(
+        `<text x="${placement.textX.toFixed(1)}" y="${placement.textY.toFixed(1)}" fill="${color}" opacity="${opacity.toFixed(2)}" font-size="${fontSize}" font-family="system-ui, sans-serif"${anchorAttr}>${city.name}</text>`,
+      )
+    }
   }
 
   return `<g>${elements.join('\n')}</g>`
@@ -513,6 +632,7 @@ export function generateGeoLayers(
   config: GeoLayerConfig,
   viewWidth = 1080,
   viewHeight = 1152,
+  routePoints?: ReadonlyArray<{ x: number; y: number }>,
 ): string {
   // Check cache
   const key = buildCacheKey(routeBounds, config, viewWidth, viewHeight)
@@ -568,7 +688,7 @@ export function generateGeoLayers(
       viewHeight,
     )
     if (cities.length > 0) {
-      parts.push(renderCities(cities, projectionParams, config.cityColor, config.cityOpacity))
+      parts.push(renderCities(cities, projectionParams, config.cityColor, config.cityOpacity, routePoints, viewWidth, viewHeight))
     }
   }
 

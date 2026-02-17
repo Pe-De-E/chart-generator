@@ -369,7 +369,7 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     // Geographic context layers (borders, rivers, cities)
     const projParams = getProjectionParams(routeBounds, mapConfig)
     const geoLayersHtml = geoLayers
-      ? generateGeoLayers(routeBounds, projParams, geoLayers, width, mapHeight)
+      ? generateGeoLayers(routeBounds, projParams, geoLayers, width, mapHeight, mapPoints)
       : ''
 
     const camera = calculateMapCameraViewport(
