@@ -461,10 +461,10 @@ function renderCities(
   for (const city of cities) {
     const { x, y } = projectGeoCoord(city.lon, city.lat, params)
 
-    // Scale: largest city gets r=4/font=16, smallest gets r=2/font=10
+    // Scale: largest city gets r=7/font=28, smallest gets r=4/font=20
     const t = maxPop > 0 ? Math.sqrt(city.pop / maxPop) : 0.5
-    const r = 2 + t * 2
-    const fontSize = Math.round(10 + t * 6)
+    const r = 4 + t * 3
+    const fontSize = Math.round(20 + t * 8)
 
     elements.push(
       `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(1)}" fill="${color}" opacity="${opacity.toFixed(2)}"/>`,
