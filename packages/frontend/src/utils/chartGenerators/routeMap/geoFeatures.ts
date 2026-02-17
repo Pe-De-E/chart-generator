@@ -400,8 +400,71 @@ function renderBorders(
 }
 
 /**
- * Render rivers as smooth SVG paths.
+ * Compute the total pixel length of a projected polyline (sum of segment distances).
+ */
+function polylineLength(pts: Point2D[]): number {
+  let len = 0
+  for (let i = 1; i < pts.length; i++) {
+    const dx = pts[i].x - pts[i - 1].x
+    const dy = pts[i].y - pts[i - 1].y
+    len += Math.sqrt(dx * dx + dy * dy)
+  }
+  return len
+}
+
+/**
+ * Find the point and tangent angle at the midpoint of a polyline (by arc length).
+ */
+function midpointOnPolyline(pts: Point2D[]): { x: number; y: number; angle: number } {
+  const totalLen = polylineLength(pts)
+  const halfLen = totalLen / 2
+  let accum = 0
+  for (let i = 1; i < pts.length; i++) {
+    const dx = pts[i].x - pts[i - 1].x
+    const dy = pts[i].y - pts[i - 1].y
+    const segLen = Math.sqrt(dx * dx + dy * dy)
+    if (accum + segLen >= halfLen) {
+      // Interpolate within this segment
+      const t = segLen > 0 ? (halfLen - accum) / segLen : 0
+      const x = pts[i - 1].x + dx * t
+      const y = pts[i - 1].y + dy * t
+      let angle = Math.atan2(dy, dx) * (180 / Math.PI)
+      // Keep text readable: flip if upside-down, clamp to ±60°
+      if (angle > 90) angle -= 180
+      if (angle < -90) angle += 180
+      angle = Math.max(-60, Math.min(60, angle))
+      return { x, y, angle }
+    }
+    accum += segLen
+  }
+  // Fallback: last segment direction
+  const last = pts[pts.length - 1]
+  const prev = pts[pts.length - 2] || last
+  let angle = Math.atan2(last.y - prev.y, last.x - prev.x) * (180 / Math.PI)
+  if (angle > 90) angle -= 180
+  if (angle < -90) angle += 180
+  angle = Math.max(-60, Math.min(60, angle))
+  return { x: last.x, y: last.y, angle }
+}
+
+/**
+ * Clip a polyline to only the points within the viewport (with margin).
+ * Returns the visible portion of the polyline.
+ */
+function clipPolylineToViewport(
+  pts: Point2D[], viewWidth: number, viewHeight: number, margin = 30,
+): Point2D[] {
+  return pts.filter(p =>
+    p.x >= -margin && p.x <= viewWidth + margin &&
+    p.y >= -margin && p.y <= viewHeight + margin
+  )
+}
+
+/**
+ * Render rivers as smooth SVG paths with name labels at the midpoint.
  * Uses Catmull-Rom smoothing on original vertices for natural curves.
+ * Each unique river name gets a label on its longest visible segment,
+ * rotated to follow the river's direction.
  */
 function renderRivers(
   features: GeoFeature[],
@@ -409,17 +472,24 @@ function renderRivers(
   color: string,
   opacity: number,
   geoBounds: RouteBounds,
+  viewWidth = 1080,
+  viewHeight = 1152,
 ): string {
   const paths: string[] = []
+  const labels: string[] = []
   const viewBbox: [number, number, number, number] = [
     geoBounds.minLon, geoBounds.minLat, geoBounds.maxLon, geoBounds.maxLat,
   ]
+
+  // Track the longest visible segment per river name for labelling
+  const longestByName = new Map<string, { len: number; pts: Point2D[] }>()
 
   for (const f of features) {
     const geom = f.geometry
     const lines: number[][][] = geom.type === 'MultiLineString'
       ? geom.coordinates as number[][][]
       : [geom.coordinates as number[][]]
+    const name = f.properties?.name || ''
 
     for (const line of lines) {
       if (line.length < 2) continue
@@ -430,16 +500,48 @@ function renderRivers(
 
       const projected = projectRing(line, params)
       const d = smoothPathD(projected)
-      if (d) {
-        paths.push(
-          `<path d="${d}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round"/>`
-        )
+      if (!d) continue
+
+      paths.push(
+        `<path d="${d}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round"/>`
+      )
+
+      // Track longest *visible* segment for this river name
+      if (name) {
+        const visible = clipPolylineToViewport(projected, viewWidth, viewHeight)
+        if (visible.length >= 2) {
+          const len = polylineLength(visible)
+          const prev = longestByName.get(name)
+          if (!prev || len > prev.len) {
+            longestByName.set(name, { len, pts: visible })
+          }
+        }
       }
     }
   }
 
   if (paths.length === 0) return ''
-  return `<g opacity="${opacity.toFixed(2)}">${paths.join('\n')}</g>`
+
+  // Generate labels for each named river at the midpoint of its longest visible segment
+  const MIN_LABEL_LENGTH_PX = 80
+  const RIVER_FONT_SIZE = 38
+  for (const [name, { len, pts }] of longestByName) {
+    const approxTextWidth = name.length * RIVER_FONT_SIZE * 0.55
+    if (len < MIN_LABEL_LENGTH_PX || len < approxTextWidth * 1.3) continue
+
+    const mid = midpointOnPolyline(pts)
+    // Skip labels whose midpoint is outside the viewport
+    if (mid.x < 0 || mid.x > viewWidth || mid.y < 0 || mid.y > viewHeight) continue
+
+    labels.push(
+      `<text x="${mid.x.toFixed(1)}" y="${(mid.y - 20).toFixed(1)}" ` +
+      `fill="${color}" font-size="${RIVER_FONT_SIZE}" font-family="system-ui, sans-serif" ` +
+      `font-style="italic" text-anchor="middle" ` +
+      `transform="rotate(${mid.angle.toFixed(1)} ${mid.x.toFixed(1)} ${(mid.y - 20).toFixed(1)})">${name}</text>`
+    )
+  }
+
+  return `<g opacity="${opacity.toFixed(2)}">${paths.join('\n')}${labels.length > 0 ? '\n' + labels.join('\n') : ''}</g>`
 }
 
 /**
@@ -672,7 +774,7 @@ export function generateGeoLayers(
       FEATURE_PADDING_DEG,
     )
     if (rivers.length > 0) {
-      const riverSvg = renderRivers(rivers, projectionParams, config.riverColor, config.riverOpacity, filterBounds)
+      const riverSvg = renderRivers(rivers, projectionParams, config.riverColor, config.riverOpacity, filterBounds, viewWidth, viewHeight)
       if (riverSvg) parts.push(riverSvg)
     }
   }
