@@ -131,6 +131,8 @@ function selectCities(
   routeBounds: RouteBounds,
   paddingDeg: number,
   params: ProjectionParams,
+  viewWidth = 1080,
+  viewHeight = 1152,
 ): CityPoint[] {
   // Route extent in degrees (max of lat/lon span)
   const latSpan = routeBounds.maxLat - routeBounds.minLat
@@ -138,37 +140,44 @@ function selectCities(
   const extent = Math.max(latSpan, lonSpan)
 
   // Scale-dependent population threshold:
-  //   extent < 0.3°  → 30K   (very tight, ~25km route)
-  //   extent ~ 1°    → 100K
-  //   extent ~ 3°    → 300K
-  //   extent > 5°    → 500K+
-  const minPop = Math.max(5000, Math.round(extent * 100000))
+  //   extent < 0.3°  → 5K    (tight route, show small towns)
+  //   extent ~ 1°    → 15K
+  //   extent ~ 3°    → 45K
+  //   extent > 5°    → 75K+
+  const minPop = Math.max(5000, Math.round(extent * 15000))
 
-  // Filter by bounds + population
-  const candidates = cities.filter(c =>
-    c.pop >= minPop &&
-    c.lon >= routeBounds.minLon - paddingDeg &&
-    c.lon <= routeBounds.maxLon + paddingDeg &&
-    c.lat >= routeBounds.minLat - paddingDeg &&
-    c.lat <= routeBounds.maxLat + paddingDeg
-  )
+  // Filter by bounds + population, project, then keep only those
+  // whose projected position is within (or near) the visible viewport.
+  // This prevents far-away large cities from crowding out local towns.
+  const margin = 50
+  const projected: Array<CityPoint & { px: number; py: number }> = []
+
+  for (const c of cities) {
+    if (c.pop < minPop) continue
+    if (c.lon < routeBounds.minLon - paddingDeg || c.lon > routeBounds.maxLon + paddingDeg) continue
+    if (c.lat < routeBounds.minLat - paddingDeg || c.lat > routeBounds.maxLat + paddingDeg) continue
+    const { x, y } = projectGeoCoord(c.lon, c.lat, params)
+    // Only keep cities visible in the viewport (with small margin for labels)
+    if (x >= -margin && x <= viewWidth + margin && y >= -margin && y <= viewHeight + margin) {
+      projected.push({ ...c, px: x, py: y })
+    }
+  }
 
   // Sort largest first so they get priority in decluttering
-  candidates.sort((a, b) => b.pop - a.pop)
+  projected.sort((a, b) => b.pop - a.pop)
 
   // Declutter: keep cities that aren't too close to already-selected ones
   const selected: Array<CityPoint & { px: number; py: number }> = []
 
-  for (const city of candidates) {
+  for (const city of projected) {
     if (selected.length >= MAX_CITIES) break
-    const { x, y } = projectGeoCoord(city.lon, city.lat, params)
     const tooClose = selected.some(s => {
-      const dx = x - s.px
-      const dy = y - s.py
+      const dx = city.px - s.px
+      const dy = city.py - s.py
       return dx * dx + dy * dy < MIN_CITY_SPACING_PX * MIN_CITY_SPACING_PX
     })
     if (!tooClose) {
-      selected.push({ ...city, px: x, py: y })
+      selected.push(city)
     }
   }
 
@@ -555,6 +564,8 @@ export function generateGeoLayers(
       routeBounds,
       FEATURE_PADDING_DEG,
       projectionParams,
+      viewWidth,
+      viewHeight,
     )
     if (cities.length > 0) {
       parts.push(renderCities(cities, projectionParams, config.cityColor, config.cityOpacity))
