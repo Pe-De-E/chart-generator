@@ -61,6 +61,13 @@
           </v-btn>
         </template>
       </v-tooltip>
+      <v-tooltip location="left" text="Geo-Kontext">
+        <template v-slot:activator="{ props }">
+          <v-btn v-bind="props" icon variant="text" @click="controlsCollapsed = false; expandedPanels = ['geo']">
+            <v-icon>mdi-earth</v-icon>
+          </v-btn>
+        </template>
+      </v-tooltip>
 
       <v-spacer />
 
@@ -811,6 +818,79 @@
           </v-expansion-panel-text>
         </v-expansion-panel>
 
+        <!-- Geo Context Layers -->
+        <v-expansion-panel value="geo">
+          <v-expansion-panel-title>
+            <v-icon start size="small">mdi-earth</v-icon>
+            Geo-Kontext
+          </v-expansion-panel-title>
+          <v-expansion-panel-text>
+            <div class="panel-stack">
+              <v-checkbox
+                v-model="showBorders"
+                label="Laendergrenzen"
+                density="compact"
+                hide-details
+              />
+              <template v-if="showBorders">
+                <label class="text-caption text-medium-emphasis d-block mb-1">
+                  Deckkraft: {{ Math.round(borderOpacity * 100) }}%
+                </label>
+                <v-slider
+                  v-model="borderOpacity"
+                  :min="0.05"
+                  :max="1"
+                  :step="0.05"
+                  density="compact"
+                  hide-details
+                />
+              </template>
+
+              <v-checkbox
+                v-model="showRivers"
+                label="Fluesse"
+                density="compact"
+                hide-details
+                class="mt-1"
+              />
+              <template v-if="showRivers">
+                <label class="text-caption text-medium-emphasis d-block mb-1">
+                  Deckkraft: {{ Math.round(riverOpacity * 100) }}%
+                </label>
+                <v-slider
+                  v-model="riverOpacity"
+                  :min="0.05"
+                  :max="1"
+                  :step="0.05"
+                  density="compact"
+                  hide-details
+                />
+              </template>
+
+              <v-checkbox
+                v-model="showCities"
+                label="Staedte"
+                density="compact"
+                hide-details
+                class="mt-1"
+              />
+              <template v-if="showCities">
+                <label class="text-caption text-medium-emphasis d-block mb-1">
+                  Deckkraft: {{ Math.round(cityOpacity * 100) }}%
+                </label>
+                <v-slider
+                  v-model="cityOpacity"
+                  :min="0.05"
+                  :max="1"
+                  :step="0.05"
+                  density="compact"
+                  hide-details
+                />
+              </template>
+            </div>
+          </v-expansion-panel-text>
+        </v-expansion-panel>
+
         <!-- Marker & Labels (Elevation Profile) -->
         <v-expansion-panel value="markers">
           <v-expansion-panel-title>
@@ -1097,6 +1177,13 @@ const {
   dividerColor,
   showElevationColoring,
   elevationColorIntensity,
+  // Geo Context Layers
+  showBorders,
+  showRivers,
+  showCities,
+  borderOpacity,
+  riverOpacity,
+  cityOpacity,
 } = useRouteMapConfig(
   () => props.animationConfig,
   updateAnimationConfig,

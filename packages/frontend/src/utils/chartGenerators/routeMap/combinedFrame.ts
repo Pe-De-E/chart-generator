@@ -12,7 +12,9 @@ import type { BackgroundType, PanZoomConfig } from '../elevationChart/types'
 import type { RouteLineStyle } from './routeLine'
 import type { MapCameraConfig } from './mapCamera'
 import { generateBackgroundElements } from '../elevationChart/background'
-import { projectRouteToSvg } from './projection'
+import { projectRouteToSvg, getProjectionParams } from './projection'
+import { generateGeoLayers } from './geoFeatures'
+import type { GeoLayerConfig } from './geoFeatures'
 import { generateRouteLine, generateRouteMarker, DEFAULT_ROUTE_LINE_STYLE } from './routeLine'
 import { calculateMapCameraViewport, DEFAULT_MAP_CAMERA_CONFIG } from './mapCamera'
 import { getMarkerPosition } from '../elevationChart/animation'
@@ -88,6 +90,9 @@ export interface CombinedFrameOptions {
 
   // Overall opacity (for fade transitions)
   sceneOpacity?: number
+
+  // Geographic context layers (borders, rivers, cities)
+  geoLayers?: GeoLayerConfig
 
   // Title overlay (rendered on top of everything)
   titleOverlay?: {
@@ -320,6 +325,8 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     dividerWidth = 2,
     // Opacity
     sceneOpacity,
+    // Geo context
+    geoLayers,
     // Title
     titleOverlay,
   } = options
@@ -357,7 +364,13 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
       height: mapHeight,
       padding: { top: 50, right: 50, bottom: 50, left: 50 },
     }
-    const { mapPoints, chartArea: mapChartArea } = projectRouteToSvg(routePoints, mapConfig)
+    const { mapPoints, bounds: routeBounds, chartArea: mapChartArea } = projectRouteToSvg(routePoints, mapConfig)
+
+    // Geographic context layers (borders, rivers, cities)
+    const projParams = getProjectionParams(routeBounds, mapConfig)
+    const geoLayersHtml = geoLayers
+      ? generateGeoLayers(routeBounds, projParams, geoLayers, width, mapHeight)
+      : ''
 
     const camera = calculateMapCameraViewport(
       effectiveProgress, mapCameraMode, mapCameraConfig,
@@ -378,7 +391,14 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
 
     mapDefs = routeLine.defs
 
+    // Wrap geo layers in a clipping container — coordinates extend far
+    // beyond the viewport since 110m data covers a wide area
+    const geoClipped = geoLayersHtml
+      ? `<svg x="0" y="0" width="${width}" height="${mapHeight}" overflow="hidden">${geoLayersHtml}</svg>`
+      : ''
+
     const mapInnerContent = `
+      ${geoClipped}
       ${routeLine.elements}
       ${distLabels}
       ${startEnd}

@@ -133,6 +133,13 @@ export interface RouteMapAnimationConfig {
   dividerColor: string;
   showElevationColoring: boolean;
   elevationColorIntensity: number;
+  // Geo context layers
+  showBorders: boolean;
+  showRivers: boolean;
+  showCities: boolean;
+  borderOpacity: number;
+  riverOpacity: number;
+  cityOpacity: number;
 }
 
 export const DEFAULT_ROUTEMAP_ANIMATION_CONFIG: RouteMapAnimationConfig = {
@@ -194,6 +201,13 @@ export const DEFAULT_ROUTEMAP_ANIMATION_CONFIG: RouteMapAnimationConfig = {
   dividerColor: '#ffffff33',
   showElevationColoring: false,
   elevationColorIntensity: 5,
+  // Geo context layers
+  showBorders: false,
+  showRivers: false,
+  showCities: false,
+  borderOpacity: 0.35,
+  riverOpacity: 0.40,
+  cityOpacity: 0.50,
 };
 </script>
 
@@ -379,6 +393,18 @@ function buildFrameOptions(progress: number, overrides: Partial<CombinedFrameOpt
     // Divider
     showDivider: cfg.showDivider,
     dividerColor: cfg.dividerColor,
+    // Geo context layers
+    geoLayers: (cfg.showBorders || cfg.showRivers || cfg.showCities) ? {
+      showBorders: cfg.showBorders,
+      showRivers: cfg.showRivers,
+      showCities: cfg.showCities,
+      borderColor: '#ffffff',
+      borderOpacity: cfg.borderOpacity,
+      riverColor: '#4a90d9',
+      riverOpacity: cfg.riverOpacity,
+      cityColor: '#ffffff',
+      cityOpacity: cfg.cityOpacity,
+    } : undefined,
     // Overrides
     ...overrides,
   }

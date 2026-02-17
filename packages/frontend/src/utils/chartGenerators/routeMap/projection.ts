@@ -66,6 +66,53 @@ export function calculateRouteBounds(points: RoutePoint[]): RouteBounds {
   }
 }
 
+/** Projection parameters for converting geo coordinates to SVG pixels */
+export interface ProjectionParams {
+  cosLat: number
+  scale: number
+  offsetX: number
+  offsetY: number
+  minLon: number
+  maxLat: number
+}
+
+/**
+ * Calculate projection parameters for a route's geographic bounds.
+ * These can be used to project any lon/lat to SVG coordinates
+ * in the same coordinate space as the route.
+ */
+export function getProjectionParams(
+  bounds: RouteBounds,
+  config: MapViewConfig,
+): ProjectionParams {
+  const areaX = config.padding.left
+  const areaY = config.padding.top
+  const areaW = config.width - config.padding.left - config.padding.right
+  const areaH = config.height - config.padding.top - config.padding.bottom
+
+  if (areaW <= 0 || areaH <= 0) {
+    return { cosLat: 1, scale: 1, offsetX: areaX, offsetY: areaY, minLon: bounds.minLon, maxLat: bounds.maxLat }
+  }
+
+  const cosLat = Math.cos((bounds.centerLat * Math.PI) / 180)
+
+  let geoW = (bounds.maxLon - bounds.minLon) * cosLat
+  let geoH = bounds.maxLat - bounds.minLat
+  if (geoW < 1e-8) geoW = 1e-4
+  if (geoH < 1e-8) geoH = 1e-4
+
+  const scaleX = areaW / geoW
+  const scaleY = areaH / geoH
+  const scale = Math.min(scaleX, scaleY)
+
+  const usedW = geoW * scale
+  const usedH = geoH * scale
+  const offsetX = areaX + (areaW - usedW) / 2
+  const offsetY = areaY + (areaH - usedH) / 2
+
+  return { cosLat, scale, offsetX, offsetY, minLon: bounds.minLon, maxLat: bounds.maxLat }
+}
+
 /**
  * Project route points to SVG pixel coordinates.
  *

@@ -141,6 +141,38 @@ export function useRouteMapConfig(
     set: (value: number) => updateConfig({ elevationColorIntensity: value }),
   })
 
+  // --- Geo Context Layers ---
+
+  const showBorders = computed({
+    get: () => getConfig().showBorders ?? false,
+    set: (value: boolean) => updateConfig({ showBorders: value }),
+  })
+
+  const showRivers = computed({
+    get: () => getConfig().showRivers ?? false,
+    set: (value: boolean) => updateConfig({ showRivers: value }),
+  })
+
+  const showCities = computed({
+    get: () => getConfig().showCities ?? false,
+    set: (value: boolean) => updateConfig({ showCities: value }),
+  })
+
+  const borderOpacity = computed({
+    get: () => getConfig().borderOpacity ?? 0.35,
+    set: (value: number) => updateConfig({ borderOpacity: value }),
+  })
+
+  const riverOpacity = computed({
+    get: () => getConfig().riverOpacity ?? 0.40,
+    set: (value: number) => updateConfig({ riverOpacity: value }),
+  })
+
+  const cityOpacity = computed({
+    get: () => getConfig().cityOpacity ?? 0.50,
+    set: (value: number) => updateConfig({ cityOpacity: value }),
+  })
+
   return {
     // All shared elevation fields
     ...elevationConfig,
@@ -173,5 +205,12 @@ export function useRouteMapConfig(
     // Elevation Coloring
     showElevationColoring,
     elevationColorIntensity,
+    // Geo Context Layers
+    showBorders,
+    showRivers,
+    showCities,
+    borderOpacity,
+    riverOpacity,
+    cityOpacity,
   }
 }
