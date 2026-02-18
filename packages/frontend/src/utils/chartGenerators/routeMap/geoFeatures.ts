@@ -26,6 +26,12 @@ export interface GeoLayerConfig {
   riverOpacity: number
   cityColor: string
   cityOpacity: number
+  showContours: boolean
+  contourColor: string
+  contourOpacity: number
+  contourInterval: number
+  contourMajorInterval: number
+  contourShowLabels: boolean
 }
 
 export const DEFAULT_GEO_LAYER_CONFIG: GeoLayerConfig = {
@@ -38,6 +44,12 @@ export const DEFAULT_GEO_LAYER_CONFIG: GeoLayerConfig = {
   riverOpacity: 0.40,
   cityColor: '#ffffff',
   cityOpacity: 0.50,
+  showContours: false,
+  contourColor: '#8B7355',
+  contourOpacity: 0.25,
+  contourInterval: 100,
+  contourMajorInterval: 500,
+  contourShowLabels: false,
 }
 
 /** GeoJSON feature (simplified, matching our stripped data) */

@@ -28,6 +28,7 @@
       :slider-progress="sliderProgress"
       :video-export-supported="videoExport.isSupported.value"
       :video-exporting="videoExport.isExporting.value"
+      :contour-loading="contourLoading"
       @update:animation-config="$emit('update:animationConfig', $event)"
       @update:chart-title="$emit('update:chartTitle', $event)"
       @back="$emit('back')"
@@ -140,6 +141,13 @@ export interface RouteMapAnimationConfig {
   borderOpacity: number;
   riverOpacity: number;
   cityOpacity: number;
+  // Contour lines
+  showContours: boolean;
+  contourColor: string;
+  contourOpacity: number;
+  contourInterval: number;
+  contourMajorInterval: number;
+  contourShowLabels: boolean;
 }
 
 export const DEFAULT_ROUTEMAP_ANIMATION_CONFIG: RouteMapAnimationConfig = {
@@ -208,6 +216,13 @@ export const DEFAULT_ROUTEMAP_ANIMATION_CONFIG: RouteMapAnimationConfig = {
   borderOpacity: 0.35,
   riverOpacity: 0.40,
   cityOpacity: 0.50,
+  // Contour lines
+  showContours: false,
+  contourColor: '#8B7355',
+  contourOpacity: 0.25,
+  contourInterval: 100,
+  contourMajorInterval: 500,
+  contourShowLabels: false,
 };
 </script>
 
@@ -227,6 +242,9 @@ import ExportSettingsDialog from './ExportSettingsDialog.vue'
 import type { ExportSettings } from './ExportSettingsDialog.vue'
 import VideoExportProgressDialog from './VideoExportProgressDialog.vue'
 import RouteMapControlsSidebar from './RouteMapControlsSidebar.vue'
+import { useContourLines } from '../../composables/useContourLines'
+import { calculateRouteBounds, getProjectionParams } from '../../utils/chartGenerators/routeMap/projection'
+import type { ContourConfig } from '../../utils/chartGenerators/routeMap/contourLines'
 
 // Slider progress state
 const sliderProgress = ref(0)
@@ -267,6 +285,40 @@ const emit = defineEmits<{
   'update:chartTitle': [value: string]
   'update:animationConfig': [value: RouteMapAnimationConfig]
 }>()
+
+// ── Contour lines (async terrain tile fetch + d3-contour) ──
+const contourRouteBounds = computed(() => {
+  if (props.routePoints.length < 2) return null
+  return calculateRouteBounds(props.routePoints)
+})
+const contourMapHeight = computed(() => Math.round(1920 * props.animationConfig.mapHeightRatio))
+const contourProjParams = computed(() => {
+  if (!contourRouteBounds.value) return null
+  return getProjectionParams(contourRouteBounds.value, {
+    width: 1080, height: contourMapHeight.value,
+    padding: { top: 50, right: 50, bottom: 50, left: 50 },
+  })
+})
+const contourConfig = computed<ContourConfig | null>(() => {
+  const cfg = props.animationConfig
+  if (!cfg.showContours) return null
+  return {
+    interval: cfg.contourInterval,
+    majorInterval: cfg.contourMajorInterval,
+    color: cfg.contourColor,
+    opacity: cfg.contourOpacity,
+    minorWidth: 0.6,
+    majorWidth: 1.2,
+    showLabels: cfg.contourShowLabels,
+  }
+})
+const { contourSvg, isLoading: contourLoading } = useContourLines(
+  contourRouteBounds,
+  contourProjParams,
+  contourConfig,
+  computed(() => 1080),
+  contourMapHeight,
+)
 
 // Title card: include title + transition in total duration when title exists
 const hasTitleCard = computed(() => !!props.chartTitle.trim())
@@ -404,7 +456,15 @@ function buildFrameOptions(progress: number, overrides: Partial<CombinedFrameOpt
       riverOpacity: cfg.riverOpacity,
       cityColor: '#ffffff',
       cityOpacity: cfg.cityOpacity,
+      showContours: false,
+      contourColor: cfg.contourColor,
+      contourOpacity: cfg.contourOpacity,
+      contourInterval: cfg.contourInterval,
+      contourMajorInterval: cfg.contourMajorInterval,
+      contourShowLabels: cfg.contourShowLabels,
     } : undefined,
+    // Pre-rendered contour lines (async, from terrain tiles)
+    contourLayerSvg: contourSvg.value,
     // Overrides
     ...overrides,
   }

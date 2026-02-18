@@ -173,6 +173,38 @@ export function useRouteMapConfig(
     set: (value: number) => updateConfig({ cityOpacity: value }),
   })
 
+  // --- Contour Lines ---
+
+  const showContours = computed({
+    get: () => getConfig().showContours ?? false,
+    set: (value: boolean) => updateConfig({ showContours: value }),
+  })
+
+  const contourColor = computed({
+    get: () => getConfig().contourColor ?? '#8B7355',
+    set: (value: string) => updateConfig({ contourColor: value }),
+  })
+
+  const contourOpacity = computed({
+    get: () => getConfig().contourOpacity ?? 0.25,
+    set: (value: number) => updateConfig({ contourOpacity: value }),
+  })
+
+  const contourInterval = computed({
+    get: () => getConfig().contourInterval ?? 100,
+    set: (value: number) => updateConfig({ contourInterval: value }),
+  })
+
+  const contourMajorInterval = computed({
+    get: () => getConfig().contourMajorInterval ?? 500,
+    set: (value: number) => updateConfig({ contourMajorInterval: value }),
+  })
+
+  const contourShowLabels = computed({
+    get: () => getConfig().contourShowLabels ?? false,
+    set: (value: boolean) => updateConfig({ contourShowLabels: value }),
+  })
+
   return {
     // All shared elevation fields
     ...elevationConfig,
@@ -212,5 +244,12 @@ export function useRouteMapConfig(
     borderOpacity,
     riverOpacity,
     cityOpacity,
+    // Contour Lines
+    showContours,
+    contourColor,
+    contourOpacity,
+    contourInterval,
+    contourMajorInterval,
+    contourShowLabels,
   }
 }

@@ -94,6 +94,9 @@ export interface CombinedFrameOptions {
   // Geographic context layers (borders, rivers, cities)
   geoLayers?: GeoLayerConfig
 
+  // Pre-rendered contour lines SVG (generated async from terrain tiles)
+  contourLayerSvg?: string
+
   // Title overlay (rendered on top of everything)
   titleOverlay?: {
     text: string
@@ -327,6 +330,7 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     sceneOpacity,
     // Geo context
     geoLayers,
+    contourLayerSvg,
     // Title
     titleOverlay,
   } = options
@@ -391,10 +395,12 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
 
     mapDefs = routeLine.defs
 
-    // Wrap geo layers in a clipping container — coordinates extend far
+    // Wrap geo/contour layers in a clipping container — coordinates extend far
     // beyond the viewport since 110m data covers a wide area
-    const geoClipped = geoLayersHtml
-      ? `<svg x="0" y="0" width="${width}" height="${mapHeight}" overflow="hidden">${geoLayersHtml}</svg>`
+    const contourHtml = contourLayerSvg || ''
+    const allGeoHtml = contourHtml + geoLayersHtml
+    const geoClipped = allGeoHtml
+      ? `<svg x="0" y="0" width="${width}" height="${mapHeight}" overflow="hidden">${allGeoHtml}</svg>`
       : ''
 
     const mapInnerContent = `

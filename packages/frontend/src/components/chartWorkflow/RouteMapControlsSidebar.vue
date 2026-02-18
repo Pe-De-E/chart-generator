@@ -887,6 +887,55 @@
                   hide-details
                 />
               </template>
+
+              <v-divider class="my-2" />
+
+              <v-checkbox
+                v-model="showContours"
+                label="Hoehenlinien"
+                density="compact"
+                hide-details
+                class="mt-1"
+              />
+              <template v-if="showContours">
+                <v-progress-linear
+                  v-if="contourLoading"
+                  indeterminate
+                  color="primary"
+                  height="2"
+                  class="mt-1"
+                />
+                <label class="text-caption text-medium-emphasis d-block mb-1">
+                  Deckkraft: {{ Math.round(contourOpacity * 100) }}%
+                </label>
+                <v-slider
+                  v-model="contourOpacity"
+                  :min="0.05"
+                  :max="0.60"
+                  :step="0.05"
+                  density="compact"
+                  hide-details
+                />
+                <label class="text-caption text-medium-emphasis d-block mb-1 mt-2">
+                  Intervall: {{ contourInterval }}m
+                </label>
+                <v-slider
+                  v-model="contourInterval"
+                  :min="25"
+                  :max="500"
+                  :step="25"
+                  density="compact"
+                  hide-details
+                  thumb-label
+                />
+                <v-checkbox
+                  v-model="contourShowLabels"
+                  label="Hoehenbeschriftung"
+                  density="compact"
+                  hide-details
+                  class="mt-1"
+                />
+              </template>
             </div>
           </v-expansion-panel-text>
         </v-expansion-panel>
@@ -1086,6 +1135,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  contourLoading: {
+    type: Boolean,
+    default: false,
+  },
 })
 
 const emit = defineEmits<{
@@ -1184,6 +1237,13 @@ const {
   borderOpacity,
   riverOpacity,
   cityOpacity,
+  // Contour Lines
+  showContours,
+  contourColor,
+  contourOpacity,
+  contourInterval,
+  contourMajorInterval,
+  contourShowLabels,
 } = useRouteMapConfig(
   () => props.animationConfig,
   updateAnimationConfig,
