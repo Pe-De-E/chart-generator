@@ -399,6 +399,7 @@ function renderBorders(
   return `<g opacity="${opacity.toFixed(2)}">${paths.join('\n')}</g>`
 }
 
+
 /**
  * Compute the total pixel length of a projected polyline (sum of segment distances).
  */
@@ -701,8 +702,11 @@ function renderCities(
 let cachedSvg: string | null = null
 let cachedKey: string | null = null
 
+// Bump this when rendering logic changes to invalidate cached results
+const CACHE_VERSION = 13
+
 function buildCacheKey(bounds: RouteBounds, config: GeoLayerConfig, vw: number, vh: number): string {
-  return `${bounds.minLat},${bounds.maxLat},${bounds.minLon},${bounds.maxLon},` +
+  return `v${CACHE_VERSION},${bounds.minLat},${bounds.maxLat},${bounds.minLon},${bounds.maxLon},` +
     `${config.showBorders},${config.showRivers},${config.showCities},` +
     `${config.borderOpacity},${config.riverOpacity},${config.cityOpacity},` +
     `${vw},${vh}`
@@ -736,7 +740,6 @@ export function generateGeoLayers(
   viewHeight = 1152,
   routePoints?: ReadonlyArray<{ x: number; y: number }>,
 ): string {
-  // Check cache
   const key = buildCacheKey(routeBounds, config, viewWidth, viewHeight)
   if (key === cachedKey && cachedSvg !== null) return cachedSvg
 
@@ -794,11 +797,134 @@ export function generateGeoLayers(
     }
   }
 
+  // Country name labels along borders (rendered last = on top of everything)
+  // For each country, find the longest visible border segment, place the label
+  // at its midpoint rotated to follow the border, offset toward the country interior
+  // using the polygon's winding direction (signed area) for reliable side detection.
+  {
+    const countries = filterFeaturesByBounds(
+      countriesData.features as unknown as GeoFeature[],
+      routeBounds,
+      FEATURE_PADDING_DEG,
+    )
+    const cViewBbox: [number, number, number, number] = [
+      filterBounds.minLon, filterBounds.minLat, filterBounds.maxLon, filterBounds.maxLat,
+    ]
+
+    // For each country: longest visible border segment + polygon winding sign for offset direction
+    const countryBest = new Map<string, { pts: Point2D[]; len: number; windingSign: number }>()
+
+    for (const f of countries) {
+      const name = f.properties?.name || ''
+      if (!name) continue
+      const geom = f.geometry
+      const polygons: number[][][][] = geom.type === 'MultiPolygon'
+        ? geom.coordinates as number[][][][]
+        : [geom.coordinates as number[][][]]
+
+      for (const polygon of polygons) {
+        const ring = polygon[0]
+        if (!ring || ring.length < 3) continue
+        const ringBbox = computeFeatureBbox(ring)
+        if (!bboxIntersects(ringBbox, cViewBbox)) continue
+
+        const projected = projectRing(ring, projectionParams)
+
+        // Signed area of projected ring determines winding direction in SVG pixel space.
+        // CCW (positive) → interior to left of forward direction
+        // CW  (negative) → interior to right of forward direction
+        let signedArea2 = 0
+        for (let i = 0; i < projected.length; i++) {
+          const j = (i + 1) % projected.length
+          signedArea2 += projected[i].x * projected[j].y - projected[j].x * projected[i].y
+        }
+        const wSign = signedArea2 >= 0 ? 1 : -1
+
+        // Collect contiguous runs of edges visible in viewport
+        let run: Point2D[] = []
+
+        const flushRun = () => {
+          if (run.length < 2) { run = []; return }
+          const len = polylineLength(run)
+          const prev = countryBest.get(name)
+          if (!prev || len > prev.len) {
+            countryBest.set(name, { pts: [...run], len, windingSign: wSign })
+          }
+          run = []
+        }
+
+        for (let i = 0; i < projected.length - 1; i++) {
+          const p1 = projected[i]
+          const p2 = projected[i + 1]
+          const mx = (p1.x + p2.x) / 2
+          const my = (p1.y + p2.y) / 2
+          if (mx >= 0 && mx <= viewWidth && my >= 0 && my <= viewHeight) {
+            if (run.length === 0) run.push(p1)
+            run.push(p2)
+          } else {
+            flushRun()
+          }
+        }
+        flushRun()
+      }
+    }
+
+    const COUNTRY_FONT = 38
+    const LABEL_OFFSET = 50
+    const cMargin = 30
+    const countryColor = config.borderColor || '#ffffff'
+    const countryOpacity = config.borderOpacity || 0.50
+
+    for (const [name, { pts, windingSign }] of countryBest) {
+      // Find midpoint and raw tangent angle on the border segment
+      const totalLen = polylineLength(pts)
+      const halfLen = totalLen / 2
+      let mx = pts[0].x, my = pts[0].y, rawAngle = 0
+      let accum = 0
+      for (let i = 1; i < pts.length; i++) {
+        const dx = pts[i].x - pts[i - 1].x
+        const dy = pts[i].y - pts[i - 1].y
+        const segLen = Math.sqrt(dx * dx + dy * dy)
+        if (accum + segLen >= halfLen) {
+          const t = segLen > 0 ? (halfLen - accum) / segLen : 0
+          mx = pts[i - 1].x + dx * t
+          my = pts[i - 1].y + dy * t
+          rawAngle = Math.atan2(dy, dx)
+          break
+        }
+        accum += segLen
+      }
+
+      // Interior normal using winding direction:
+      // Left of tangent (cos θ, sin θ) is (-sin θ, cos θ)
+      // windingSign > 0 (CCW): interior = left  → normal = (-sin θ, cos θ)
+      // windingSign < 0 (CW):  interior = right → normal = (sin θ, -cos θ)
+      const nx = windingSign * (-Math.sin(rawAngle))
+      const ny = windingSign * Math.cos(rawAngle)
+
+      const lx = mx + nx * LABEL_OFFSET
+      const ly = my + ny * LABEL_OFFSET
+
+      if (lx < cMargin || lx > viewWidth - cMargin || ly < cMargin || ly > viewHeight - cMargin) continue
+
+      // Display angle: clamped for readability
+      let displayAngle = rawAngle * (180 / Math.PI)
+      if (displayAngle > 90) displayAngle -= 180
+      if (displayAngle < -90) displayAngle += 180
+      displayAngle = Math.max(-60, Math.min(60, displayAngle))
+
+      parts.push(
+        `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" fill="${countryColor}" opacity="${countryOpacity.toFixed(2)}" ` +
+        `font-size="${COUNTRY_FONT}" font-family="system-ui, sans-serif" font-style="italic" text-anchor="middle" ` +
+        `transform="rotate(${displayAngle.toFixed(1)} ${lx.toFixed(1)} ${ly.toFixed(1)})">${name}</text>`
+      )
+    }
+  }
+
   const svg = parts.length > 0
     ? `<g class="geo-context">${parts.join('\n')}</g>`
     : ''
 
-  // Cache
   cachedSvg = svg
   cachedKey = key
 
