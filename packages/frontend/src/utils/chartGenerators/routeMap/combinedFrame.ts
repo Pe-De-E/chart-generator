@@ -15,7 +15,7 @@ import { generateBackgroundElements } from '../elevationChart/background'
 import { projectRouteToSvg, getProjectionParams } from './projection'
 import { generateGeoLayers } from './geoFeatures'
 import type { GeoLayerConfig } from './geoFeatures'
-import { generateRouteLine, generateRouteMarker, DEFAULT_ROUTE_LINE_STYLE } from './routeLine'
+import { generateRouteLine, generateRouteMarker, DEFAULT_ROUTE_LINE_STYLE, elevationToColor } from './routeLine'
 import { calculateMapCameraViewport, DEFAULT_MAP_CAMERA_CONFIG } from './mapCamera'
 import { getMarkerPosition } from '../elevationChart/animation'
 import {
@@ -24,6 +24,7 @@ import {
   pointsToAreaPolygon,
   type GPXPoint,
   type ViewBoxConfig,
+  type ViewBoxPoint,
 } from '../../coordinateContract'
 import { remapProgressByTime, remapProgressDirect, buildGradientTimeArray } from '../../timeMapping'
 
@@ -64,6 +65,10 @@ export interface CombinedFrameOptions {
 
   // Elevation section
   curveColor: string
+  /** Color the elevation curve by height (same scale as route) */
+  elevationCurveColoring?: boolean
+  /** Intensity for elevation curve coloring (1-8, reuses route scale) */
+  elevationColorIntensity?: number
   showElevationMarker: boolean
   elevationMarkerSize: number
   elevationMarkerColor: string
@@ -273,6 +278,73 @@ function generateCurveDistanceLabels(
 }
 
 /**
+ * Generate elevation-colored segments for the elevation curve line.
+ * Each segment gets its color based on average elevation of endpoints.
+ */
+function generateColoredElevationLine(
+  points: ViewBoxPoint[],
+  intensity: number,
+  strokeWidth: number,
+): string {
+  if (points.length < 2) return ''
+
+  const elevations = points.map(p => p.originalElevation)
+  const minElev = Math.min(...elevations)
+  const maxElev = Math.max(...elevations)
+  const range = maxElev - minElev
+
+  const segments: string[] = []
+  for (let i = 0; i < points.length - 1; i++) {
+    const p1 = points[i]
+    const p2 = points[i + 1]
+    const avgElev = (p1.originalElevation + p2.originalElevation) / 2
+    const normalizedElev = range > 0 ? (avgElev - minElev) / range : 0.5
+    const color = elevationToColor(normalizedElev, intensity)
+
+    segments.push(
+      `<line x1="${p1.x.toFixed(1)}" y1="${p1.y.toFixed(1)}" x2="${p2.x.toFixed(1)}" y2="${p2.y.toFixed(1)}" stroke="${color}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round"/>`
+    )
+  }
+
+  return segments.join('\n')
+}
+
+/**
+ * Generate elevation-colored area fill for the elevation curve.
+ * Each vertical strip gets its color based on average elevation.
+ */
+function generateColoredElevationArea(
+  points: ViewBoxPoint[],
+  chartArea: { x: number; y: number; width: number; height: number },
+  intensity: number,
+): string {
+  if (points.length < 2) return ''
+
+  const elevations = points.map(p => p.originalElevation)
+  const minElev = Math.min(...elevations)
+  const maxElev = Math.max(...elevations)
+  const range = maxElev - minElev
+  const bottom = chartArea.y + chartArea.height
+
+  const strips: string[] = []
+  for (let i = 0; i < points.length - 1; i++) {
+    const p1 = points[i]
+    const p2 = points[i + 1]
+    const avgElev = (p1.originalElevation + p2.originalElevation) / 2
+    const normalizedElev = range > 0 ? (avgElev - minElev) / range : 0.5
+    const color = elevationToColor(normalizedElev, intensity)
+
+    // Vertical strip from curve to bottom
+    const polyPoints = `${p1.x.toFixed(1)},${p1.y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)} ${p2.x.toFixed(1)},${bottom.toFixed(1)} ${p1.x.toFixed(1)},${bottom.toFixed(1)}`
+    strips.push(
+      `<polygon points="${polyPoints}" fill="${color}" opacity="0.35"/>`
+    )
+  }
+
+  return strips.join('\n')
+}
+
+/**
  * Generate a combined frame with map (top) and elevation chart (bottom).
  *
  * Both views are synchronized via a shared progress value (0-1).
@@ -309,6 +381,8 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     showStartEndLabels = false,
     // Elevation
     curveColor,
+    elevationCurveColoring = false,
+    elevationColorIntensity = 5,
     showElevationMarker,
     elevationMarkerSize,
     elevationMarkerColor,
@@ -479,7 +553,7 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     const scaledMarkerSize = elevationMarkerSize * 2
     const markerStrokeWidth = 3
 
-    const gradientDef = showAreaFill
+    const gradientDef = (showAreaFill && !elevationCurveColoring)
       ? `<linearGradient id="${elevGradientId}" x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%" style="stop-color:${curveColor};stop-opacity:0.5"/>
           <stop offset="100%" style="stop-color:${curveColor};stop-opacity:0.1"/>
@@ -501,17 +575,28 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
       ? generateCurveDistanceLabels(chartData, offsetChartArea, totalDistanceKm, distanceLabelColor)
       : ''
 
-    const areaFillElement = showAreaFill
-      ? `<polygon points="${areaPath}" fill="url(#${elevGradientId})"/>`
-      : ''
+    // Curve rendering: colored segments or standard monochrome
+    let curveElements: string
+    if (elevationCurveColoring) {
+      const coloredArea = showAreaFill
+        ? generateColoredElevationArea(offsetPoints, offsetChartArea, elevationColorIntensity)
+        : ''
+      const coloredLine = generateColoredElevationLine(offsetPoints, elevationColorIntensity, strokeWidth)
+      curveElements = `${coloredArea}\n${coloredLine}`
+    } else {
+      const areaFillElement = showAreaFill
+        ? `<polygon points="${areaPath}" fill="url(#${elevGradientId})"/>`
+        : ''
+      curveElements = `${areaFillElement}
+        <polyline points="${linePoints}" fill="none" stroke="${curveColor}"
+                  stroke-width="${strokeWidth}" stroke-linejoin="round" stroke-linecap="round"/>`
+    }
 
     elevContent = `
       ${elevLabelsHtml}
       ${distLabelsHtml}
       <g clip-path="url(#${elevClipId})">
-        ${areaFillElement}
-        <polyline points="${linePoints}" fill="none" stroke="${curveColor}"
-                  stroke-width="${strokeWidth}" stroke-linejoin="round" stroke-linecap="round"/>
+        ${curveElements}
       </g>
       ${showElevationMarker && markerPoint ? `
         <circle cx="${markerPoint.x}" cy="${markerPoint.y}" r="${scaledMarkerSize}"

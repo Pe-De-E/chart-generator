@@ -72,7 +72,7 @@ function hexToHsl(hex: string): { h: number; s: number; l: number } {
  * Get elevation-based color for a normalized elevation value (0-1).
  * Maps from blue (low) through green (mid) to red (high).
  */
-function elevationToColor(normalizedElev: number, intensity: number): string {
+export function elevationToColor(normalizedElev: number, intensity: number): string {
   // Hue: 240 (blue) → 120 (green) → 0 (red)
   const hue = 240 - normalizedElev * 240
   // Saturation scales with intensity

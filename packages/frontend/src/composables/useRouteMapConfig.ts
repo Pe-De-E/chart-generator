@@ -141,6 +141,11 @@ export function useRouteMapConfig(
     set: (value: number) => updateConfig({ elevationColorIntensity: value }),
   })
 
+  const showElevationCurveColoring = computed({
+    get: () => getConfig().showElevationCurveColoring ?? false,
+    set: (value: boolean) => updateConfig({ showElevationCurveColoring: value }),
+  })
+
   // --- Geo Context Layers ---
 
   const showBorders = computed({
@@ -237,6 +242,7 @@ export function useRouteMapConfig(
     // Elevation Coloring
     showElevationColoring,
     elevationColorIntensity,
+    showElevationCurveColoring,
     // Geo Context Layers
     showBorders,
     showRivers,

@@ -134,6 +134,7 @@ export interface RouteMapAnimationConfig {
   dividerColor: string;
   showElevationColoring: boolean;
   elevationColorIntensity: number;
+  showElevationCurveColoring: boolean;
   // Geo context layers
   showBorders: boolean;
   showRivers: boolean;
@@ -209,6 +210,7 @@ export const DEFAULT_ROUTEMAP_ANIMATION_CONFIG: RouteMapAnimationConfig = {
   dividerColor: '#ffffff33',
   showElevationColoring: false,
   elevationColorIntensity: 5,
+  showElevationCurveColoring: false,
   // Geo context layers
   showBorders: false,
   showRivers: false,
@@ -430,6 +432,8 @@ function buildFrameOptions(progress: number, overrides: Partial<CombinedFrameOpt
     showStartEndLabels: cfg.showStartEndLabels,
     // Elevation
     curveColor: cfg.curveColor,
+    elevationCurveColoring: cfg.showElevationCurveColoring,
+    elevationColorIntensity: cfg.elevationColorIntensity,
     showElevationMarker: cfg.showMarker,
     elevationMarkerSize: cfg.markerSize,
     elevationMarkerColor: '#ffffff',

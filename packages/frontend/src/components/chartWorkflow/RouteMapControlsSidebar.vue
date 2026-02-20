@@ -956,6 +956,13 @@
                 color="primary"
               />
               <v-checkbox
+                v-model="showElevationCurveColoring"
+                label="Kurve nach Hoehe einfaerben"
+                density="compact"
+                hide-details
+                color="primary"
+              />
+              <v-checkbox
                 v-model="animationShowMarker"
                 label="Profil-Marker"
                 density="compact"
@@ -1230,6 +1237,7 @@ const {
   dividerColor,
   showElevationColoring,
   elevationColorIntensity,
+  showElevationCurveColoring,
   // Geo Context Layers
   showBorders,
   showRivers,
