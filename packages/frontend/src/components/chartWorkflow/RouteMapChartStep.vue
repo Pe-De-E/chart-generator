@@ -29,6 +29,8 @@
       :video-export-supported="videoExport.isSupported.value"
       :video-exporting="videoExport.isExporting.value"
       :contour-loading="contourLoading"
+      :river-loading="riverLoading"
+      :peak-loading="peakLoading"
       @update:animation-config="$emit('update:animationConfig', $event)"
       @update:chart-title="$emit('update:chartTitle', $event)"
       @back="$emit('back')"
@@ -142,6 +144,8 @@ export interface RouteMapAnimationConfig {
   borderOpacity: number;
   riverOpacity: number;
   cityOpacity: number;
+  showPeaks: boolean;
+  peakOpacity: number;
   // Contour lines
   showContours: boolean;
   contourColor: string;
@@ -218,6 +222,8 @@ export const DEFAULT_ROUTEMAP_ANIMATION_CONFIG: RouteMapAnimationConfig = {
   borderOpacity: 0.35,
   riverOpacity: 0.40,
   cityOpacity: 0.50,
+  showPeaks: false,
+  peakOpacity: 0.70,
   // Contour lines
   showContours: false,
   contourColor: '#8B7355',
@@ -245,8 +251,12 @@ import type { ExportSettings } from './ExportSettingsDialog.vue'
 import VideoExportProgressDialog from './VideoExportProgressDialog.vue'
 import RouteMapControlsSidebar from './RouteMapControlsSidebar.vue'
 import { useContourLines } from '../../composables/useContourLines'
+import { useRiverTiles } from '../../composables/useRiverTiles'
 import { calculateRouteBounds, getProjectionParams } from '../../utils/chartGenerators/routeMap/projection'
 import type { ContourConfig } from '../../utils/chartGenerators/routeMap/contourLines'
+import type { RiverConfig } from '../../utils/chartGenerators/routeMap/riverTiles'
+import { usePeakLayer } from '../../composables/usePeakLayer'
+import type { PeakConfig } from '../../utils/chartGenerators/routeMap/peakLayer'
 
 // Slider progress state
 const sliderProgress = ref(0)
@@ -318,6 +328,41 @@ const { contourSvg, isLoading: contourLoading } = useContourLines(
   contourRouteBounds,
   contourProjParams,
   contourConfig,
+  computed(() => 1080),
+  contourMapHeight,
+)
+
+// ── River vector tiles (async fetch from OpenFreeMap) ──
+const riverConfig = computed<RiverConfig | null>(() => {
+  const cfg = props.animationConfig
+  if (!cfg.showRivers) return null
+  return {
+    color: '#4a90d9',
+    opacity: cfg.riverOpacity,
+    showLabels: true,
+  }
+})
+const { riverSvg, isLoading: riverLoading } = useRiverTiles(
+  contourRouteBounds,
+  contourProjParams,
+  riverConfig,
+  computed(() => 1080),
+  contourMapHeight,
+)
+
+// ── Peak layer (async fetch from Overpass API) ──
+const peakConfig = computed<PeakConfig | null>(() => {
+  const cfg = props.animationConfig
+  if (!cfg.showPeaks) return null
+  return {
+    color: '#ffffff',
+    opacity: cfg.peakOpacity,
+  }
+})
+const { peakSvg, isLoading: peakLoading } = usePeakLayer(
+  contourRouteBounds,
+  contourProjParams,
+  peakConfig,
   computed(() => 1080),
   contourMapHeight,
 )
@@ -450,9 +495,9 @@ function buildFrameOptions(progress: number, overrides: Partial<CombinedFrameOpt
     showDivider: cfg.showDivider,
     dividerColor: cfg.dividerColor,
     // Geo context layers
-    geoLayers: (cfg.showBorders || cfg.showRivers || cfg.showCities) ? {
+    geoLayers: (cfg.showBorders || cfg.showCities) ? {
       showBorders: cfg.showBorders,
-      showRivers: cfg.showRivers,
+      showRivers: false,  // Rivers are now async via riverLayerSvg
       showCities: cfg.showCities,
       borderColor: '#ffffff',
       borderOpacity: cfg.borderOpacity,
@@ -469,6 +514,9 @@ function buildFrameOptions(progress: number, overrides: Partial<CombinedFrameOpt
     } : undefined,
     // Pre-rendered contour lines (async, from terrain tiles)
     contourLayerSvg: contourSvg.value,
+    // Pre-rendered river layer (async, from OpenFreeMap vector tiles)
+    riverLayerSvg: riverSvg.value,
+    peakLayerSvg: peakSvg.value,
     // Overrides
     ...overrides,
   }

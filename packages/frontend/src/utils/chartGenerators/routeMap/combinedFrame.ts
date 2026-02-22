@@ -102,6 +102,12 @@ export interface CombinedFrameOptions {
   // Pre-rendered contour lines SVG (generated async from terrain tiles)
   contourLayerSvg?: string
 
+  // Pre-rendered river SVG (generated async from OpenFreeMap vector tiles)
+  riverLayerSvg?: string
+
+  // Pre-rendered peak layer (async, from Overpass API)
+  peakLayerSvg?: string
+
   // Title overlay (rendered on top of everything)
   titleOverlay?: {
     text: string
@@ -405,6 +411,8 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     // Geo context
     geoLayers,
     contourLayerSvg,
+    riverLayerSvg,
+    peakLayerSvg,
     // Title
     titleOverlay,
   } = options
@@ -472,7 +480,9 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     // Wrap geo/contour layers in a clipping container — coordinates extend far
     // beyond the viewport since 110m data covers a wide area
     const contourHtml = contourLayerSvg || ''
-    const allGeoHtml = contourHtml + geoLayersHtml
+    const riverHtml = riverLayerSvg || ''
+    const peakHtml = peakLayerSvg || ''
+    const allGeoHtml = contourHtml + riverHtml + geoLayersHtml + peakHtml
     const geoClipped = allGeoHtml
       ? `<svg x="0" y="0" width="${width}" height="${mapHeight}" overflow="hidden">${allGeoHtml}</svg>`
       : ''

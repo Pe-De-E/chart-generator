@@ -210,7 +210,19 @@ export function useRouteMapConfig(
     set: (value: boolean) => updateConfig({ contourShowLabels: value }),
   })
 
-  return {
+  // --- Peaks ---
+
+  const showPeaks = computed({
+    get: () => getConfig().showPeaks ?? false,
+    set: (value: boolean) => updateConfig({ showPeaks: value }),
+  })
+
+  const peakOpacity = computed({
+    get: () => getConfig().peakOpacity ?? 0.70,
+    set: (value: number) => updateConfig({ peakOpacity: value }),
+  })
+
+    return {
     // All shared elevation fields
     ...elevationConfig,
     // Map Camera
@@ -250,6 +262,9 @@ export function useRouteMapConfig(
     borderOpacity,
     riverOpacity,
     cityOpacity,
+    // Peaks
+    showPeaks,
+    peakOpacity,
     // Contour Lines
     showContours,
     contourColor,

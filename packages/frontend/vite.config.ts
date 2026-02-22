@@ -18,6 +18,11 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path: string) => path.replace(/^\/terrain-tiles/, ''),
       },
+      '/overpass': {
+        target: 'https://overpass-api.de/api',
+        changeOrigin: true,
+        rewrite: (path: string) => path.replace(/^\/overpass/, ''),
+      },
     },
   },
   optimizeDeps: {

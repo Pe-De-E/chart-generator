@@ -854,6 +854,15 @@
                 class="mt-1"
               />
               <template v-if="showRivers">
+                <v-progress-linear
+                  v-if="riverLoading"
+                  indeterminate
+                  color="primary"
+                  height="2"
+                  class="mt-1"
+                />
+              </template>
+              <template v-if="showRivers">
                 <label class="text-caption text-medium-emphasis d-block mb-1">
                   Deckkraft: {{ Math.round(riverOpacity * 100) }}%
                 </label>
@@ -880,6 +889,36 @@
                 </label>
                 <v-slider
                   v-model="cityOpacity"
+                  :min="0.05"
+                  :max="1"
+                  :step="0.05"
+                  density="compact"
+                  hide-details
+                />
+              </template>
+
+              <v-checkbox
+                v-model="showPeaks"
+                label="Gipfel"
+                density="compact"
+                hide-details
+                class="mt-1"
+              />
+              <template v-if="showPeaks">
+                <v-progress-linear
+                  v-if="peakLoading"
+                  indeterminate
+                  color="primary"
+                  height="2"
+                  class="mt-1"
+                />
+              </template>
+              <template v-if="showPeaks">
+                <label class="text-caption text-medium-emphasis d-block mb-1">
+                  Deckkraft: {{ Math.round(peakOpacity * 100) }}%
+                </label>
+                <v-slider
+                  v-model="peakOpacity"
                   :min="0.05"
                   :max="1"
                   :step="0.05"
@@ -1146,6 +1185,14 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  riverLoading: {
+    type: Boolean,
+    default: false,
+  },
+  peakLoading: {
+    type: Boolean,
+    default: false,
+  },
 })
 
 const emit = defineEmits<{
@@ -1245,6 +1292,9 @@ const {
   borderOpacity,
   riverOpacity,
   cityOpacity,
+  // Peaks
+  showPeaks,
+  peakOpacity,
   // Contour Lines
   showContours,
   contourColor,
