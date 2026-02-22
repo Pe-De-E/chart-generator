@@ -517,7 +517,7 @@ function labelExceedsViewport(
  * Returns { textX, textY, angle, anchor } for the first placement that fits,
  * or the best fallback if none is perfect.
  */
-function pickLabelPlacement(
+export function pickLabelPlacement(
   x: number, y: number, r: number, fontSize: number,
   cityName: string,
   viewWidth: number, viewHeight: number,

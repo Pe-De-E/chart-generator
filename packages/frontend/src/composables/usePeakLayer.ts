@@ -15,6 +15,7 @@ export function usePeakLayer(
   config: Ref<PeakConfig | null>,
   viewWidth: Ref<number>,
   viewHeight: Ref<number>,
+  routePoints?: Ref<ReadonlyArray<{ lat: number; lon: number }>>,
 ) {
   const peakSvg = ref('')
   const isLoading = ref(false)
@@ -35,7 +36,7 @@ export function usePeakLayer(
       error.value = null
 
       try {
-        const svg = await generatePeakLayer(bounds, params, cfg, w, h)
+        const svg = await generatePeakLayer(bounds, params, cfg, w, h, routePoints?.value)
         if (thisGeneration === generation) {
           peakSvg.value = svg
         }

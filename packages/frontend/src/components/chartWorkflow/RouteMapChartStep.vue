@@ -365,6 +365,7 @@ const { peakSvg, isLoading: peakLoading } = usePeakLayer(
   peakConfig,
   computed(() => 1080),
   contourMapHeight,
+  computed(() => props.routePoints),
 )
 
 // Title card: include title + transition in total duration when title exists

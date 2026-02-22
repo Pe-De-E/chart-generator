@@ -10,7 +10,7 @@
  */
 
 import type { RouteBounds, ProjectionParams } from './projection'
-import { projectGeoCoord } from './geoFeatures'
+import { projectGeoCoord, pickLabelPlacement } from './geoFeatures'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -117,15 +117,44 @@ function renderPeakSvg(
   config: PeakConfig,
   viewWidth: number,
   viewHeight: number,
+  routePoints?: ReadonlyArray<{ x: number; y: number }>,
 ): string {
   const selected = selectPeaks(peaks, projParams, viewWidth, viewHeight)
   if (selected.length === 0) return ''
 
   const fontSize = 24
+  // r approximates the triangle visual radius for collision detection
+  const symbolR = 8
+  const charWidth = fontSize * 0.6
   const elements: string[] = []
+
+  // Track placed label bounding boxes to prevent label-to-label overlap
+  const placedRects: Array<{ x: number; y: number; w: number; h: number }> = []
 
   for (const p of selected) {
     const { svgX: x, svgY: y } = p
+
+    const label = p.ele > 0
+      ? `${p.name} (${Math.round(p.ele)}m)`
+      : p.name
+
+    const placement = pickLabelPlacement(x, y, symbolR, fontSize, label, viewWidth, viewHeight, routePoints)
+
+    // Compute approximate label bounding box (same convention as pickLabelPlacement internals)
+    const labelW = label.length * charWidth
+    const labelH = fontSize
+    const lx = placement.anchor === 'end' ? placement.textX - labelW : placement.textX
+    const ly = placement.textY
+    const rect = { x: lx, y: ly, w: labelW, h: labelH }
+
+    // Skip this peak entirely if its label collides with an already-placed label
+    const overlaps = placedRects.some(r =>
+      rect.x < r.x + r.w + 6 && rect.x + rect.w + 6 > r.x &&
+      rect.y < r.y + r.h + 6 && rect.y + rect.h + 6 > r.y
+    )
+    if (overlaps) continue
+
+    placedRects.push(rect)
 
     // Upward-pointing triangle (classic cartographic peak symbol)
     elements.push(
@@ -134,16 +163,21 @@ function renderPeakSvg(
       `${(x + 6).toFixed(1)},${(y + 4).toFixed(1)}" fill="${config.color}"/>`
     )
 
-    // Label: Name + elevation if available
-    const label = p.ele > 0
-      ? `${p.name} (${Math.round(p.ele)}m)`
-      : p.name
+    const anchorAttr = placement.anchor === 'end' ? ' text-anchor="end"' : ''
 
-    elements.push(
-      `<text x="${(x + 12).toFixed(1)}" y="${(y - 3).toFixed(1)}" ` +
-      `fill="${config.color}" font-size="${fontSize}" font-family="system-ui, sans-serif" ` +
-      `dominant-baseline="middle">${label}</text>`
-    )
+    if (placement.angle !== 0) {
+      const pivotX = (x + (placement.anchor === 'end' ? -(symbolR + 3) : symbolR + 3)).toFixed(1)
+      elements.push(
+        `<text x="${placement.textX.toFixed(1)}" y="${placement.textY.toFixed(1)}" ` +
+        `fill="${config.color}" font-size="${fontSize}" font-family="system-ui, sans-serif"${anchorAttr} ` +
+        `transform="rotate(${placement.angle} ${pivotX} ${y.toFixed(1)})">${label}</text>`
+      )
+    } else {
+      elements.push(
+        `<text x="${placement.textX.toFixed(1)}" y="${placement.textY.toFixed(1)}" ` +
+        `fill="${config.color}" font-size="${fontSize}" font-family="system-ui, sans-serif"${anchorAttr}>${label}</text>`
+      )
+    }
   }
 
   return `<g opacity="${config.opacity.toFixed(2)}">${elements.join('\n')}</g>`
@@ -168,6 +202,7 @@ export async function generatePeakLayer(
   config: PeakConfig,
   viewWidth = 1080,
   viewHeight = 1152,
+  rawRoutePoints?: ReadonlyArray<{ lat: number; lon: number }>,
 ): Promise<string> {
   const cacheKey = buildCacheKey(routeBounds, config, viewWidth, viewHeight)
   const cached = peakSvgCache.get(cacheKey)
@@ -185,8 +220,11 @@ export async function generatePeakLayer(
     centerLon: routeBounds.centerLon,
   }
 
+  // Project raw geo route points to SVG space for label collision avoidance
+  const routePoints = rawRoutePoints?.map(p => projectGeoCoord(p.lon, p.lat, projectionParams))
+
   const peaks = await fetchPeaks(paddedBounds)
-  const svg = renderPeakSvg(peaks, projectionParams, config, viewWidth, viewHeight)
+  const svg = renderPeakSvg(peaks, projectionParams, config, viewWidth, viewHeight, routePoints)
 
   peakSvgCache.set(cacheKey, svg)
   return svg
