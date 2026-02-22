@@ -476,7 +476,7 @@ export function clipPolylineToViewport(
  * Check if a text label bounding box overlaps with the route polyline.
  * Uses a fast point-in-box test against route points.
  */
-function labelOverlapsRoute(
+export function labelOverlapsRoute(
   labelX: number, labelY: number,
   labelWidth: number, labelHeight: number,
   routePoints: ReadonlyArray<{ x: number; y: number }>,

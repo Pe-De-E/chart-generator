@@ -47,10 +47,13 @@ export function getTitleCardOpacity(titleProgress: number): number {
 }
 
 /** Duration of the title card phase in milliseconds */
-export const TITLE_CARD_DURATION_MS = 2500
+export const TITLE_CARD_DURATION_MS = 1000
 
-/** Duration of the transition from title hook to animation in milliseconds */
+/** Duration of the transition from title hook to animation in milliseconds (used by elevation chart) */
 export const TRANSITION_DURATION_MS = 1500
+
+/** Duration of the outro (full static image) phase in milliseconds */
+export const OUTRO_DURATION_MS = 1500
 
 /**
  * Generate an SVG frame for the title card.

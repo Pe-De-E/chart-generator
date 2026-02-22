@@ -244,8 +244,7 @@ import { useChartAnimation, type PlaybackSpeed } from '../../composables/useChar
 import { useVideoExport } from '../../composables/useVideoExport'
 import { generateCombinedFrame } from '../../utils/chartGenerators/routeMap/combinedFrame'
 import type { CombinedFrameOptions } from '../../utils/chartGenerators/routeMap/combinedFrame'
-import { getTitleCardOpacity, TITLE_CARD_DURATION_MS, TRANSITION_DURATION_MS } from '../../utils/titleCardGenerator'
-import { findHookPoint } from '../../utils/chartGenerators/elevationChart/hookDetection'
+import { getTitleCardOpacity, TITLE_CARD_DURATION_MS, OUTRO_DURATION_MS } from '../../utils/titleCardGenerator'
 import ExportSettingsDialog from './ExportSettingsDialog.vue'
 import type { ExportSettings } from './ExportSettingsDialog.vue'
 import VideoExportProgressDialog from './VideoExportProgressDialog.vue'
@@ -368,28 +367,23 @@ const { peakSvg, isLoading: peakLoading } = usePeakLayer(
   computed(() => props.routePoints),
 )
 
-// Title card: include title + transition in total duration when title exists
+// Animation phases: Title (optional) → Chart animation → Outro (full image)
 const hasTitleCard = computed(() => !!props.chartTitle.trim())
 const chartDurationMs = computed(() => props.animationConfig.duration * 1000)
 const introDurationMs = computed(() =>
-  hasTitleCard.value ? TITLE_CARD_DURATION_MS + TRANSITION_DURATION_MS : 0
+  hasTitleCard.value ? TITLE_CARD_DURATION_MS : 0
 )
 const totalDurationMs = computed(() =>
-  chartDurationMs.value + introDurationMs.value
+  chartDurationMs.value + introDurationMs.value + OUTRO_DURATION_MS
 )
+// titleEnd: fraction at which title phase ends (0 if no title)
 const titleEnd = computed(() =>
-  hasTitleCard.value ? TITLE_CARD_DURATION_MS / totalDurationMs.value : 0
-)
-const transitionEnd = computed(() =>
   hasTitleCard.value ? introDurationMs.value / totalDurationMs.value : 0
 )
-
-// Hook point for title card camera
-const hookProgress = computed(() => findHookPoint(props.chartData))
-
-// Pan window: camera pans from hook to start during late title + transition
-const panStart = computed(() => titleEnd.value * 0.8)
-const panEnd = computed(() => transitionEnd.value)
+// animEnd: fraction at which the animation phase ends (outro starts here)
+const animEnd = computed(() =>
+  (introDurationMs.value + chartDurationMs.value) / totalDurationMs.value
+)
 
 // Animation settings for the composable
 const animationSettings = computed<AnimationOptions>(() => ({
@@ -529,17 +523,16 @@ const animationSvg = computed(() => {
 
   const progress = animationProgress.value
 
-  // Phase 1: Title card — terrain visible with title overlay + hook camera
+  // Phase 1: Title card — clean background with title overlay (no route yet)
   if (hasTitleCard.value && progress <= titleEnd.value) {
     const titleProgress = titleEnd.value > 0 ? progress / titleEnd.value : 1
-    return generateCombinedFrame(buildFrameOptions(1, {
+    return generateCombinedFrame(buildFrameOptions(0, {
       sceneOpacity: 1,
       titleOverlay: {
         text: props.chartTitle,
         opacity: getTitleCardOpacity(titleProgress),
         color: props.animationConfig.titleColor || '#ffffff',
       },
-      // Show full terrain as backdrop, no animation markers
       showElevationMarker: false,
       showMapMarker: false,
       showElevationLabels: false,
@@ -547,29 +540,28 @@ const animationSvg = computed(() => {
     }))
   }
 
-  // Phase 2: Transition — fade out terrain, prepare for animation
-  if (hasTitleCard.value && progress <= transitionEnd.value) {
-    const t = (progress - titleEnd.value) / (transitionEnd.value - titleEnd.value)
-    // Terrain fades out over last 60% of transition
-    const fadeT = Math.max(0, (t - 0.4) / 0.6)
-    const curveOpacity = 1 - fadeT * fadeT
-    return generateCombinedFrame(buildFrameOptions(0, {
-      sceneOpacity: curveOpacity,
+  // Phase 2: Chart animation — route reveals from start to finish
+  if (progress <= animEnd.value) {
+    const chartProgress = animEnd.value > titleEnd.value
+      ? (progress - titleEnd.value) / (animEnd.value - titleEnd.value)
+      : progress
+
+    // Fade-in at the start of the animation (first 10%)
+    const fadeInT = Math.min(1, chartProgress / 0.10)
+    const fadeIn = fadeInT * fadeInT
+
+    return generateCombinedFrame(buildFrameOptions(chartProgress, {
+      sceneOpacity: hasTitleCard.value ? fadeIn : undefined,
     }))
   }
 
-  // Phase 3: Chart animation
-  const chartProgress = transitionEnd.value < 1
-    ? (progress - transitionEnd.value) / (1 - transitionEnd.value)
-    : progress
-
-  // Fade-in at the start of the animation (first 10%)
-  const fadeInDuration = 0.10
-  const fadeInT = Math.min(1, chartProgress / fadeInDuration)
-  const fadeIn = fadeInT * fadeInT
-
-  return generateCombinedFrame(buildFrameOptions(chartProgress, {
-    sceneOpacity: hasTitleCard.value ? fadeIn : undefined,
+  // Phase 3: Outro — full static image, fades in over first 30%
+  const outroProgress = (progress - animEnd.value) / (1 - animEnd.value)
+  const fadeIn = Math.min(1, outroProgress / 0.3)
+  return generateCombinedFrame(buildFrameOptions(1, {
+    showElevationMarker: false,
+    showMapMarker: false,
+    sceneOpacity: fadeIn,
   }))
 })
 
@@ -601,11 +593,10 @@ async function startVideoExport(settings: ExportSettings) {
 
   const hasTitle = !!props.chartTitle.trim()
   const titleMs = hasTitle ? TITLE_CARD_DURATION_MS : 0
-  const transitionMs = hasTitle ? TRANSITION_DURATION_MS : 0
   const chartMs = props.animationConfig.duration * 1000
-  const totalMs = titleMs + transitionMs + chartMs
+  const totalMs = titleMs + chartMs + OUTRO_DURATION_MS
   const exportTitleEnd = titleMs / totalMs
-  const exportTransitionEnd = (titleMs + transitionMs) / totalMs
+  const exportAnimEnd = (titleMs + chartMs) / totalMs
 
   await videoExport.exportVideo({
     width,
@@ -615,10 +606,10 @@ async function startVideoExport(settings: ExportSettings) {
     durationMs: totalMs,
     filename: `${props.chartTitle || 'route-map'}-reel.mp4`,
     renderFrame: (progress: number) => {
-      // Phase 1: Title — terrain visible + title overlay
+      // Phase 1: Title — clean background with title overlay (no route yet)
       if (hasTitle && progress <= exportTitleEnd) {
         const titleProgress = exportTitleEnd > 0 ? progress / exportTitleEnd : 1
-        return generateCombinedFrame(buildFrameOptions(1, {
+        return generateCombinedFrame(buildFrameOptions(0, {
           sceneOpacity: 1,
           titleOverlay: {
             text: props.chartTitle,
@@ -632,27 +623,27 @@ async function startVideoExport(settings: ExportSettings) {
         }))
       }
 
-      // Phase 2: Transition — terrain fades out
-      if (hasTitle && progress <= exportTransitionEnd) {
-        const t = (progress - exportTitleEnd) / (exportTransitionEnd - exportTitleEnd)
-        const fadeT = Math.max(0, (t - 0.4) / 0.6)
-        const curveOpacity = 1 - fadeT * fadeT
-        return generateCombinedFrame(buildFrameOptions(0, {
-          sceneOpacity: curveOpacity,
+      // Phase 2: Chart animation — route reveals from start to finish
+      if (progress <= exportAnimEnd) {
+        const chartProgress = exportAnimEnd > exportTitleEnd
+          ? (progress - exportTitleEnd) / (exportAnimEnd - exportTitleEnd)
+          : progress
+
+        const fadeInT = Math.min(1, chartProgress / 0.10)
+        const fadeIn = fadeInT * fadeInT
+
+        return generateCombinedFrame(buildFrameOptions(chartProgress, {
+          sceneOpacity: hasTitle ? fadeIn : undefined,
         }))
       }
 
-      // Phase 3: Chart animation
-      const chartProgress = exportTransitionEnd < 1
-        ? (progress - exportTransitionEnd) / (1 - exportTransitionEnd)
-        : progress
-
-      const fadeInDuration = 0.10
-      const fadeInT = Math.min(1, chartProgress / fadeInDuration)
-      const fadeIn = fadeInT * fadeInT
-
-      return generateCombinedFrame(buildFrameOptions(chartProgress, {
-        sceneOpacity: hasTitle ? fadeIn : undefined,
+      // Phase 3: Outro — full static image, fades in over first 30%
+      const outroProgress = (progress - exportAnimEnd) / (1 - exportAnimEnd)
+      const fadeIn = Math.min(1, outroProgress / 0.3)
+      return generateCombinedFrame(buildFrameOptions(1, {
+        showElevationMarker: false,
+        showMapMarker: false,
+        sceneOpacity: fadeIn,
       }))
     },
   })

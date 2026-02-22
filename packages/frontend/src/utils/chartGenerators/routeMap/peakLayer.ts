@@ -10,7 +10,7 @@
  */
 
 import type { RouteBounds, ProjectionParams } from './projection'
-import { projectGeoCoord, pickLabelPlacement } from './geoFeatures'
+import { projectGeoCoord, labelOverlapsRoute } from './geoFeatures'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -77,8 +77,8 @@ function selectPeaks(
   projParams: ProjectionParams,
   viewWidth: number,
   viewHeight: number,
-  maxCount = 15,
-  minDistPx = 100,
+  maxCount = 10,
+  minDistPx = 160,
 ): Array<OSMPeak & { svgX: number; svgY: number }> {
   // Highest peaks first; fall back to name-only peaks at the end
   const sorted = [...peaks].filter(p => p.name).sort((a, b) => b.ele - a.ele)
@@ -123,9 +123,10 @@ function renderPeakSvg(
   if (selected.length === 0) return ''
 
   const fontSize = 24
-  // r approximates the triangle visual radius for collision detection
-  const symbolR = 8
-  const charWidth = fontSize * 0.6
+  const symbolHalf = 8   // half-width of triangle base
+  const symbolHeight = 16 // total triangle height
+  const gap = symbolHalf + 5
+  const charWidth = fontSize * 0.65  // conservative estimate to avoid underestimating label width
   const elements: string[] = []
 
   // Track placed label bounding boxes to prevent label-to-label overlap
@@ -138,46 +139,64 @@ function renderPeakSvg(
       ? `${p.name} (${Math.round(p.ele)}m)`
       : p.name
 
-    const placement = pickLabelPlacement(x, y, symbolR, fontSize, label, viewWidth, viewHeight, routePoints)
-
-    // Compute approximate label bounding box (same convention as pickLabelPlacement internals)
-    const labelW = label.length * charWidth
+    const labelW = Math.ceil(label.length * charWidth)
     const labelH = fontSize
-    const lx = placement.anchor === 'end' ? placement.textX - labelW : placement.textX
-    const ly = placement.textY
-    const rect = { x: lx, y: ly, w: labelW, h: labelH }
 
-    // Skip this peak entirely if its label collides with an already-placed label
-    const overlaps = placedRects.some(r =>
-      rect.x < r.x + r.w + 6 && rect.x + rect.w + 6 > r.x &&
-      rect.y < r.y + r.h + 6 && rect.y + rect.h + 6 > r.y
-    )
-    if (overlaps) continue
+    // textY is the SVG text baseline; vertically centers text beside the triangle
+    const textY = y - symbolHeight / 2 + fontSize / 3
 
-    placedRects.push(rect)
+    // Try placement directions: right, left, above-right, above-left
+    const placementCandidates = [
+      { textX: x + gap, textY, anchor: 'start' as const },
+      { textX: x - gap, textY, anchor: 'end' as const },
+      { textX: x + gap, textY: y - symbolHeight - 4, anchor: 'start' as const },
+      { textX: x - gap, textY: y - symbolHeight - 4, anchor: 'end' as const },
+    ]
 
-    // Upward-pointing triangle (classic cartographic peak symbol)
-    elements.push(
-      `<polygon points="${x.toFixed(1)},${(y - 10).toFixed(1)} ` +
-      `${(x - 6).toFixed(1)},${(y + 4).toFixed(1)} ` +
-      `${(x + 6).toFixed(1)},${(y + 4).toFixed(1)}" fill="${config.color}"/>`
-    )
+    let chosenRect: { x: number; y: number; w: number; h: number } | null = null
+    let chosenPlacement = placementCandidates[0]
 
-    const anchorAttr = placement.anchor === 'end' ? ' text-anchor="end"' : ''
+    for (const c of placementCandidates) {
+      const rx = c.anchor === 'end' ? c.textX - labelW : c.textX
+      const ry = c.textY - fontSize
+      const rect = { x: rx, y: ry, w: labelW, h: labelH }
 
-    if (placement.angle !== 0) {
-      const pivotX = (x + (placement.anchor === 'end' ? -(symbolR + 3) : symbolR + 3)).toFixed(1)
-      elements.push(
-        `<text x="${placement.textX.toFixed(1)}" y="${placement.textY.toFixed(1)}" ` +
-        `fill="${config.color}" font-size="${fontSize}" font-family="system-ui, sans-serif"${anchorAttr} ` +
-        `transform="rotate(${placement.angle} ${pivotX} ${y.toFixed(1)})">${label}</text>`
+      // labelOverlapsRoute uses (x, baseline_y, w, h) convention
+      const hitsRoute = routePoints && routePoints.length > 0
+        && labelOverlapsRoute(rx, c.textY, labelW, labelH, routePoints, 10)
+
+      const hitsLabel = placedRects.some(r =>
+        rect.x < r.x + r.w + 12 && rect.x + rect.w + 12 > r.x &&
+        rect.y < r.y + r.h + 12 && rect.y + rect.h + 12 > r.y
       )
-    } else {
-      elements.push(
-        `<text x="${placement.textX.toFixed(1)}" y="${placement.textY.toFixed(1)}" ` +
-        `fill="${config.color}" font-size="${fontSize}" font-family="system-ui, sans-serif"${anchorAttr}>${label}</text>`
-      )
+
+      const outOfBounds = rx < 4 || rx + labelW > viewWidth - 4
+        || ry < 4 || ry + labelH > viewHeight - 4
+
+      if (!hitsRoute && !hitsLabel && !outOfBounds) {
+        chosenRect = rect
+        chosenPlacement = c
+        break
+      }
     }
+
+    // Skip this peak entirely if no label placement is possible
+    if (!chosenRect) continue
+
+    placedRects.push(chosenRect)
+
+    // Render triangle icon and label together (only when a clean spot was found)
+    elements.push(
+      `<polygon points="${x.toFixed(1)},${(y - symbolHeight).toFixed(1)} ` +
+      `${(x - symbolHalf).toFixed(1)},${y.toFixed(1)} ` +
+      `${(x + symbolHalf).toFixed(1)},${y.toFixed(1)}" fill="${config.color}"/>`
+    )
+
+    const anchorAttr = chosenPlacement.anchor === 'end' ? ' text-anchor="end"' : ''
+    elements.push(
+      `<text x="${chosenPlacement.textX.toFixed(1)}" y="${chosenPlacement.textY.toFixed(1)}" ` +
+      `fill="${config.color}" font-size="${fontSize}" font-family="system-ui, sans-serif"${anchorAttr}>${label}</text>`
+    )
   }
 
   return `<g opacity="${config.opacity.toFixed(2)}">${elements.join('\n')}</g>`
