@@ -114,6 +114,12 @@ export interface CombinedFrameOptions {
     opacity: number    // 0-1, controlled by getTitleCardOpacity()
     color: string
   }
+
+  // Stats overlay (distance, elevation gain, current elevation, time)
+  showStatsOverlay?: boolean
+  statsOverlayColor?: string
+  statsX?: number   // 0-1, normalized horizontal position (0=left, 1=right)
+  statsY?: number   // 0-1, normalized vertical position within map area (0=top, 1=bottom)
 }
 
 export const DEFAULT_COMBINED_FRAME_OPTIONS: Partial<CombinedFrameOptions> = {
@@ -351,6 +357,111 @@ function generateColoredElevationArea(
 }
 
 /**
+ * Calculate current stats at a given animation progress.
+ */
+function calculateCurrentStats(
+  routePoints: RoutePoint[],
+  chartData: Array<{ value: number }>,
+  effectiveProgress: number,
+): { distance: number; elevGain: number; currentElev: number; elapsedMs: number | null } {
+  if (routePoints.length === 0 || chartData.length === 0) {
+    return { distance: 0, elevGain: 0, currentElev: 0, elapsedMs: null }
+  }
+
+  // Distance + time: interpolate from routePoints
+  const rpIdx = effectiveProgress * (routePoints.length - 1)
+  const rpI = Math.min(Math.floor(rpIdx), routePoints.length - 2)
+  const rpFrac = rpIdx - rpI
+  const distance = routePoints[rpI].distance + (routePoints[rpI + 1].distance - routePoints[rpI].distance) * rpFrac
+
+  // Elapsed GPS time — use routePoints[i].time (ms since start) if present
+  let elapsedMs: number | null = null
+  const t0 = routePoints[rpI].time
+  const t1 = routePoints[rpI + 1].time
+  if (t0 != null && t1 != null) {
+    elapsedMs = t0 + (t1 - t0) * rpFrac
+  }
+
+  // Current elevation: interpolate from chartData
+  const cdIdx = effectiveProgress * (chartData.length - 1)
+  const cdI = Math.min(Math.floor(cdIdx), chartData.length - 2)
+  const cdFrac = cdIdx - cdI
+  const currentElev = chartData[cdI].value + (chartData[cdI + 1].value - chartData[cdI].value) * cdFrac
+
+  // Elevation gain: sum positive differences up to current index
+  const endIdx = Math.round(effectiveProgress * (chartData.length - 1))
+  let elevGain = 0
+  for (let i = 1; i <= endIdx; i++) {
+    const diff = chartData[i].value - chartData[i - 1].value
+    if (diff > 0) elevGain += diff
+  }
+
+  return { distance, elevGain, currentElev, elapsedMs }
+}
+
+function formatElapsedTime(ms: number): string {
+  const totalSeconds = Math.floor(ms / 1000)
+  const h = Math.floor(totalSeconds / 3600)
+  const m = Math.floor((totalSeconds % 3600) / 60)
+  const s = totalSeconds % 60
+  if (h > 0) {
+    return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+  }
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+}
+
+/**
+ * Render a stats overlay panel at a freely specified normalized position.
+ * statsX/statsY are 0-1 values: 0=top/left edge flush, 1=bottom/right edge flush.
+ */
+function generateStatsOverlay(
+  stats: { distance: number; elevGain: number; currentElev: number; elapsedMs: number | null },
+  width: number,
+  mapHeight: number,
+  color: string,
+  statsX: number,
+  statsY: number,
+): string {
+  const fontSize = 32
+  const rowHeight = 48
+  const paddingX = 20
+  const paddingY = 16
+  const boxWidth = 270
+
+  const rows: Array<{ icon: string; value: string }> = [
+    {
+      icon: '↔',
+      value: stats.distance >= 100
+        ? `${Math.round(stats.distance)} km`
+        : `${stats.distance.toFixed(1)} km`,
+    },
+    { icon: '↑', value: `+${Math.round(stats.elevGain)} m` },
+    { icon: '▲', value: `${Math.round(stats.currentElev)} m` },
+  ]
+  if (stats.elapsedMs !== null) {
+    rows.push({ icon: '⏱', value: formatElapsedTime(stats.elapsedMs) })
+  }
+
+  const boxHeight = rows.length * rowHeight + 2 * paddingY
+
+  const maxX = width - boxWidth
+  const maxY = mapHeight - boxHeight
+  const boxX = Math.round(statsX * maxX)
+  const boxY = Math.round(statsY * maxY)
+
+  const textLines = rows.map((row, i) => {
+    const x = boxX + paddingX
+    const y = Math.round(boxY + paddingY + rowHeight * i + fontSize * 0.78)
+    return `<text x="${x}" y="${y}" fill="${color}" font-size="${fontSize}" font-weight="bold" font-family="system-ui, sans-serif">${row.icon}  ${row.value}</text>`
+  }).join('\n    ')
+
+  return `
+    <rect x="${boxX}" y="${boxY}" width="${boxWidth}" height="${boxHeight}" rx="12" fill="#00000066"/>
+    ${textLines}
+  `
+}
+
+/**
  * Generate a combined frame with map (top) and elevation chart (bottom).
  *
  * Both views are synchronized via a shared progress value (0-1).
@@ -415,6 +526,11 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     peakLayerSvg,
     // Title
     titleOverlay,
+    // Stats
+    showStatsOverlay = false,
+    statsOverlayColor = '#ffffff',
+    statsX = 1.0,
+    statsY = 1.0,
   } = options
 
   // Layout split
@@ -621,6 +737,13 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
             stroke="${dividerColor}" stroke-width="${dividerWidth}"/>`
     : ''
 
+  // ── Stats Overlay ──
+  let statsHtml = ''
+  if (showStatsOverlay && routePoints.length > 1 && chartData.length > 1) {
+    const stats = calculateCurrentStats(routePoints, chartData, effectiveProgress)
+    statsHtml = generateStatsOverlay(stats, width, mapHeight, statsOverlayColor, statsX, statsY)
+  }
+
   // ── Title Overlay ──
   let titleHtml = ''
   if (titleOverlay && titleOverlay.text && titleOverlay.opacity > 0) {
@@ -654,6 +777,7 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     ${opacityOpen}
     ${bg.elements}
     ${mapContent}
+    ${statsHtml}
     ${elevContent}
     ${dividerHtml}
     ${opacityClose}

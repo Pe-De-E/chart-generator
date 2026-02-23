@@ -5,11 +5,17 @@
       <!-- Centered Reel Preview -->
       <div class="preview-area">
         <div class="reel-preview">
-          <div class="silhouette-container">
+          <div class="silhouette-container" ref="previewRef">
             <div
               class="silhouette-chart"
               v-html="animationSvg"
             ></div>
+            <div
+              v-if="animationConfig.showStatsOverlay"
+              class="stats-drag-handle"
+              :style="dragHandleStyle"
+              @mousedown.prevent="onStatsDragStart"
+            />
           </div>
         </div>
       </div>
@@ -153,6 +159,11 @@ export interface RouteMapAnimationConfig {
   contourInterval: number;
   contourMajorInterval: number;
   contourShowLabels: boolean;
+  // Stats overlay
+  showStatsOverlay: boolean;
+  statsOverlayColor: string;
+  statsX: number;   // 0-1 normalized horizontal position
+  statsY: number;   // 0-1 normalized vertical position within map area
 }
 
 export const DEFAULT_ROUTEMAP_ANIMATION_CONFIG: RouteMapAnimationConfig = {
@@ -231,6 +242,11 @@ export const DEFAULT_ROUTEMAP_ANIMATION_CONFIG: RouteMapAnimationConfig = {
   contourInterval: 100,
   contourMajorInterval: 500,
   contourShowLabels: false,
+  // Stats overlay
+  showStatsOverlay: false,
+  statsOverlayColor: '#ffffff',
+  statsX: 1.0,
+  statsY: 1.0,
 };
 </script>
 
@@ -296,6 +312,76 @@ const emit = defineEmits<{
   'update:chartTitle': [value: string]
   'update:animationConfig': [value: RouteMapAnimationConfig]
 }>()
+
+// ── Stats overlay drag ──
+const STATS_BOX_WIDTH_SVG = 270
+const STATS_ROW_HEIGHT = 48
+const STATS_PADDING_Y = 32
+
+const previewRef = ref<HTMLElement | null>(null)
+const isDragging = ref(false)
+const dragOffset = ref({ x: 0, y: 0 })
+
+const statsBoxHeightSvg = computed(() => {
+  const rows = 3 + (props.timeArray && props.timeArray.length > 0 ? 1 : 0)
+  return rows * STATS_ROW_HEIGHT + STATS_PADDING_Y
+})
+
+const dragHandleStyle = computed(() => {
+  if (!previewRef.value) return {}
+  const rect = previewRef.value.getBoundingClientRect()
+  const scale = rect.width / 1080
+  const mapHeightSvg = 1920 * (props.animationConfig.mapHeightRatio ?? 0.6)
+  const maxX = (1080 - STATS_BOX_WIDTH_SVG) * scale
+  const maxY = (mapHeightSvg - statsBoxHeightSvg.value) * scale
+  const boxX = (props.animationConfig.statsX ?? 1.0) * maxX
+  const boxY = (props.animationConfig.statsY ?? 1.0) * maxY
+  return {
+    left: `${boxX}px`,
+    top: `${boxY}px`,
+    width: `${STATS_BOX_WIDTH_SVG * scale}px`,
+    height: `${statsBoxHeightSvg.value * scale}px`,
+    cursor: isDragging.value ? 'grabbing' : 'grab',
+  }
+})
+
+function onStatsDragStart(e: MouseEvent) {
+  if (!previewRef.value) return
+  isDragging.value = true
+  const rect = previewRef.value.getBoundingClientRect()
+  const scale = rect.width / 1080
+  const mapHeightSvg = 1920 * (props.animationConfig.mapHeightRatio ?? 0.6)
+  const maxX = (1080 - STATS_BOX_WIDTH_SVG) * scale
+  const maxY = (mapHeightSvg - statsBoxHeightSvg.value) * scale
+  const currentLeftPx = (props.animationConfig.statsX ?? 1.0) * maxX
+  const currentTopPx = (props.animationConfig.statsY ?? 1.0) * maxY
+  dragOffset.value = {
+    x: e.clientX - rect.left - currentLeftPx,
+    y: e.clientY - rect.top - currentTopPx,
+  }
+  document.addEventListener('mousemove', onStatsDragMove)
+  document.addEventListener('mouseup', onStatsDragEnd)
+}
+
+function onStatsDragMove(e: MouseEvent) {
+  if (!isDragging.value || !previewRef.value) return
+  const rect = previewRef.value.getBoundingClientRect()
+  const scale = rect.width / 1080
+  const mapHeightSvg = 1920 * (props.animationConfig.mapHeightRatio ?? 0.6)
+  const maxX = (1080 - STATS_BOX_WIDTH_SVG) * scale
+  const maxY = (mapHeightSvg - statsBoxHeightSvg.value) * scale
+  const newLeftPx = e.clientX - rect.left - dragOffset.value.x
+  const newTopPx = e.clientY - rect.top - dragOffset.value.y
+  const newStatsX = Math.max(0, Math.min(1, newLeftPx / maxX))
+  const newStatsY = Math.max(0, Math.min(1, newTopPx / maxY))
+  emit('update:animationConfig', { ...props.animationConfig, statsX: newStatsX, statsY: newStatsY })
+}
+
+function onStatsDragEnd() {
+  isDragging.value = false
+  document.removeEventListener('mousemove', onStatsDragMove)
+  document.removeEventListener('mouseup', onStatsDragEnd)
+}
 
 // ── Contour lines (async terrain tile fetch + d3-contour) ──
 const contourRouteBounds = computed(() => {
@@ -512,6 +598,11 @@ function buildFrameOptions(progress: number, overrides: Partial<CombinedFrameOpt
     // Pre-rendered river layer (async, from OpenFreeMap vector tiles)
     riverLayerSvg: riverSvg.value,
     peakLayerSvg: peakSvg.value,
+    // Stats overlay
+    showStatsOverlay: cfg.showStatsOverlay,
+    statsOverlayColor: cfg.statsOverlayColor,
+    statsX: cfg.statsX ?? 1.0,
+    statsY: cfg.statsY ?? 1.0,
     // Overrides
     ...overrides,
   }
@@ -719,5 +810,18 @@ function closeExportDialog() {
 
 .routemap-step :deep(.v-dialog > .v-overlay__content > .v-card) {
   border-radius: var(--radius-xl, 24px) !important;
+}
+
+.stats-drag-handle {
+  position: absolute;
+  border: 2px dashed rgba(255, 255, 255, 0.5);
+  border-radius: 12px;
+  pointer-events: auto;
+  user-select: none;
+  z-index: 10;
+  transition: border-color 0.15s;
+}
+.stats-drag-handle:hover {
+  border-color: rgba(255, 255, 255, 0.9);
 }
 </style>

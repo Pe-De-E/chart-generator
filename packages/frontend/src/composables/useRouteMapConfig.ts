@@ -222,6 +222,28 @@ export function useRouteMapConfig(
     set: (value: number) => updateConfig({ peakOpacity: value }),
   })
 
+  // --- Stats Overlay ---
+
+  const showStatsOverlay = computed({
+    get: () => getConfig().showStatsOverlay ?? false,
+    set: (value: boolean) => updateConfig({ showStatsOverlay: value }),
+  })
+
+  const statsOverlayColor = computed({
+    get: () => getConfig().statsOverlayColor ?? '#ffffff',
+    set: (value: string) => updateConfig({ statsOverlayColor: value }),
+  })
+
+  const statsX = computed({
+    get: () => getConfig().statsX ?? 1.0,
+    set: (value: number) => updateConfig({ statsX: value }),
+  })
+
+  const statsY = computed({
+    get: () => getConfig().statsY ?? 1.0,
+    set: (value: number) => updateConfig({ statsY: value }),
+  })
+
     return {
     // All shared elevation fields
     ...elevationConfig,
@@ -272,5 +294,10 @@ export function useRouteMapConfig(
     contourInterval,
     contourMajorInterval,
     contourShowLabels,
+    // Stats Overlay
+    showStatsOverlay,
+    statsOverlayColor,
+    statsX,
+    statsY,
   }
 }

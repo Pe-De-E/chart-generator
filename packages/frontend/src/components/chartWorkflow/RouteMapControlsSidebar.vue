@@ -325,6 +325,22 @@
               </template>
               <v-color-picker v-model="distanceLabelColor" mode="hexa" show-swatches />
             </v-menu>
+
+            <v-divider class="my-3" />
+            <div class="section-label">Stats-Overlay</div>
+            <v-checkbox v-model="showStatsOverlay" label="Stats anzeigen (Distanz, Hoehe, Zeit)" density="compact" hide-details color="primary" />
+            <template v-if="showStatsOverlay">
+              <p class="text-caption text-medium-emphasis mt-1 mb-2">Box im Preview ziehen um zu positionieren.</p>
+              <v-menu :close-on-content-click="false">
+                <template v-slot:activator="{ props: menuProps }">
+                  <v-btn v-bind="menuProps" variant="outlined" block size="small">
+                    <div class="color-swatch mr-2" :style="{ backgroundColor: statsOverlayColor }"></div>
+                    Stats-Farbe
+                  </v-btn>
+                </template>
+                <v-color-picker v-model="statsOverlayColor" mode="hexa" show-swatches />
+              </v-menu>
+            </template>
           </div>
         </div>
 
@@ -761,6 +777,8 @@ const {
   contourInterval,
   contourMajorInterval,
   contourShowLabels,
+  showStatsOverlay,
+  statsOverlayColor,
 } = useRouteMapConfig(
   () => props.animationConfig,
   updateAnimationConfig,
