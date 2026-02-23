@@ -35,36 +35,36 @@
       </v-tooltip>
       <v-tooltip location="left" text="Karte">
         <template v-slot:activator="{ props }">
-          <v-btn v-bind="props" icon variant="text" @click="controlsCollapsed = false; expandedPanels = ['route']">
+          <v-btn v-bind="props" icon variant="text" @click="controlsCollapsed = false; activeTab = 0">
+            <v-icon>mdi-map</v-icon>
+          </v-btn>
+        </template>
+      </v-tooltip>
+      <v-tooltip location="left" text="Route">
+        <template v-slot:activator="{ props }">
+          <v-btn v-bind="props" icon variant="text" @click="controlsCollapsed = false; activeTab = 1">
             <v-icon>mdi-map-marker-path</v-icon>
+          </v-btn>
+        </template>
+      </v-tooltip>
+      <v-tooltip location="left" text="Profil">
+        <template v-slot:activator="{ props }">
+          <v-btn v-bind="props" icon variant="text" @click="controlsCollapsed = false; activeTab = 2">
+            <v-icon>mdi-chart-line</v-icon>
           </v-btn>
         </template>
       </v-tooltip>
       <v-tooltip location="left" text="Animation">
         <template v-slot:activator="{ props }">
-          <v-btn v-bind="props" icon variant="text" @click="controlsCollapsed = false; expandedPanels = ['animation']">
+          <v-btn v-bind="props" icon variant="text" @click="controlsCollapsed = false; activeTab = 3">
             <v-icon>mdi-animation-play</v-icon>
           </v-btn>
         </template>
       </v-tooltip>
-      <v-tooltip location="left" text="Farben">
+      <v-tooltip location="left" text="Stil">
         <template v-slot:activator="{ props }">
-          <v-btn v-bind="props" icon variant="text" @click="controlsCollapsed = false; expandedPanels = ['colors']">
+          <v-btn v-bind="props" icon variant="text" @click="controlsCollapsed = false; activeTab = 4">
             <v-icon>mdi-palette</v-icon>
-          </v-btn>
-        </template>
-      </v-tooltip>
-      <v-tooltip location="left" text="Marker & Labels">
-        <template v-slot:activator="{ props }">
-          <v-btn v-bind="props" icon variant="text" @click="controlsCollapsed = false; expandedPanels = ['markers']">
-            <v-icon>mdi-map-marker</v-icon>
-          </v-btn>
-        </template>
-      </v-tooltip>
-      <v-tooltip location="left" text="Geo-Kontext">
-        <template v-slot:activator="{ props }">
-          <v-btn v-bind="props" icon variant="text" @click="controlsCollapsed = false; expandedPanels = ['geo']">
-            <v-icon>mdi-earth</v-icon>
           </v-btn>
         </template>
       </v-tooltip>
@@ -100,8 +100,8 @@
 
     <!-- Expanded state: Full controls -->
     <div v-else class="expanded-controls">
-      <!-- Chart Name -->
-      <div class="control-section">
+      <!-- Chart Name (above tabs) -->
+      <div class="control-section px-3 pt-3">
         <v-text-field
           :model-value="chartTitle"
           @update:model-value="$emit('update:chartTitle', $event)"
@@ -114,937 +114,498 @@
         />
       </div>
 
-      <v-divider class="my-2" />
+      <!-- Tab Navigation -->
+      <v-tabs v-model="activeTab" grow density="compact" color="primary" class="sidebar-tabs">
+        <v-tab :value="0" class="tab-item">
+          <v-icon size="16">mdi-map</v-icon>
+          <span class="tab-label">Karte</span>
+        </v-tab>
+        <v-tab :value="1" class="tab-item">
+          <v-icon size="16">mdi-map-marker-path</v-icon>
+          <span class="tab-label">Route</span>
+        </v-tab>
+        <v-tab :value="2" class="tab-item">
+          <v-icon size="16">mdi-chart-line</v-icon>
+          <span class="tab-label">Profil</span>
+        </v-tab>
+        <v-tab :value="3" class="tab-item">
+          <v-icon size="16">mdi-animation-play</v-icon>
+          <span class="tab-label">Anim.</span>
+        </v-tab>
+        <v-tab :value="4" class="tab-item">
+          <v-icon size="16">mdi-palette</v-icon>
+          <span class="tab-label">Stil</span>
+        </v-tab>
+      </v-tabs>
 
-      <!-- Layout: Map Height Ratio -->
-      <div class="control-section">
-        <div class="section-label">Layout (Karte / Profil)</div>
-        <div class="height-control">
-          <v-slider
-            v-model="mapHeightRatio"
-            :min="0.3"
-            :max="0.8"
-            :step="0.05"
-            hide-details
-            thumb-label
-            color="primary"
-          />
-          <span class="text-caption">{{ Math.round(mapHeightRatio * 100) }}%</span>
-        </div>
-        <v-checkbox
-          v-model="showDivider"
-          label="Trennlinie anzeigen"
-          density="compact"
-          hide-details
-          color="primary"
-          class="mt-1"
-        />
-        <v-menu v-if="showDivider" :close-on-content-click="false">
-          <template v-slot:activator="{ props: menuProps }">
-            <v-btn v-bind="menuProps" variant="outlined" block size="small" class="mt-1">
-              <div class="color-swatch mr-2" :style="{ backgroundColor: dividerColor }"></div>
-              Trennlinienfarbe
-            </v-btn>
-          </template>
-          <v-color-picker v-model="dividerColor" mode="hexa" hide-inputs />
-        </v-menu>
-      </div>
+      <v-divider />
 
-      <v-divider class="my-2" />
+      <!-- Tab Content -->
+      <v-window v-model="activeTab" class="tab-content">
 
-      <!-- Curve Height Slider (Elevation Profile) -->
-      <div class="control-section">
-        <div class="section-label">Profilhoehe</div>
-        <div class="height-control">
-          <v-slider
-            v-model="curveEndpoint"
-            :min="15"
-            :max="100"
-            :step="1"
-            hide-details
-            thumb-label
-            color="primary"
-          />
-          <span class="text-caption">{{ curveEndpoint }}%</span>
-        </div>
-      </div>
+        <!-- ── Tab 0: Karte ──────────────────────────────── -->
+        <v-window-item :value="0">
+          <div class="tab-panel">
+            <!-- Layout -->
+            <div class="control-section">
+              <div class="section-label">Layout (Karte / Profil)</div>
+              <div class="height-control">
+                <v-slider v-model="mapHeightRatio" :min="0.3" :max="0.8" :step="0.05" hide-details thumb-label color="primary" />
+                <span class="text-caption">{{ Math.round(mapHeightRatio * 100) }}%</span>
+              </div>
+              <v-checkbox v-model="showDivider" label="Trennlinie anzeigen" density="compact" hide-details color="primary" class="mt-1" />
+              <v-menu v-if="showDivider" :close-on-content-click="false">
+                <template v-slot:activator="{ props: menuProps }">
+                  <v-btn v-bind="menuProps" variant="outlined" block size="small" class="mt-1">
+                    <div class="color-swatch mr-2" :style="{ backgroundColor: dividerColor }"></div>
+                    Trennlinienfarbe
+                  </v-btn>
+                </template>
+                <v-color-picker v-model="dividerColor" mode="hexa" hide-inputs />
+              </v-menu>
+            </div>
 
-      <v-divider class="my-2" />
-
-      <!-- Collapsible Settings Panels -->
-      <v-expansion-panels v-model="expandedPanels" multiple class="settings-panels">
-        <!-- Route & Map Settings -->
-        <v-expansion-panel value="route">
-          <v-expansion-panel-title>
-            <v-icon start size="small">mdi-map-marker-path</v-icon>
-            Route & Karte
-          </v-expansion-panel-title>
-          <v-expansion-panel-text>
-            <div class="panel-stack">
-              <!-- Map Camera Mode -->
-              <label class="text-caption text-medium-emphasis d-block mb-1">Kamera-Modus</label>
-              <v-btn-toggle
-                v-model="mapCameraMode"
-                mandatory
-                density="compact"
-                variant="outlined"
-                divided
-                class="w-100"
-                color="primary"
-              >
-                <v-btn value="overview" size="small" class="flex-grow-1">
-                  <v-icon start size="small">mdi-image-filter-center-focus</v-icon>
-                  Uebersicht
-                </v-btn>
-                <v-btn value="chase" size="small" class="flex-grow-1">
+            <v-expansion-panels v-model="expandedPanels" multiple class="settings-panels">
+              <!-- Camera -->
+              <v-expansion-panel value="camera">
+                <v-expansion-panel-title>
                   <v-icon start size="small">mdi-video-outline</v-icon>
-                  Verfolgung
-                </v-btn>
-              </v-btn-toggle>
-
-              <!-- Chase Camera Settings -->
-              <template v-if="mapCameraMode === 'chase'">
-                <label class="text-caption text-medium-emphasis d-block mb-1 mt-3">
-                  Zoom: {{ mapChaseZoomLevel.toFixed(1) }}x
-                </label>
-                <v-slider
-                  v-model="mapChaseZoomLevel"
-                  :min="1.5"
-                  :max="6"
-                  :step="0.5"
-                  density="compact"
-                  hide-details
-                  thumb-label
-                />
-                <label class="text-caption text-medium-emphasis d-block mb-1 mt-2">
-                  Auszoom bei: {{ Math.round(mapChaseZoomOutStart * 100) }}%
-                </label>
-                <v-slider
-                  v-model="mapChaseZoomOutStart"
-                  :min="0.5"
-                  :max="0.95"
-                  :step="0.05"
-                  density="compact"
-                  hide-details
-                  thumb-label
-                />
-              </template>
-
-              <v-divider class="my-3" />
-
-              <!-- Route Line Style -->
-              <label class="text-caption text-medium-emphasis d-block mb-1">Routenlinie</label>
-
-              <v-menu :close-on-content-click="false">
-                <template v-slot:activator="{ props: menuProps }">
-                  <v-btn v-bind="menuProps" variant="outlined" block size="small">
-                    <div class="color-swatch mr-2" :style="{ backgroundColor: routeColor }"></div>
-                    Routenfarbe
-                  </v-btn>
-                </template>
-                <v-color-picker v-model="routeColor" mode="hexa" hide-inputs />
-              </v-menu>
-
-              <label class="text-caption text-medium-emphasis d-block mb-1 mt-2">
-                Linienstaerke: {{ routeWidth }}px
-              </label>
-              <v-slider
-                v-model="routeWidth"
-                :min="1"
-                :max="10"
-                :step="0.5"
-                density="compact"
-                hide-details
-                thumb-label
-              />
-
-              <!-- Route Glow -->
-              <v-checkbox
-                v-model="routeGlow"
-                label="Glow-Effekt"
-                density="compact"
-                hide-details
-                color="primary"
-                class="mt-1"
-              />
-              <template v-if="routeGlow">
-                <v-menu :close-on-content-click="false">
-                  <template v-slot:activator="{ props: menuProps }">
-                    <v-btn v-bind="menuProps" variant="outlined" block size="small" class="mt-1">
-                      <div class="color-swatch mr-2" :style="{ backgroundColor: routeGlowColor }"></div>
-                      Glow-Farbe
-                    </v-btn>
-                  </template>
-                  <v-color-picker v-model="routeGlowColor" mode="hexa" hide-inputs />
-                </v-menu>
-                <label class="text-caption text-medium-emphasis d-block mb-1 mt-2">
-                  Glow-Intensitaet: {{ routeGlowIntensity }}
-                </label>
-                <v-slider
-                  v-model="routeGlowIntensity"
-                  :min="1"
-                  :max="10"
-                  :step="1"
-                  density="compact"
-                  hide-details
-                  thumb-label
-                />
-              </template>
-
-              <!-- Route Trail -->
-              <v-divider class="my-3" />
-              <label class="text-caption text-medium-emphasis d-block mb-1">Vorschau-Spur</label>
-              <label class="text-caption text-medium-emphasis d-block mb-1">
-                Deckkraft: {{ Math.round(routeTrailOpacity * 100) }}%
-              </label>
-              <v-slider
-                v-model="routeTrailOpacity"
-                :min="0"
-                :max="0.5"
-                :step="0.05"
-                density="compact"
-                hide-details
-                thumb-label
-              />
-
-              <!-- Elevation Coloring -->
-              <v-divider class="my-3" />
-              <v-checkbox
-                v-model="showElevationColoring"
-                label="Route nach Hoehe einfaerben"
-                density="compact"
-                hide-details
-                color="primary"
-              />
-              <template v-if="showElevationColoring">
-                <label class="text-caption text-medium-emphasis d-block mb-1 mt-2">
-                  Intensitaet: {{ elevationColorIntensity }}
-                </label>
-                <v-slider
-                  v-model="elevationColorIntensity"
-                  :min="1"
-                  :max="8"
-                  :step="1"
-                  density="compact"
-                  hide-details
-                  thumb-label
-                />
-              </template>
-
-              <!-- Map Marker -->
-              <v-divider class="my-3" />
-              <v-checkbox
-                v-model="showMapMarker"
-                label="Karten-Marker"
-                density="compact"
-                hide-details
-                color="primary"
-              />
-              <template v-if="showMapMarker">
-                <v-menu :close-on-content-click="false">
-                  <template v-slot:activator="{ props: menuProps }">
-                    <v-btn v-bind="menuProps" variant="outlined" block size="small" class="mt-1">
-                      <div class="color-swatch mr-2" :style="{ backgroundColor: mapMarkerColor }"></div>
-                      Marker-Farbe
-                    </v-btn>
-                  </template>
-                  <v-color-picker v-model="mapMarkerColor" mode="hexa" hide-inputs />
-                </v-menu>
-                <label class="text-caption text-medium-emphasis d-block mb-1 mt-2">
-                  Groesse: {{ mapMarkerSize }}px
-                </label>
-                <v-slider
-                  v-model="mapMarkerSize"
-                  :min="4"
-                  :max="16"
-                  :step="1"
-                  density="compact"
-                  hide-details
-                  thumb-label
-                />
-              </template>
-
-              <!-- Direction Arrow -->
-              <v-checkbox
-                v-model="showDirection"
-                label="Richtungspfeil"
-                density="compact"
-                hide-details
-                color="primary"
-                class="mt-1"
-              />
-
-              <!-- Start/End Labels -->
-              <v-checkbox
-                v-model="showStartEndLabels"
-                label="Start/Ziel Labels"
-                density="compact"
-                hide-details
-                color="primary"
-                class="mt-1"
-              />
-
-              <!-- Distance Markers on Route -->
-              <v-checkbox
-                v-model="showDistanceMarkers"
-                label="Kilometer-Markierungen"
-                density="compact"
-                hide-details
-                color="primary"
-                class="mt-1"
-              />
-              <v-text-field
-                v-if="showDistanceMarkers"
-                v-model.number="distanceMarkerInterval"
-                label="Intervall (km)"
-                type="number"
-                :min="1"
-                :max="50"
-                variant="outlined"
-                density="compact"
-                hide-details
-                class="mt-1 ml-6"
-              />
-            </div>
-          </v-expansion-panel-text>
-        </v-expansion-panel>
-
-        <!-- Animation Settings -->
-        <v-expansion-panel value="animation">
-          <v-expansion-panel-title>
-            <v-icon start size="small">mdi-animation-play</v-icon>
-            Animation
-          </v-expansion-panel-title>
-          <v-expansion-panel-text>
-            <div class="panel-grid">
-              <v-text-field
-                v-model.number="animationDuration"
-                label="Dauer (Sek.)"
-                type="number"
-                :min="1"
-                :max="30"
-                variant="outlined"
-                density="compact"
-                hide-details
-              />
-              <v-select
-                v-model="animationEasing"
-                label="Easing"
-                :items="easingOptions"
-                variant="outlined"
-                density="compact"
-                hide-details
-              />
-            </div>
-            <!-- Animation Mode Toggle -->
-            <div class="mt-3">
-              <label class="text-caption text-medium-emphasis d-block mb-1">Animationsmodus</label>
-              <v-btn-toggle
-                v-model="animationMode"
-                mandatory
-                density="compact"
-                variant="outlined"
-                divided
-                class="w-100"
-              >
-                <v-btn value="uniform" size="small" class="flex-grow-1">
-                  Gleichmaessig
-                </v-btn>
-                <v-btn value="gradient" size="small" class="flex-grow-1">
-                  Steigung
-                </v-btn>
-                <v-btn value="effort" size="small" class="flex-grow-1">
-                  Anstrengung
-                </v-btn>
-                <v-btn v-if="timeArray && timeArray.length > 0" value="time-based" size="small" class="flex-grow-1">
-                  Zeitbasiert
-                </v-btn>
-              </v-btn-toggle>
-            </div>
-            <!-- Gradient Sensitivity -->
-            <div v-if="animationMode === 'gradient'" class="mt-3">
-              <label class="text-caption text-medium-emphasis d-block mb-1">
-                Intensitaet: {{ gradientSensitivity.toFixed(1) }}
-              </label>
-              <v-slider
-                v-model="gradientSensitivity"
-                :min="1"
-                :max="8"
-                :step="0.5"
-                density="compact"
-                hide-details
-                thumb-label
-              />
-            </div>
-            <!-- Effort Mode Settings -->
-            <div v-if="animationMode === 'effort'" class="mt-3">
-              <label class="text-caption text-medium-emphasis d-block mb-2">Effekte</label>
-              <v-checkbox
-                v-model="effortVariableStroke"
-                label="Linienstaerke variiert"
-                density="compact"
-                hide-details
-                class="mt-0"
-              />
-              <v-slider
-                v-if="effortVariableStroke"
-                v-model="effortVariableStrokeIntensity"
-                :min="1"
-                :max="8"
-                :step="0.5"
-                density="compact"
-                hide-details
-                thumb-label
-                class="ml-6 mt-n2"
-              />
-              <v-checkbox
-                v-model="effortColorGradient"
-                label="Farbverlauf (hell → dunkel)"
-                density="compact"
-                hide-details
-                class="mt-1"
-              />
-              <v-slider
-                v-if="effortColorGradient"
-                v-model="effortColorGradientIntensity"
-                :min="1"
-                :max="8"
-                :step="0.5"
-                density="compact"
-                hide-details
-                thumb-label
-                class="ml-6 mt-n2"
-              />
-              <v-checkbox
-                v-model="effortGlowAura"
-                label="Glow-Aura"
-                density="compact"
-                hide-details
-                class="mt-1"
-              />
-              <v-slider
-                v-if="effortGlowAura"
-                v-model="effortGlowAuraIntensity"
-                :min="1"
-                :max="8"
-                :step="0.5"
-                density="compact"
-                hide-details
-                thumb-label
-                class="ml-6 mt-n2"
-              />
-            </div>
-            <!-- Elevation Pan-Zoom (Kamerafahrt) -->
-            <div class="mt-3">
-              <v-divider class="mb-3" />
-              <v-checkbox
-                v-model="panZoomEnabled"
-                label="Profil-Kamerafahrt"
-                density="compact"
-                hide-details
-                color="primary"
-              />
-              <template v-if="panZoomEnabled">
-                <label class="text-caption text-medium-emphasis d-block mb-1 mt-2">
-                  Zoom: {{ panZoomZoomLevel.toFixed(1) }}x
-                </label>
-                <v-slider
-                  v-model="panZoomZoomLevel"
-                  :min="1.5"
-                  :max="5"
-                  :step="0.5"
-                  density="compact"
-                  hide-details
-                  thumb-label
-                />
-                <label class="text-caption text-medium-emphasis d-block mb-1 mt-2">
-                  Auszoom bei: {{ Math.round(panZoomZoomOutStart * 100) }}%
-                </label>
-                <v-slider
-                  v-model="panZoomZoomOutStart"
-                  :min="0.5"
-                  :max="0.95"
-                  :step="0.05"
-                  density="compact"
-                  hide-details
-                  thumb-label
-                />
-              </template>
-            </div>
-          </v-expansion-panel-text>
-        </v-expansion-panel>
-
-        <!-- Colors Settings -->
-        <v-expansion-panel value="colors">
-          <v-expansion-panel-title>
-            <v-icon start size="small">mdi-palette</v-icon>
-            Farben
-          </v-expansion-panel-title>
-          <v-expansion-panel-text>
-            <div class="panel-stack">
-              <!-- Curve Color (elevation profile) -->
-              <v-menu :close-on-content-click="false">
-                <template v-slot:activator="{ props: menuProps }">
-                  <v-btn v-bind="menuProps" variant="outlined" block>
-                    <div class="color-swatch mr-2" :style="{ backgroundColor: silhouetteCurveColor }"></div>
-                    Profilkurve
-                  </v-btn>
-                </template>
-                <v-color-picker v-model="silhouetteCurveColor" mode="hexa" hide-inputs />
-              </v-menu>
-
-              <!-- Title Color -->
-              <v-menu :close-on-content-click="false">
-                <template v-slot:activator="{ props: menuProps }">
-                  <v-btn v-bind="menuProps" variant="outlined" block class="mt-2">
-                    <div class="color-swatch mr-2" :style="{ backgroundColor: titleColor }"></div>
-                    Titel
-                  </v-btn>
-                </template>
-                <v-color-picker v-model="titleColor" mode="hexa" hide-inputs />
-              </v-menu>
-
-              <!-- Background Type Selector -->
-              <v-select
-                v-model="backgroundType"
-                :items="backgroundTypeOptions"
-                item-title="title"
-                item-value="value"
-                label="Hintergrund"
-                variant="outlined"
-                density="compact"
-                hide-details
-                class="mt-2"
-              >
-                <template v-slot:item="{ props: itemProps, item }">
-                  <v-list-item v-bind="itemProps">
-                    <template v-slot:prepend>
-                      <v-icon :icon="item.raw.icon" size="small" />
-                    </template>
-                  </v-list-item>
-                </template>
-              </v-select>
-
-              <!-- Solid Background Color -->
-              <v-menu v-if="backgroundType === 'solid' || backgroundType === 'grid' || backgroundType === 'dots'" :close-on-content-click="false">
-                <template v-slot:activator="{ props: menuProps }">
-                  <v-btn v-bind="menuProps" variant="outlined" block size="small" class="mt-2">
-                    <div class="color-swatch mr-2" :style="{ backgroundColor: backgroundColor }"></div>
-                    Hintergrundfarbe
-                  </v-btn>
-                </template>
-                <v-color-picker v-model="backgroundColor" mode="hexa" hide-inputs />
-              </v-menu>
-
-              <!-- Gradient Color -->
-              <v-menu v-if="backgroundType === 'gradient'" :close-on-content-click="false">
-                <template v-slot:activator="{ props: menuProps }">
-                  <v-btn v-bind="menuProps" variant="outlined" block size="small" class="mt-2">
-                    <div class="color-swatch mr-2" :style="{ backgroundColor: gradientColor }"></div>
-                    Gradient-Farbe
-                  </v-btn>
-                </template>
-                <v-color-picker v-model="gradientColor" mode="hexa" hide-inputs />
-              </v-menu>
-
-              <!-- Mesh Gradient Colors -->
-              <template v-if="backgroundType === 'mesh'">
-                <div class="text-caption text-grey mt-2 mb-1">Mesh-Farben</div>
-                <div class="d-flex ga-2">
-                  <v-menu :close-on-content-click="false">
-                    <template v-slot:activator="{ props: menuProps }">
-                      <v-btn v-bind="menuProps" variant="outlined" size="small" icon>
-                        <div class="color-swatch-small" :style="{ backgroundColor: meshColor1 }"></div>
+                  Kamera
+                </v-expansion-panel-title>
+                <v-expansion-panel-text>
+                  <div class="panel-stack">
+                    <label class="text-caption text-medium-emphasis d-block mb-1">Kamera-Modus</label>
+                    <v-btn-toggle v-model="mapCameraMode" mandatory density="compact" variant="outlined" divided class="w-100" color="primary">
+                      <v-btn value="overview" size="small" class="flex-grow-1">
+                        <v-icon start size="small">mdi-image-filter-center-focus</v-icon>
+                        Uebersicht
                       </v-btn>
-                    </template>
-                    <v-color-picker v-model="meshColor1" mode="hexa" hide-inputs />
-                  </v-menu>
-                  <v-menu :close-on-content-click="false">
-                    <template v-slot:activator="{ props: menuProps }">
-                      <v-btn v-bind="menuProps" variant="outlined" size="small" icon>
-                        <div class="color-swatch-small" :style="{ backgroundColor: meshColor2 }"></div>
+                      <v-btn value="chase" size="small" class="flex-grow-1">
+                        <v-icon start size="small">mdi-video-outline</v-icon>
+                        Verfolgung
                       </v-btn>
+                    </v-btn-toggle>
+                    <template v-if="mapCameraMode === 'chase'">
+                      <label class="text-caption text-medium-emphasis d-block mb-1 mt-3">Zoom: {{ mapChaseZoomLevel.toFixed(1) }}x</label>
+                      <v-slider v-model="mapChaseZoomLevel" :min="1.5" :max="6" :step="0.5" density="compact" hide-details thumb-label />
+                      <label class="text-caption text-medium-emphasis d-block mb-1 mt-2">Auszoom bei: {{ Math.round(mapChaseZoomOutStart * 100) }}%</label>
+                      <v-slider v-model="mapChaseZoomOutStart" :min="0.5" :max="0.95" :step="0.05" density="compact" hide-details thumb-label />
                     </template>
-                    <v-color-picker v-model="meshColor2" mode="hexa" hide-inputs />
-                  </v-menu>
-                  <v-menu :close-on-content-click="false">
-                    <template v-slot:activator="{ props: menuProps }">
-                      <v-btn v-bind="menuProps" variant="outlined" size="small" icon>
-                        <div class="color-swatch-small" :style="{ backgroundColor: meshColor3 }"></div>
-                      </v-btn>
+                  </div>
+                </v-expansion-panel-text>
+              </v-expansion-panel>
+
+              <!-- Geo-Layer -->
+              <v-expansion-panel value="geo">
+                <v-expansion-panel-title>
+                  <v-icon start size="small">mdi-earth</v-icon>
+                  Geo-Layer
+                </v-expansion-panel-title>
+                <v-expansion-panel-text>
+                  <div class="panel-stack">
+                    <v-checkbox v-model="showBorders" label="Laendergrenzen" density="compact" hide-details />
+                    <template v-if="showBorders">
+                      <label class="text-caption text-medium-emphasis d-block mb-1">Deckkraft: {{ Math.round(borderOpacity * 100) }}%</label>
+                      <v-slider v-model="borderOpacity" :min="0.05" :max="1" :step="0.05" density="compact" hide-details />
                     </template>
-                    <v-color-picker v-model="meshColor3" mode="hexa" hide-inputs />
-                  </v-menu>
-                </div>
-              </template>
 
-              <!-- Pattern Color and Opacity (Grid/Dots) -->
-              <template v-if="backgroundType === 'grid' || backgroundType === 'dots'">
-                <v-menu :close-on-content-click="false">
-                  <template v-slot:activator="{ props: menuProps }">
-                    <v-btn v-bind="menuProps" variant="outlined" block size="small" class="mt-2">
-                      <div class="color-swatch mr-2" :style="{ backgroundColor: patternColor }"></div>
-                      Musterfarbe
-                    </v-btn>
-                  </template>
-                  <v-color-picker v-model="patternColor" mode="hexa" hide-inputs />
-                </v-menu>
-                <v-slider
-                  v-model="patternOpacity"
-                  :min="0.05"
-                  :max="0.5"
-                  :step="0.05"
-                  label="Deckkraft"
-                  density="compact"
-                  hide-details
-                  thumb-label
-                  class="mt-2"
-                />
-              </template>
+                    <v-checkbox v-model="showRivers" label="Fluesse" density="compact" hide-details class="mt-1" />
+                    <v-progress-linear v-if="showRivers && riverLoading" indeterminate color="primary" height="2" class="mt-1" />
+                    <template v-if="showRivers">
+                      <label class="text-caption text-medium-emphasis d-block mb-1">Deckkraft: {{ Math.round(riverOpacity * 100) }}%</label>
+                      <v-slider v-model="riverOpacity" :min="0.05" :max="1" :step="0.05" density="compact" hide-details />
+                    </template>
 
-              <!-- Image Background Controls -->
-              <template v-if="backgroundType === 'image'">
-                <div class="mt-2">
-                  <v-file-input
-                    v-if="!imageOptions?.imageUrl"
-                    label="Bild hochladen"
-                    accept="image/jpeg,image/png,image/webp"
-                    prepend-icon="mdi-image-plus"
-                    variant="outlined"
-                    density="compact"
-                    hide-details
-                    @update:model-value="handleImageUpload"
-                    :loading="imageUploading"
-                  />
-                  <div v-else class="image-preview-container">
-                    <img :src="imageOptions.imageUrl" class="image-preview" alt="Background" />
-                    <v-btn
-                      icon="mdi-close"
-                      size="x-small"
-                      color="error"
-                      variant="flat"
-                      class="remove-image-btn"
-                      @click="removeBackgroundImage"
+                    <v-checkbox v-model="showCities" label="Staedte" density="compact" hide-details class="mt-1" />
+                    <template v-if="showCities">
+                      <label class="text-caption text-medium-emphasis d-block mb-1">Deckkraft: {{ Math.round(cityOpacity * 100) }}%</label>
+                      <v-slider v-model="cityOpacity" :min="0.05" :max="1" :step="0.05" density="compact" hide-details />
+                    </template>
+
+                    <v-checkbox v-model="showPeaks" label="Gipfel" density="compact" hide-details class="mt-1" />
+                    <v-progress-linear v-if="showPeaks && peakLoading" indeterminate color="primary" height="2" class="mt-1" />
+                    <template v-if="showPeaks">
+                      <label class="text-caption text-medium-emphasis d-block mb-1">Deckkraft: {{ Math.round(peakOpacity * 100) }}%</label>
+                      <v-slider v-model="peakOpacity" :min="0.05" :max="1" :step="0.05" density="compact" hide-details />
+                    </template>
+
+                    <v-divider class="my-2" />
+
+                    <v-checkbox v-model="showContours" label="Hoehenlinien" density="compact" hide-details class="mt-1" />
+                    <v-progress-linear v-if="showContours && contourLoading" indeterminate color="primary" height="2" class="mt-1" />
+                    <template v-if="showContours">
+                      <label class="text-caption text-medium-emphasis d-block mb-1">Deckkraft: {{ Math.round(contourOpacity * 100) }}%</label>
+                      <v-slider v-model="contourOpacity" :min="0.05" :max="0.60" :step="0.05" density="compact" hide-details />
+                      <label class="text-caption text-medium-emphasis d-block mb-1 mt-2">Intervall: {{ contourInterval }}m</label>
+                      <v-slider v-model="contourInterval" :min="25" :max="500" :step="25" density="compact" hide-details thumb-label />
+                      <v-checkbox v-model="contourShowLabels" label="Hoehenbeschriftung" density="compact" hide-details class="mt-1" />
+                    </template>
+                  </div>
+                </v-expansion-panel-text>
+              </v-expansion-panel>
+            </v-expansion-panels>
+          </div>
+        </v-window-item>
+
+        <!-- ── Tab 1: Route ──────────────────────────────── -->
+        <v-window-item :value="1">
+          <div class="tab-panel">
+            <v-expansion-panels v-model="expandedPanels" multiple class="settings-panels">
+              <!-- Routenstil -->
+              <v-expansion-panel value="routestyle">
+                <v-expansion-panel-title>
+                  <v-icon start size="small">mdi-map-marker-path</v-icon>
+                  Routenstil
+                </v-expansion-panel-title>
+                <v-expansion-panel-text>
+                  <div class="panel-stack">
+                    <v-menu :close-on-content-click="false">
+                      <template v-slot:activator="{ props: menuProps }">
+                        <v-btn v-bind="menuProps" variant="outlined" block size="small">
+                          <div class="color-swatch mr-2" :style="{ backgroundColor: routeColor }"></div>
+                          Routenfarbe
+                        </v-btn>
+                      </template>
+                      <v-color-picker v-model="routeColor" mode="hexa" hide-inputs />
+                    </v-menu>
+                    <label class="text-caption text-medium-emphasis d-block mb-1 mt-2">Linienstaerke: {{ routeWidth }}px</label>
+                    <v-slider v-model="routeWidth" :min="1" :max="10" :step="0.5" density="compact" hide-details thumb-label />
+
+                    <v-checkbox v-model="routeGlow" label="Glow-Effekt" density="compact" hide-details color="primary" class="mt-1" />
+                    <template v-if="routeGlow">
+                      <v-menu :close-on-content-click="false">
+                        <template v-slot:activator="{ props: menuProps }">
+                          <v-btn v-bind="menuProps" variant="outlined" block size="small" class="mt-1">
+                            <div class="color-swatch mr-2" :style="{ backgroundColor: routeGlowColor }"></div>
+                            Glow-Farbe
+                          </v-btn>
+                        </template>
+                        <v-color-picker v-model="routeGlowColor" mode="hexa" hide-inputs />
+                      </v-menu>
+                      <label class="text-caption text-medium-emphasis d-block mb-1 mt-2">Glow-Intensitaet: {{ routeGlowIntensity }}</label>
+                      <v-slider v-model="routeGlowIntensity" :min="1" :max="10" :step="1" density="compact" hide-details thumb-label />
+                    </template>
+
+                    <v-divider class="my-3" />
+                    <label class="text-caption text-medium-emphasis d-block mb-1">Vorschau-Spur</label>
+                    <label class="text-caption text-medium-emphasis d-block mb-1">Deckkraft: {{ Math.round(routeTrailOpacity * 100) }}%</label>
+                    <v-slider v-model="routeTrailOpacity" :min="0" :max="0.5" :step="0.05" density="compact" hide-details thumb-label />
+
+                    <v-divider class="my-3" />
+                    <v-checkbox v-model="showElevationColoring" label="Route nach Hoehe einfaerben" density="compact" hide-details color="primary" />
+                    <template v-if="showElevationColoring">
+                      <label class="text-caption text-medium-emphasis d-block mb-1 mt-2">Intensitaet: {{ elevationColorIntensity }}</label>
+                      <v-slider v-model="elevationColorIntensity" :min="1" :max="8" :step="1" density="compact" hide-details thumb-label />
+                    </template>
+                  </div>
+                </v-expansion-panel-text>
+              </v-expansion-panel>
+
+              <!-- Karten-Overlays -->
+              <v-expansion-panel value="maprefs">
+                <v-expansion-panel-title>
+                  <v-icon start size="small">mdi-map-marker</v-icon>
+                  Karten-Overlays
+                </v-expansion-panel-title>
+                <v-expansion-panel-text>
+                  <div class="panel-stack">
+                    <v-checkbox v-model="showMapMarker" label="Karten-Marker" density="compact" hide-details color="primary" />
+                    <template v-if="showMapMarker">
+                      <v-menu :close-on-content-click="false">
+                        <template v-slot:activator="{ props: menuProps }">
+                          <v-btn v-bind="menuProps" variant="outlined" block size="small" class="mt-1">
+                            <div class="color-swatch mr-2" :style="{ backgroundColor: mapMarkerColor }"></div>
+                            Marker-Farbe
+                          </v-btn>
+                        </template>
+                        <v-color-picker v-model="mapMarkerColor" mode="hexa" hide-inputs />
+                      </v-menu>
+                      <label class="text-caption text-medium-emphasis d-block mb-1 mt-2">Groesse: {{ mapMarkerSize }}px</label>
+                      <v-slider v-model="mapMarkerSize" :min="4" :max="16" :step="1" density="compact" hide-details thumb-label />
+                    </template>
+                    <v-checkbox v-model="showDirection" label="Richtungspfeil" density="compact" hide-details color="primary" class="mt-1" />
+                    <v-checkbox v-model="showStartEndLabels" label="Start/Ziel Labels" density="compact" hide-details color="primary" class="mt-1" />
+                    <v-checkbox v-model="showDistanceMarkers" label="Kilometer-Markierungen" density="compact" hide-details color="primary" class="mt-1" />
+                    <v-text-field
+                      v-if="showDistanceMarkers"
+                      v-model.number="distanceMarkerInterval"
+                      label="Intervall (km)"
+                      type="number"
+                      :min="1"
+                      :max="50"
+                      variant="outlined"
+                      density="compact"
+                      hide-details
+                      class="mt-1 ml-6"
                     />
                   </div>
-                </div>
-                <v-select
-                  v-if="imageOptions?.imageUrl"
-                  v-model="imagePosition"
-                  :items="imagePositionOptions"
-                  item-title="title"
-                  item-value="value"
-                  label="Position"
-                  variant="outlined"
-                  density="compact"
-                  hide-details
-                  class="mt-2"
-                />
-                <v-slider
-                  v-if="imageOptions?.imageUrl"
-                  v-model="imageBlur"
-                  :min="0"
-                  :max="20"
-                  :step="1"
-                  label="Weichzeichnung"
-                  density="compact"
-                  hide-details
-                  thumb-label
-                  class="mt-2"
-                >
-                  <template v-slot:append>
-                    <span class="text-caption">{{ imageBlur }}px</span>
-                  </template>
-                </v-slider>
-                <v-slider
-                  v-if="imageOptions?.imageUrl"
-                  v-model="imageBrightness"
-                  :min="0.5"
-                  :max="1.5"
-                  :step="0.05"
-                  label="Helligkeit"
-                  density="compact"
-                  hide-details
-                  thumb-label
-                  class="mt-2"
-                >
-                  <template v-slot:append>
-                    <span class="text-caption">{{ Math.round(imageBrightness * 100) }}%</span>
-                  </template>
-                </v-slider>
-                <v-slider
-                  v-if="imageOptions?.imageUrl"
-                  v-model="imageContrast"
-                  :min="0.5"
-                  :max="1.5"
-                  :step="0.05"
-                  label="Kontrast"
-                  density="compact"
-                  hide-details
-                  thumb-label
-                  class="mt-2"
-                >
-                  <template v-slot:append>
-                    <span class="text-caption">{{ Math.round(imageContrast * 100) }}%</span>
-                  </template>
-                </v-slider>
-                <v-menu v-if="imageOptions?.imageUrl" :close-on-content-click="false">
-                  <template v-slot:activator="{ props: menuProps }">
-                    <v-btn v-bind="menuProps" variant="outlined" block size="small" class="mt-2">
-                      <div class="color-swatch mr-2" :style="{ backgroundColor: imageOverlayColor }"></div>
-                      Overlay-Farbe
-                    </v-btn>
-                  </template>
-                  <v-color-picker v-model="imageOverlayColor" mode="hexa" hide-inputs />
-                </v-menu>
-                <v-slider
-                  v-if="imageOptions?.imageUrl"
-                  v-model="imageOverlayOpacity"
-                  :min="0"
-                  :max="0.8"
-                  :step="0.05"
-                  label="Overlay Deckkraft"
-                  density="compact"
-                  hide-details
-                  thumb-label
-                  class="mt-2"
-                >
-                  <template v-slot:append>
-                    <span class="text-caption">{{ Math.round(imageOverlayOpacity * 100) }}%</span>
-                  </template>
-                </v-slider>
-              </template>
+                </v-expansion-panel-text>
+              </v-expansion-panel>
+            </v-expansion-panels>
+          </div>
+        </v-window-item>
+
+        <!-- ── Tab 2: Profil ─────────────────────────────── -->
+        <v-window-item :value="2">
+          <div class="tab-panel">
+            <!-- Profilhoehe (immer sichtbar) -->
+            <div class="control-section">
+              <div class="section-label">Profilhoehe</div>
+              <div class="height-control">
+                <v-slider v-model="curveEndpoint" :min="15" :max="100" :step="1" hide-details thumb-label color="primary" />
+                <span class="text-caption">{{ curveEndpoint }}%</span>
+              </div>
             </div>
-          </v-expansion-panel-text>
-        </v-expansion-panel>
 
-        <!-- Geo Context Layers -->
-        <v-expansion-panel value="geo">
-          <v-expansion-panel-title>
-            <v-icon start size="small">mdi-earth</v-icon>
-            Geo-Kontext
-          </v-expansion-panel-title>
-          <v-expansion-panel-text>
-            <div class="panel-stack">
-              <v-checkbox
-                v-model="showBorders"
-                label="Laendergrenzen"
-                density="compact"
-                hide-details
-              />
-              <template v-if="showBorders">
-                <label class="text-caption text-medium-emphasis d-block mb-1">
-                  Deckkraft: {{ Math.round(borderOpacity * 100) }}%
-                </label>
-                <v-slider
-                  v-model="borderOpacity"
-                  :min="0.05"
-                  :max="1"
-                  :step="0.05"
-                  density="compact"
-                  hide-details
-                />
-              </template>
+            <v-expansion-panels v-model="expandedPanels" multiple class="settings-panels">
+              <!-- Profil-Stil -->
+              <v-expansion-panel value="profilestyle">
+                <v-expansion-panel-title>
+                  <v-icon start size="small">mdi-chart-areaspline</v-icon>
+                  Profil-Stil
+                </v-expansion-panel-title>
+                <v-expansion-panel-text>
+                  <div class="panel-stack">
+                    <v-checkbox v-model="showAreaFill" label="Flaeche fuellen" density="compact" hide-details color="primary" />
+                    <v-checkbox v-model="showElevationCurveColoring" label="Kurve nach Hoehe einfaerben" density="compact" hide-details color="primary" />
+                  </div>
+                </v-expansion-panel-text>
+              </v-expansion-panel>
 
-              <v-checkbox
-                v-model="showRivers"
-                label="Fluesse"
-                density="compact"
-                hide-details
-                class="mt-1"
-              />
-              <template v-if="showRivers">
-                <v-progress-linear
-                  v-if="riverLoading"
-                  indeterminate
-                  color="primary"
-                  height="2"
-                  class="mt-1"
-                />
-              </template>
-              <template v-if="showRivers">
-                <label class="text-caption text-medium-emphasis d-block mb-1">
-                  Deckkraft: {{ Math.round(riverOpacity * 100) }}%
-                </label>
-                <v-slider
-                  v-model="riverOpacity"
-                  :min="0.05"
-                  :max="1"
-                  :step="0.05"
-                  density="compact"
-                  hide-details
-                />
-              </template>
+              <!-- Profil-Labels -->
+              <v-expansion-panel value="profilelabels">
+                <v-expansion-panel-title>
+                  <v-icon start size="small">mdi-tag-text</v-icon>
+                  Marker & Labels
+                </v-expansion-panel-title>
+                <v-expansion-panel-text>
+                  <div class="panel-stack">
+                    <v-checkbox v-model="animationShowMarker" label="Profil-Marker" density="compact" hide-details color="primary" />
+                    <v-checkbox v-model="showElevationLabels" label="Hoehenmeter anzeigen" density="compact" hide-details color="primary" />
+                    <v-menu v-if="showElevationLabels" :close-on-content-click="false">
+                      <template v-slot:activator="{ props: menuProps }">
+                        <v-btn v-bind="menuProps" variant="outlined" block size="small" class="mt-1">
+                          <div class="color-swatch mr-2" :style="{ backgroundColor: elevationLabelColor }"></div>
+                          Hoehenmeter-Farbe
+                        </v-btn>
+                      </template>
+                      <v-color-picker v-model="elevationLabelColor" mode="hexa" show-swatches />
+                    </v-menu>
+                    <v-checkbox v-model="showDistanceLabels" label="Kilometer anzeigen" density="compact" hide-details color="primary" class="mt-2" />
+                    <v-menu v-if="showDistanceLabels" :close-on-content-click="false">
+                      <template v-slot:activator="{ props: menuProps }">
+                        <v-btn v-bind="menuProps" variant="outlined" block size="small" class="mt-1">
+                          <div class="color-swatch mr-2" :style="{ backgroundColor: distanceLabelColor }"></div>
+                          Kilometer-Farbe
+                        </v-btn>
+                      </template>
+                      <v-color-picker v-model="distanceLabelColor" mode="hexa" show-swatches />
+                    </v-menu>
+                  </div>
+                </v-expansion-panel-text>
+              </v-expansion-panel>
+            </v-expansion-panels>
+          </div>
+        </v-window-item>
 
-              <v-checkbox
-                v-model="showCities"
-                label="Staedte"
-                density="compact"
-                hide-details
-                class="mt-1"
-              />
-              <template v-if="showCities">
-                <label class="text-caption text-medium-emphasis d-block mb-1">
-                  Deckkraft: {{ Math.round(cityOpacity * 100) }}%
-                </label>
-                <v-slider
-                  v-model="cityOpacity"
-                  :min="0.05"
-                  :max="1"
-                  :step="0.05"
-                  density="compact"
-                  hide-details
-                />
-              </template>
+        <!-- ── Tab 3: Animation ──────────────────────────── -->
+        <v-window-item :value="3">
+          <div class="tab-panel">
+            <v-expansion-panels v-model="expandedPanels" multiple class="settings-panels">
+              <v-expansion-panel value="animation">
+                <v-expansion-panel-title>
+                  <v-icon start size="small">mdi-animation-play</v-icon>
+                  Animation
+                </v-expansion-panel-title>
+                <v-expansion-panel-text>
+                  <div class="panel-grid">
+                    <v-text-field v-model.number="animationDuration" label="Dauer (Sek.)" type="number" :min="1" :max="30" variant="outlined" density="compact" hide-details />
+                    <v-select v-model="animationEasing" label="Easing" :items="easingOptions" variant="outlined" density="compact" hide-details />
+                  </div>
+                  <div class="mt-3">
+                    <label class="text-caption text-medium-emphasis d-block mb-1">Animationsmodus</label>
+                    <v-btn-toggle v-model="animationMode" mandatory density="compact" variant="outlined" divided class="w-100">
+                      <v-btn value="uniform" size="small" class="flex-grow-1">Gleichmaessig</v-btn>
+                      <v-btn value="gradient" size="small" class="flex-grow-1">Steigung</v-btn>
+                      <v-btn value="effort" size="small" class="flex-grow-1">Anstrengung</v-btn>
+                      <v-btn v-if="timeArray && timeArray.length > 0" value="time-based" size="small" class="flex-grow-1">Zeitbasiert</v-btn>
+                    </v-btn-toggle>
+                  </div>
+                  <div v-if="animationMode === 'gradient'" class="mt-3">
+                    <label class="text-caption text-medium-emphasis d-block mb-1">Intensitaet: {{ gradientSensitivity.toFixed(1) }}</label>
+                    <v-slider v-model="gradientSensitivity" :min="1" :max="8" :step="0.5" density="compact" hide-details thumb-label />
+                  </div>
+                  <div v-if="animationMode === 'effort'" class="mt-3">
+                    <label class="text-caption text-medium-emphasis d-block mb-2">Effekte</label>
+                    <v-checkbox v-model="effortVariableStroke" label="Linienstaerke variiert" density="compact" hide-details class="mt-0" />
+                    <v-slider v-if="effortVariableStroke" v-model="effortVariableStrokeIntensity" :min="1" :max="8" :step="0.5" density="compact" hide-details thumb-label class="ml-6 mt-n2" />
+                    <v-checkbox v-model="effortColorGradient" label="Farbverlauf (hell → dunkel)" density="compact" hide-details class="mt-1" />
+                    <v-slider v-if="effortColorGradient" v-model="effortColorGradientIntensity" :min="1" :max="8" :step="0.5" density="compact" hide-details thumb-label class="ml-6 mt-n2" />
+                    <v-checkbox v-model="effortGlowAura" label="Glow-Aura" density="compact" hide-details class="mt-1" />
+                    <v-slider v-if="effortGlowAura" v-model="effortGlowAuraIntensity" :min="1" :max="8" :step="0.5" density="compact" hide-details thumb-label class="ml-6 mt-n2" />
+                  </div>
+                  <div class="mt-3">
+                    <v-divider class="mb-3" />
+                    <v-checkbox v-model="panZoomEnabled" label="Profil-Kamerafahrt" density="compact" hide-details color="primary" />
+                    <template v-if="panZoomEnabled">
+                      <label class="text-caption text-medium-emphasis d-block mb-1 mt-2">Zoom: {{ panZoomZoomLevel.toFixed(1) }}x</label>
+                      <v-slider v-model="panZoomZoomLevel" :min="1.5" :max="5" :step="0.5" density="compact" hide-details thumb-label />
+                      <label class="text-caption text-medium-emphasis d-block mb-1 mt-2">Auszoom bei: {{ Math.round(panZoomZoomOutStart * 100) }}%</label>
+                      <v-slider v-model="panZoomZoomOutStart" :min="0.5" :max="0.95" :step="0.05" density="compact" hide-details thumb-label />
+                    </template>
+                  </div>
+                </v-expansion-panel-text>
+              </v-expansion-panel>
+            </v-expansion-panels>
+          </div>
+        </v-window-item>
 
-              <v-checkbox
-                v-model="showPeaks"
-                label="Gipfel"
-                density="compact"
-                hide-details
-                class="mt-1"
-              />
-              <template v-if="showPeaks">
-                <v-progress-linear
-                  v-if="peakLoading"
-                  indeterminate
-                  color="primary"
-                  height="2"
-                  class="mt-1"
-                />
-              </template>
-              <template v-if="showPeaks">
-                <label class="text-caption text-medium-emphasis d-block mb-1">
-                  Deckkraft: {{ Math.round(peakOpacity * 100) }}%
-                </label>
-                <v-slider
-                  v-model="peakOpacity"
-                  :min="0.05"
-                  :max="1"
-                  :step="0.05"
-                  density="compact"
-                  hide-details
-                />
-              </template>
+        <!-- ── Tab 4: Stil ───────────────────────────────── -->
+        <v-window-item :value="4">
+          <div class="tab-panel">
+            <v-expansion-panels v-model="expandedPanels" multiple class="settings-panels">
+              <v-expansion-panel value="colors">
+                <v-expansion-panel-title>
+                  <v-icon start size="small">mdi-palette</v-icon>
+                  Farben & Hintergrund
+                </v-expansion-panel-title>
+                <v-expansion-panel-text>
+                  <div class="panel-stack">
+                    <v-menu :close-on-content-click="false">
+                      <template v-slot:activator="{ props: menuProps }">
+                        <v-btn v-bind="menuProps" variant="outlined" block>
+                          <div class="color-swatch mr-2" :style="{ backgroundColor: silhouetteCurveColor }"></div>
+                          Profilkurve
+                        </v-btn>
+                      </template>
+                      <v-color-picker v-model="silhouetteCurveColor" mode="hexa" hide-inputs />
+                    </v-menu>
+                    <v-menu :close-on-content-click="false">
+                      <template v-slot:activator="{ props: menuProps }">
+                        <v-btn v-bind="menuProps" variant="outlined" block class="mt-2">
+                          <div class="color-swatch mr-2" :style="{ backgroundColor: titleColor }"></div>
+                          Titel
+                        </v-btn>
+                      </template>
+                      <v-color-picker v-model="titleColor" mode="hexa" hide-inputs />
+                    </v-menu>
+                    <v-select
+                      v-model="backgroundType"
+                      :items="backgroundTypeOptions"
+                      item-title="title"
+                      item-value="value"
+                      label="Hintergrund"
+                      variant="outlined"
+                      density="compact"
+                      hide-details
+                      class="mt-2"
+                    >
+                      <template v-slot:item="{ props: itemProps, item }">
+                        <v-list-item v-bind="itemProps">
+                          <template v-slot:prepend>
+                            <v-icon :icon="item.raw.icon" size="small" />
+                          </template>
+                        </v-list-item>
+                      </template>
+                    </v-select>
+                    <v-menu v-if="backgroundType === 'solid' || backgroundType === 'grid' || backgroundType === 'dots'" :close-on-content-click="false">
+                      <template v-slot:activator="{ props: menuProps }">
+                        <v-btn v-bind="menuProps" variant="outlined" block size="small" class="mt-2">
+                          <div class="color-swatch mr-2" :style="{ backgroundColor: backgroundColor }"></div>
+                          Hintergrundfarbe
+                        </v-btn>
+                      </template>
+                      <v-color-picker v-model="backgroundColor" mode="hexa" hide-inputs />
+                    </v-menu>
+                    <v-menu v-if="backgroundType === 'gradient'" :close-on-content-click="false">
+                      <template v-slot:activator="{ props: menuProps }">
+                        <v-btn v-bind="menuProps" variant="outlined" block size="small" class="mt-2">
+                          <div class="color-swatch mr-2" :style="{ backgroundColor: gradientColor }"></div>
+                          Gradient-Farbe
+                        </v-btn>
+                      </template>
+                      <v-color-picker v-model="gradientColor" mode="hexa" hide-inputs />
+                    </v-menu>
+                    <template v-if="backgroundType === 'mesh'">
+                      <div class="text-caption text-grey mt-2 mb-1">Mesh-Farben</div>
+                      <div class="d-flex ga-2">
+                        <v-menu :close-on-content-click="false">
+                          <template v-slot:activator="{ props: menuProps }">
+                            <v-btn v-bind="menuProps" variant="outlined" size="small" icon>
+                              <div class="color-swatch-small" :style="{ backgroundColor: meshColor1 }"></div>
+                            </v-btn>
+                          </template>
+                          <v-color-picker v-model="meshColor1" mode="hexa" hide-inputs />
+                        </v-menu>
+                        <v-menu :close-on-content-click="false">
+                          <template v-slot:activator="{ props: menuProps }">
+                            <v-btn v-bind="menuProps" variant="outlined" size="small" icon>
+                              <div class="color-swatch-small" :style="{ backgroundColor: meshColor2 }"></div>
+                            </v-btn>
+                          </template>
+                          <v-color-picker v-model="meshColor2" mode="hexa" hide-inputs />
+                        </v-menu>
+                        <v-menu :close-on-content-click="false">
+                          <template v-slot:activator="{ props: menuProps }">
+                            <v-btn v-bind="menuProps" variant="outlined" size="small" icon>
+                              <div class="color-swatch-small" :style="{ backgroundColor: meshColor3 }"></div>
+                            </v-btn>
+                          </template>
+                          <v-color-picker v-model="meshColor3" mode="hexa" hide-inputs />
+                        </v-menu>
+                      </div>
+                    </template>
+                    <template v-if="backgroundType === 'grid' || backgroundType === 'dots'">
+                      <v-menu :close-on-content-click="false">
+                        <template v-slot:activator="{ props: menuProps }">
+                          <v-btn v-bind="menuProps" variant="outlined" block size="small" class="mt-2">
+                            <div class="color-swatch mr-2" :style="{ backgroundColor: patternColor }"></div>
+                            Musterfarbe
+                          </v-btn>
+                        </template>
+                        <v-color-picker v-model="patternColor" mode="hexa" hide-inputs />
+                      </v-menu>
+                      <v-slider v-model="patternOpacity" :min="0.05" :max="0.5" :step="0.05" label="Deckkraft" density="compact" hide-details thumb-label class="mt-2" />
+                    </template>
+                    <template v-if="backgroundType === 'image'">
+                      <div class="mt-2">
+                        <v-file-input v-if="!imageOptions?.imageUrl" label="Bild hochladen" accept="image/jpeg,image/png,image/webp" prepend-icon="mdi-image-plus" variant="outlined" density="compact" hide-details @update:model-value="handleImageUpload" :loading="imageUploading" />
+                        <div v-else class="image-preview-container">
+                          <img :src="imageOptions.imageUrl" class="image-preview" alt="Background" />
+                          <v-btn icon="mdi-close" size="x-small" color="error" variant="flat" class="remove-image-btn" @click="removeBackgroundImage" />
+                        </div>
+                      </div>
+                      <v-select v-if="imageOptions?.imageUrl" v-model="imagePosition" :items="imagePositionOptions" item-title="title" item-value="value" label="Position" variant="outlined" density="compact" hide-details class="mt-2" />
+                      <v-slider v-if="imageOptions?.imageUrl" v-model="imageBlur" :min="0" :max="20" :step="1" label="Weichzeichnung" density="compact" hide-details thumb-label class="mt-2">
+                        <template v-slot:append><span class="text-caption">{{ imageBlur }}px</span></template>
+                      </v-slider>
+                      <v-slider v-if="imageOptions?.imageUrl" v-model="imageBrightness" :min="0.5" :max="1.5" :step="0.05" label="Helligkeit" density="compact" hide-details thumb-label class="mt-2">
+                        <template v-slot:append><span class="text-caption">{{ Math.round(imageBrightness * 100) }}%</span></template>
+                      </v-slider>
+                      <v-slider v-if="imageOptions?.imageUrl" v-model="imageContrast" :min="0.5" :max="1.5" :step="0.05" label="Kontrast" density="compact" hide-details thumb-label class="mt-2">
+                        <template v-slot:append><span class="text-caption">{{ Math.round(imageContrast * 100) }}%</span></template>
+                      </v-slider>
+                      <v-menu v-if="imageOptions?.imageUrl" :close-on-content-click="false">
+                        <template v-slot:activator="{ props: menuProps }">
+                          <v-btn v-bind="menuProps" variant="outlined" block size="small" class="mt-2">
+                            <div class="color-swatch mr-2" :style="{ backgroundColor: imageOverlayColor }"></div>
+                            Overlay-Farbe
+                          </v-btn>
+                        </template>
+                        <v-color-picker v-model="imageOverlayColor" mode="hexa" hide-inputs />
+                      </v-menu>
+                      <v-slider v-if="imageOptions?.imageUrl" v-model="imageOverlayOpacity" :min="0" :max="0.8" :step="0.05" label="Overlay Deckkraft" density="compact" hide-details thumb-label class="mt-2">
+                        <template v-slot:append><span class="text-caption">{{ Math.round(imageOverlayOpacity * 100) }}%</span></template>
+                      </v-slider>
+                    </template>
+                  </div>
+                </v-expansion-panel-text>
+              </v-expansion-panel>
+            </v-expansion-panels>
+          </div>
+        </v-window-item>
 
-              <v-divider class="my-2" />
-
-              <v-checkbox
-                v-model="showContours"
-                label="Hoehenlinien"
-                density="compact"
-                hide-details
-                class="mt-1"
-              />
-              <template v-if="showContours">
-                <v-progress-linear
-                  v-if="contourLoading"
-                  indeterminate
-                  color="primary"
-                  height="2"
-                  class="mt-1"
-                />
-                <label class="text-caption text-medium-emphasis d-block mb-1">
-                  Deckkraft: {{ Math.round(contourOpacity * 100) }}%
-                </label>
-                <v-slider
-                  v-model="contourOpacity"
-                  :min="0.05"
-                  :max="0.60"
-                  :step="0.05"
-                  density="compact"
-                  hide-details
-                />
-                <label class="text-caption text-medium-emphasis d-block mb-1 mt-2">
-                  Intervall: {{ contourInterval }}m
-                </label>
-                <v-slider
-                  v-model="contourInterval"
-                  :min="25"
-                  :max="500"
-                  :step="25"
-                  density="compact"
-                  hide-details
-                  thumb-label
-                />
-                <v-checkbox
-                  v-model="contourShowLabels"
-                  label="Hoehenbeschriftung"
-                  density="compact"
-                  hide-details
-                  class="mt-1"
-                />
-              </template>
-            </div>
-          </v-expansion-panel-text>
-        </v-expansion-panel>
-
-        <!-- Marker & Labels (Elevation Profile) -->
-        <v-expansion-panel value="markers">
-          <v-expansion-panel-title>
-            <v-icon start size="small">mdi-map-marker</v-icon>
-            Profil Marker & Labels
-          </v-expansion-panel-title>
-          <v-expansion-panel-text>
-            <div class="panel-stack">
-              <v-checkbox
-                v-model="showAreaFill"
-                label="Flaeche fuellen"
-                density="compact"
-                hide-details
-                color="primary"
-              />
-              <v-checkbox
-                v-model="showElevationCurveColoring"
-                label="Kurve nach Hoehe einfaerben"
-                density="compact"
-                hide-details
-                color="primary"
-              />
-              <v-checkbox
-                v-model="animationShowMarker"
-                label="Profil-Marker"
-                density="compact"
-                hide-details
-                color="primary"
-              />
-              <v-checkbox
-                v-model="showElevationLabels"
-                label="Hoehenmeter anzeigen"
-                density="compact"
-                hide-details
-                color="primary"
-              />
-              <v-menu v-if="showElevationLabels" :close-on-content-click="false">
-                <template v-slot:activator="{ props: menuProps }">
-                  <v-btn v-bind="menuProps" variant="outlined" block size="small" class="mt-1">
-                    <div class="color-swatch mr-2" :style="{ backgroundColor: elevationLabelColor }"></div>
-                    Hoehenmeter-Farbe
-                  </v-btn>
-                </template>
-                <v-color-picker v-model="elevationLabelColor" mode="hexa" show-swatches />
-              </v-menu>
-              <v-checkbox
-                v-model="showDistanceLabels"
-                label="Kilometer anzeigen"
-                density="compact"
-                hide-details
-                color="primary"
-                class="mt-2"
-              />
-              <v-menu v-if="showDistanceLabels" :close-on-content-click="false">
-                <template v-slot:activator="{ props: menuProps }">
-                  <v-btn v-bind="menuProps" variant="outlined" block size="small" class="mt-1">
-                    <div class="color-swatch mr-2" :style="{ backgroundColor: distanceLabelColor }"></div>
-                    Kilometer-Farbe
-                  </v-btn>
-                </template>
-                <v-color-picker v-model="distanceLabelColor" mode="hexa" show-swatches />
-              </v-menu>
-            </div>
-          </v-expansion-panel-text>
-        </v-expansion-panel>
-      </v-expansion-panels>
+      </v-window>
     </div>
 
     <!-- Fixed bottom: Playback + Actions (always visible) -->
@@ -1214,7 +775,8 @@ const controlsCollapsed = computed({
   get: () => props.collapsed,
   set: (val: boolean) => emit('update:collapsed', val),
 })
-const expandedPanels = ref(['route', 'animation'])
+const activeTab = ref(0)
+const expandedPanels = ref(['camera', 'routestyle', 'animation', 'profilestyle', 'profilelabels', 'colors'])
 const imageUploading = ref(false)
 
 // --- Config composable ---
@@ -1395,10 +957,43 @@ const imagePositionOptions = [
 }
 
 .expanded-controls {
-  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.sidebar-tabs {
+  flex-shrink: 0;
+}
+
+.sidebar-tabs :deep(.v-tab) {
+  min-width: 0;
+  padding: 0 4px;
+}
+
+.tab-item {
+  flex-direction: column;
+  gap: 2px;
+  min-height: 52px !important;
+}
+
+.tab-label {
+  font-size: 10px;
+  line-height: 1;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.tab-content {
   flex: 1;
   overflow-y: auto;
   min-height: 0;
+}
+
+.tab-panel {
+  padding: 12px;
 }
 
 .sidebar-bottom {
