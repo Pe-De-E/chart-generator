@@ -101,7 +101,7 @@
     <!-- Expanded state: Full controls -->
     <div v-else class="expanded-controls">
       <!-- Chart Name (above tabs) -->
-      <div class="control-section px-3 pt-3">
+      <div class="chart-name-section">
         <v-text-field
           :model-value="chartTitle"
           @update:model-value="$emit('update:chartTitle', $event)"
@@ -138,13 +138,11 @@
         </v-tab>
       </v-tabs>
 
-      <v-divider />
-
       <!-- Tab Content -->
-      <v-window v-model="activeTab" class="tab-content">
+      <div class="tab-content">
 
         <!-- ── Tab 0: Karte ──────────────────────────────── -->
-        <v-window-item :value="0">
+        <div v-show="activeTab === 0">
           <div class="tab-panel">
             <!-- Layout -->
             <div class="control-section">
@@ -245,10 +243,10 @@
               </v-expansion-panel>
             </v-expansion-panels>
           </div>
-        </v-window-item>
+        </div>
 
         <!-- ── Tab 1: Route ──────────────────────────────── -->
-        <v-window-item :value="1">
+        <div v-show="activeTab === 1">
           <div class="tab-panel">
             <v-expansion-panels v-model="expandedPanels" multiple class="settings-panels">
               <!-- Routenstil -->
@@ -343,10 +341,10 @@
               </v-expansion-panel>
             </v-expansion-panels>
           </div>
-        </v-window-item>
+        </div>
 
         <!-- ── Tab 2: Profil ─────────────────────────────── -->
-        <v-window-item :value="2">
+        <div v-show="activeTab === 2">
           <div class="tab-panel">
             <!-- Profilhoehe (immer sichtbar) -->
             <div class="control-section">
@@ -406,10 +404,10 @@
               </v-expansion-panel>
             </v-expansion-panels>
           </div>
-        </v-window-item>
+        </div>
 
         <!-- ── Tab 3: Animation ──────────────────────────── -->
-        <v-window-item :value="3">
+        <div v-show="activeTab === 3">
           <div class="tab-panel">
             <v-expansion-panels v-model="expandedPanels" multiple class="settings-panels">
               <v-expansion-panel value="animation">
@@ -458,10 +456,10 @@
               </v-expansion-panel>
             </v-expansion-panels>
           </div>
-        </v-window-item>
+        </div>
 
         <!-- ── Tab 4: Stil ───────────────────────────────── -->
-        <v-window-item :value="4">
+        <div v-show="activeTab === 4">
           <div class="tab-panel">
             <v-expansion-panels v-model="expandedPanels" multiple class="settings-panels">
               <v-expansion-panel value="colors">
@@ -603,9 +601,9 @@
               </v-expansion-panel>
             </v-expansion-panels>
           </div>
-        </v-window-item>
+        </div>
 
-      </v-window>
+      </div>
     </div>
 
     <!-- Fixed bottom: Playback + Actions (always visible) -->
@@ -996,6 +994,11 @@ const imagePositionOptions = [
   padding: 12px;
 }
 
+.chart-name-section {
+  padding: 8px 12px 6px;
+  flex-shrink: 0;
+}
+
 .sidebar-bottom {
   flex-shrink: 0;
   padding: 0 12px 12px;
@@ -1049,7 +1052,7 @@ const imagePositionOptions = [
 }
 
 .settings-panels {
-  flex: 1;
+  flex-shrink: 0;
 }
 
 .settings-panels :deep(.v-expansion-panel--active .v-expansion-panel-title) {
