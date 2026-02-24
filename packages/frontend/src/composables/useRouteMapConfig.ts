@@ -90,6 +90,11 @@ export function useRouteMapConfig(
     set: (value: string) => updateConfig({ mapMarkerColor: value }),
   })
 
+  const showMarkerPulse = computed({
+    get: () => getConfig().showMarkerPulse ?? false,
+    set: (value: boolean) => updateConfig({ showMarkerPulse: value }),
+  })
+
   // --- Map Labels & Markers ---
 
   const showDirection = computed({
@@ -264,6 +269,7 @@ export function useRouteMapConfig(
     showMapMarker,
     mapMarkerSize,
     mapMarkerColor,
+    showMarkerPulse,
     // Map Labels & Markers
     showDirection,
     showDistanceMarkers,

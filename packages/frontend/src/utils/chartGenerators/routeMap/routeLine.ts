@@ -305,11 +305,26 @@ export function generateRouteMarker(
   markerColor: string,
   routeColor: string,
   showDirection: boolean = true,
+  showPulse: boolean = false,
 ): string {
   const pos = getRouteMarkerPosition(points, progress)
   if (!pos) return ''
 
   const elements: string[] = []
+
+  // Pulse rings (3 concentric rings at staggered phases)
+  if (showPulse) {
+    const PULSE_CYCLES = 8
+    for (let i = 0; i < 3; i++) {
+      const phase = ((progress * PULSE_CYCLES) + i / 3) % 1
+      const r = (markerSize * (1.5 + phase * 3.5)).toFixed(1)
+      const opacity = (0.55 * (1 - phase)).toFixed(2)
+      elements.push(
+        `<circle cx="${pos.x.toFixed(1)}" cy="${pos.y.toFixed(1)}" r="${r}" ` +
+        `fill="none" stroke="${markerColor}" stroke-width="1.5" opacity="${opacity}"/>`
+      )
+    }
+  }
 
   // Direction arrow
   if (showDirection && points.length >= 2) {

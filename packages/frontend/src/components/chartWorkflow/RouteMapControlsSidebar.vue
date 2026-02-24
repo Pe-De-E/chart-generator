@@ -270,6 +270,7 @@
               <label class="text-caption text-medium-emphasis d-block mb-1 mt-2">Groesse: {{ mapMarkerSize }}px</label>
               <v-slider v-model="mapMarkerSize" :min="4" :max="16" :step="1" density="compact" hide-details thumb-label />
             </template>
+            <v-checkbox v-model="showMarkerPulse" label="Pulse-Ringe" density="compact" hide-details color="primary" class="mt-1" />
             <v-checkbox v-model="showDirection" label="Richtungspfeil" density="compact" hide-details color="primary" class="mt-1" />
             <v-checkbox v-model="showStartEndLabels" label="Start/Ziel Labels" density="compact" hide-details color="primary" class="mt-1" />
             <v-checkbox v-model="showDistanceMarkers" label="Kilometer-Markierungen" density="compact" hide-details color="primary" class="mt-1" />
@@ -750,6 +751,7 @@ const {
   showMapMarker,
   mapMarkerSize,
   mapMarkerColor,
+  showMarkerPulse,
   showDirection,
   showDistanceMarkers,
   distanceMarkerInterval,

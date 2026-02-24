@@ -133,6 +133,7 @@ export interface RouteMapAnimationConfig {
   showMapMarker: boolean;
   mapMarkerSize: number;
   mapMarkerColor: string;
+  showMarkerPulse: boolean;
   showDirection: boolean;
   showDistanceMarkers: boolean;
   distanceMarkerInterval: number;
@@ -216,6 +217,7 @@ export const DEFAULT_ROUTEMAP_ANIMATION_CONFIG: RouteMapAnimationConfig = {
   showMapMarker: true,
   mapMarkerSize: 8,
   mapMarkerColor: '#ffffff',
+  showMarkerPulse: false,
   showDirection: true,
   showDistanceMarkers: false,
   distanceMarkerInterval: 5,
@@ -552,6 +554,7 @@ function buildFrameOptions(progress: number, overrides: Partial<CombinedFrameOpt
     showMapMarker: cfg.showMapMarker,
     mapMarkerSize: cfg.mapMarkerSize,
     mapMarkerColor: cfg.mapMarkerColor,
+    showMarkerPulse: cfg.showMarkerPulse ?? false,
     showDirection: cfg.showDirection,
     showDistanceMarkers: cfg.showDistanceMarkers,
     distanceMarkerInterval: cfg.distanceMarkerInterval,

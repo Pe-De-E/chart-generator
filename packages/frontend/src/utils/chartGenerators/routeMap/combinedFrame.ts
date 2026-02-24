@@ -58,6 +58,7 @@ export interface CombinedFrameOptions {
   showMapMarker: boolean
   mapMarkerSize: number
   mapMarkerColor: string
+  showMarkerPulse?: boolean
   showDirection: boolean
   showDistanceMarkers?: boolean
   distanceMarkerInterval?: number
@@ -492,6 +493,7 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     showMapMarker,
     mapMarkerSize,
     mapMarkerColor,
+    showMarkerPulse = false,
     showDirection,
     showDistanceMarkers = false,
     distanceMarkerInterval = 5,
@@ -581,7 +583,7 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
 
     const routeLine = generateRouteLine(mapPoints, effectiveProgress, routeStyle, width, mapHeight)
     const marker = showMapMarker
-      ? generateRouteMarker(mapPoints, effectiveProgress, mapMarkerSize, mapMarkerColor, routeStyle.color, showDirection)
+      ? generateRouteMarker(mapPoints, effectiveProgress, mapMarkerSize, mapMarkerColor, routeStyle.color, showDirection, showMarkerPulse)
       : ''
 
     const distLabels = showDistanceMarkers
