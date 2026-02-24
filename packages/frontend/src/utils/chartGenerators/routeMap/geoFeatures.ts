@@ -630,7 +630,7 @@ let cachedSvg: string | null = null
 let cachedKey: string | null = null
 
 // Bump this when rendering logic changes to invalidate cached results
-const CACHE_VERSION = 13
+const CACHE_VERSION = 14
 
 function buildCacheKey(bounds: RouteBounds, config: GeoLayerConfig, vw: number, vh: number): string {
   return `v${CACHE_VERSION},${bounds.minLat},${bounds.maxLat},${bounds.minLon},${bounds.maxLon},` +
@@ -830,8 +830,9 @@ export function generateGeoLayers(
       displayAngle = Math.max(-60, Math.min(60, displayAngle))
 
       parts.push(
-        `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" fill="${countryColor}" opacity="${countryOpacity.toFixed(2)}" ` +
-        `font-size="${COUNTRY_FONT}" font-family="system-ui, sans-serif" font-style="italic" text-anchor="middle" ` +
+        `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" fill="${countryColor}" opacity="${Math.min(1, countryOpacity * 1.8).toFixed(2)}" ` +
+        `font-size="${COUNTRY_FONT}" font-family="system-ui, sans-serif" font-style="italic" font-weight="600" text-anchor="middle" ` +
+        `stroke="rgba(0,0,0,0.6)" stroke-width="5" paint-order="stroke fill" stroke-linejoin="round" ` +
         `transform="rotate(${displayAngle.toFixed(1)} ${lx.toFixed(1)} ${ly.toFixed(1)})">${name}</text>`
       )
     }
