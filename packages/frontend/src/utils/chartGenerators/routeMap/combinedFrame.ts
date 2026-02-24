@@ -452,13 +452,13 @@ function generateStatsOverlay(
   const textLines = rows.map((row, i) => {
     const x = boxX + paddingX
     const y = Math.round(boxY + paddingY + rowHeight * i + fontSize * 0.78)
-    return `<text x="${x}" y="${y}" fill="${color}" font-size="${fontSize}" font-weight="bold" font-family="system-ui, sans-serif">${row.icon}  ${row.value}</text>`
+    return `<text x="${x}" y="${y}" fill="${color}" font-size="${fontSize}" font-weight="bold"
+      font-family="system-ui, sans-serif"
+      stroke="rgba(0,0,0,0.75)" stroke-width="5" paint-order="stroke fill"
+      stroke-linejoin="round">${row.icon}  ${row.value}</text>`
   }).join('\n    ')
 
-  return `
-    <rect x="${boxX}" y="${boxY}" width="${boxWidth}" height="${boxHeight}" rx="12" fill="#00000066"/>
-    ${textLines}
-  `
+  return textLines
 }
 
 /**
