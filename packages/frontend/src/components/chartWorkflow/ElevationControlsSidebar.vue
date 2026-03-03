@@ -61,6 +61,13 @@
           </v-btn>
         </template>
       </v-tooltip>
+      <v-tooltip location="left" text="Momente">
+        <template v-slot:activator="{ props }">
+          <v-btn v-bind="props" icon variant="text" @click="controlsCollapsed = false; expandedPanels = ['momente']">
+            <v-icon>mdi-map-marker-star</v-icon>
+          </v-btn>
+        </template>
+      </v-tooltip>
 
       <v-spacer />
 
@@ -734,6 +741,143 @@
             </div>
           </v-expansion-panel-text>
         </v-expansion-panel>
+
+        <!-- Momente (Annotations) -->
+        <v-expansion-panel value="momente">
+          <v-expansion-panel-title>
+            <v-icon start size="small">mdi-map-marker-star</v-icon>
+            Momente
+          </v-expansion-panel-title>
+          <v-expansion-panel-text>
+            <div class="panel-stack">
+              <!-- Detection Button -->
+              <v-btn
+                block
+                variant="tonal"
+                color="primary"
+                prepend-icon="mdi-auto-fix"
+                :loading="isDetecting"
+                :disabled="chartData.length === 0"
+                @click="runDetection"
+              >
+                Momente erkennen
+              </v-btn>
+
+              <!-- Annotation list -->
+              <div v-if="annotations && annotations.length > 0" class="annotation-list mt-3">
+                <div
+                  v-for="annotation in annotations"
+                  :key="annotation.id"
+                  class="annotation-item"
+                >
+                  <v-checkbox
+                    :model-value="annotation.enabled"
+                    density="compact"
+                    hide-details
+                    color="primary"
+                    class="annotation-toggle flex-shrink-0"
+                    @update:model-value="toggleAnnotation(annotation.id)"
+                  />
+                  <v-chip
+                    size="x-small"
+                    :color="annotationTypeColor(annotation.type)"
+                    class="mr-1 flex-shrink-0"
+                  >
+                    <v-icon size="x-small">{{ annotationTypeIcon(annotation.type) }}</v-icon>
+                  </v-chip>
+                  <template v-if="editingId === annotation.id">
+                    <v-text-field
+                      v-model="editingText"
+                      density="compact"
+                      variant="outlined"
+                      hide-details
+                      autofocus
+                      class="flex-grow-1"
+                      @keydown.enter="commitEdit(annotation.id)"
+                      @keydown.escape="editingId = null"
+                    />
+                    <v-btn
+                      icon="mdi-check"
+                      size="x-small"
+                      variant="text"
+                      color="success"
+                      @click="commitEdit(annotation.id)"
+                    />
+                  </template>
+                  <template v-else>
+                    <span
+                      class="annotation-text flex-grow-1 text-caption"
+                      :class="{ 'text-disabled': !annotation.enabled }"
+                    >
+                      {{ annotation.text }}
+                      <span class="text-grey ml-1">{{ Math.round(annotation.progress * 100) }}%</span>
+                    </span>
+                    <v-btn
+                      icon="mdi-pencil"
+                      size="x-small"
+                      variant="text"
+                      @click="startEdit(annotation)"
+                    />
+                    <v-btn
+                      icon="mdi-delete-outline"
+                      size="x-small"
+                      variant="text"
+                      color="error"
+                      @click="deleteAnnotation(annotation.id)"
+                    />
+                  </template>
+                </div>
+              </div>
+
+              <!-- Empty state -->
+              <div
+                v-else
+                class="text-caption text-medium-emphasis text-center py-2"
+              >
+                Keine Momente. Klicke „Momente erkennen" oder füge eigene hinzu.
+              </div>
+
+              <v-divider class="my-3" />
+
+              <!-- Add custom annotation -->
+              <div class="text-caption text-medium-emphasis mb-1">Eigenen Moment hinzufügen</div>
+              <v-text-field
+                v-model="newAnnotationText"
+                label="Beschriftung"
+                density="compact"
+                variant="outlined"
+                hide-details
+                placeholder="z.B. Aussichtspunkt"
+                class="mb-2"
+              />
+              <div class="d-flex align-center gap-2">
+                <v-slider
+                  v-model="newAnnotationProgress"
+                  :min="1"
+                  :max="99"
+                  :step="1"
+                  density="compact"
+                  hide-details
+                  thumb-label
+                  color="primary"
+                  class="flex-grow-1"
+                />
+                <span class="text-caption text-no-wrap ml-2">{{ newAnnotationProgress }}%</span>
+              </div>
+              <v-btn
+                block
+                variant="outlined"
+                prepend-icon="mdi-plus"
+                :disabled="!newAnnotationText.trim()"
+                class="mt-2"
+                @click="handleAddCustom"
+              >
+                Hinzufügen
+              </v-btn>
+            </div>
+          </v-expansion-panel-text>
+        </v-expansion-panel>
+
       </v-expansion-panels>
     </div>
 
@@ -826,13 +970,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import type { PropType } from 'vue'
 import type { PlaybackSpeed } from '../../composables/useChartAnimation'
 import { useElevationConfig } from '../../composables/useElevationConfig'
 import { useElevationThemes } from '../../composables/useElevationThemes'
 import { uploadService } from '../../services/upload.service'
 import type { ElevationAnimationConfig } from './ElevationChartStep.vue'
+import type { Annotation, AnnotationType } from '../../utils/chartGenerators/elevationChart/types'
+import { detectAnnotations } from '../../utils/chartGenerators/elevationChart/annotationDetection'
 import SaveThemeDialog from './SaveThemeDialog.vue'
 
 const props = defineProps({
@@ -843,6 +989,10 @@ const props = defineProps({
   chartTitle: {
     type: String,
     required: true,
+  },
+  chartData: {
+    type: Array as PropType<Array<{ label: string; value: number }>>,
+    default: () => [],
   },
   timeArray: {
     type: Array as PropType<number[]>,
@@ -906,6 +1056,13 @@ const selectedThemeId = ref<string | null>(null)
 const imageUploading = ref(false)
 const showSaveThemeDialog = ref(false)
 
+// --- Annotation local state ---
+const isDetecting = ref(false)
+const newAnnotationProgress = ref(50)
+const newAnnotationText = ref('')
+const editingId = ref<string | null>(null)
+const editingText = ref('')
+
 // --- Config composable ---
 
 function updateAnimationConfig(partial: Partial<ElevationAnimationConfig>) {
@@ -951,6 +1108,11 @@ const {
   imageContrast,
   imageOverlayColor,
   imageOverlayOpacity,
+  annotations,
+  toggleAnnotation,
+  updateAnnotationText,
+  deleteAnnotation,
+  addCustomAnnotation,
 } = useElevationConfig(
   () => props.animationConfig,
   updateAnimationConfig,
@@ -1081,6 +1243,69 @@ function removeBackgroundImage() {
     backgroundType: 'solid',
     imageOptions: undefined,
   })
+}
+
+// --- Annotations ---
+
+async function runDetection() {
+  if (props.chartData.length === 0) return
+  isDetecting.value = true
+  await nextTick()
+  const detected = detectAnnotations(props.chartData)
+  // Preserve user-edited texts for matching types, keep existing custom annotations
+  const existingByType = new Map(
+    (annotations.value ?? [])
+      .filter(a => a.isAutoGenerated)
+      .map(a => [a.type, a])
+  )
+  const merged = detected.map(d => {
+    const existing = existingByType.get(d.type)
+    return existing ? { ...d, text: existing.text, enabled: existing.enabled } : d
+  })
+  const customAnnotations = (annotations.value ?? []).filter(a => !a.isAutoGenerated)
+  annotations.value = [...merged, ...customAnnotations]
+  isDetecting.value = false
+}
+
+function handleAddCustom() {
+  if (!newAnnotationText.value.trim()) return
+  addCustomAnnotation(newAnnotationProgress.value / 100, newAnnotationText.value.trim())
+  newAnnotationText.value = ''
+  newAnnotationProgress.value = 50
+}
+
+function startEdit(annotation: Annotation) {
+  editingId.value = annotation.id
+  editingText.value = annotation.text
+}
+
+function commitEdit(id: string) {
+  if (editingText.value.trim()) {
+    updateAnnotationText(id, editingText.value.trim())
+  }
+  editingId.value = null
+}
+
+function annotationTypeIcon(type: AnnotationType): string {
+  const icons: Record<AnnotationType, string> = {
+    summit: 'mdi-triangle',
+    steepest_climb: 'mdi-trending-up',
+    steepest_descent: 'mdi-trending-down',
+    longest_descent: 'mdi-ski-water',
+    custom: 'mdi-map-marker',
+  }
+  return icons[type] ?? 'mdi-map-marker'
+}
+
+function annotationTypeColor(type: AnnotationType): string {
+  const colors: Record<AnnotationType, string> = {
+    summit: 'amber',
+    steepest_climb: 'red-lighten-1',
+    steepest_descent: 'blue-lighten-1',
+    longest_descent: 'cyan-lighten-1',
+    custom: 'grey',
+  }
+  return colors[type] ?? 'grey'
 }
 
 // --- Constants ---
@@ -1216,6 +1441,30 @@ const imagePositionOptions = [
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.annotation-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.annotation-item {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 36px;
+}
+
+.annotation-toggle {
+  margin: 0;
+  padding: 0;
+}
+
+.annotation-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .color-swatch {

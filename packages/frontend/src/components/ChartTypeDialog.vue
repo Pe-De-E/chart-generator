@@ -49,6 +49,24 @@
               </div>
             </v-card>
           </v-col>
+          <!-- 3D Terrain Option -->
+          <v-col cols="12" sm="6">
+            <v-card
+              variant="outlined"
+              class="chart-type-card pa-4 text-center"
+              :class="{ 'selected': selectedType === 'terrain' }"
+              @click="selectType('terrain')"
+              hover
+            >
+              <v-icon size="64" color="primary" class="mb-3">
+                mdi-mountain
+              </v-icon>
+              <div class="text-h6 mb-2">3D Gelände (GPX)</div>
+              <div class="text-caption text-medium-emphasis">
+                Echtes 3D-Terrain mit leuchtender Route
+              </div>
+            </v-card>
+          </v-col>
         </v-row>
       </v-card-text>
 
@@ -93,9 +111,9 @@ const dialogVisible = computed({
   set: (value) => emit('update:modelValue', value)
 })
 
-const selectedType = ref<'elevation' | 'route-map' | null>(null)
+const selectedType = ref<'elevation' | 'route-map' | 'terrain' | null>(null)
 
-function selectType(type: 'elevation' | 'route-map') {
+function selectType(type: 'elevation' | 'route-map' | 'terrain') {
   selectedType.value = type
 }
 
@@ -109,6 +127,8 @@ function confirmSelection() {
     router.push({ name: 'Elevation' })
   } else if (selectedType.value === 'route-map') {
     router.push({ name: 'RouteMap' })
+  } else if (selectedType.value === 'terrain') {
+    router.push({ name: 'Terrain' })
   }
   closeDialog()
 }

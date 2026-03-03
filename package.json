@@ -14,10 +14,17 @@
     "db:wait": "node scripts/wait-for-db.js",
     "db:start": "node scripts/check-docker.js && docker-compose up -d postgres",
     "db:stop": "docker-compose down",
-    "db:reset": "pnpm --filter @chart-generator/backend db:reset"
+    "db:reset": "pnpm --filter @chart-generator/backend db:reset",
+    "sonar:start": "docker-compose -f docker-compose.sonar.yml up -d",
+    "sonar:stop": "docker-compose -f docker-compose.sonar.yml down",
+    "test:coverage": "pnpm --filter @chart-generator/frontend test:coverage && pnpm --filter @chart-generator/backend test:coverage",
+    "test:e2e": "pnpm --filter @chart-generator/frontend test:e2e",
+    "test:ct": "pnpm --filter @chart-generator/frontend test:ct",
+    "sonar:scan": "node scripts/sonar-scan.js"
   },
   "devDependencies": {
     "concurrently": "^8.2.0",
-    "sharp": "^0.34.5"
+    "sharp": "^0.34.5",
+    "sonarqube-scanner": "3.5.0"
   }
 }

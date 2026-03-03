@@ -8,11 +8,12 @@
 
 import type { RoutePoint } from '@chart-generator/shared'
 import type { ImageBackgroundOptions } from '@chart-generator/shared'
-import type { BackgroundType, PanZoomConfig } from '../elevationChart/types'
+import type { Annotation, BackgroundType, PanZoomConfig } from '../elevationChart/types'
 import type { RouteLineStyle } from './routeLine'
 import type { MapCameraConfig } from './mapCamera'
 import { generateBackgroundElements } from '../elevationChart/background'
 import { projectRouteToSvg, getProjectionParams } from './projection'
+import type { RouteBounds } from './projection'
 import { generateGeoLayers } from './geoFeatures'
 import type { GeoLayerConfig } from './geoFeatures'
 import { generateRouteLine, generateRouteMarker, DEFAULT_ROUTE_LINE_STYLE, elevationToColor } from './routeLine'
@@ -109,6 +110,11 @@ export interface CombinedFrameOptions {
   // Pre-rendered peak layer (async, from Overpass API)
   peakLayerSvg?: string
 
+  // Map visual enhancements
+  showNorthArrow?: boolean
+  showScaleBar?: boolean
+  showMapFade?: boolean
+
   // Title overlay (rendered on top of everything)
   titleOverlay?: {
     text: string
@@ -121,6 +127,7 @@ export interface CombinedFrameOptions {
   statsOverlayColor?: string
   statsX?: number   // 0-1, normalized horizontal position (0=left, 1=right)
   statsY?: number   // 0-1, normalized vertical position within map area (0=top, 1=bottom)
+  annotations?: Annotation[]   // Text chips shown at specific progress points
 }
 
 export const DEFAULT_COMBINED_FRAME_OPTIONS: Partial<CombinedFrameOptions> = {
@@ -145,6 +152,9 @@ export const DEFAULT_COMBINED_FRAME_OPTIONS: Partial<CombinedFrameOptions> = {
   showDivider: false,
   dividerColor: '#ffffff33',
   dividerWidth: 2,
+  showNorthArrow: true,
+  showScaleBar: true,
+  showMapFade: true,
 }
 
 /**
@@ -463,6 +473,67 @@ function generateStatsOverlay(
 }
 
 /**
+ * Generate a north arrow indicator for the top-right corner of the map.
+ */
+function generateNorthArrow(width: number, color: string): string {
+  const cx = width - 72
+  const cy = 72
+  return `
+    <g transform="translate(${cx}, ${cy})">
+      <circle r="30" fill="rgba(0,0,0,0.5)" stroke="${color}" stroke-width="1" stroke-opacity="0.25"/>
+      <path d="M 0,-22 L 7,3 L 0,-4 L -7,3 Z" fill="${color}" opacity="0.95"/>
+      <path d="M 0,-4 L 7,3 L 0,22 L -7,3 Z" fill="${color}" opacity="0.22"/>
+      <text y="-25" text-anchor="middle" font-size="10" font-weight="700"
+            fill="${color}" font-family="system-ui, sans-serif" opacity="0.9">N</text>
+    </g>
+  `
+}
+
+/**
+ * Generate a scale bar for the bottom-left corner of the map.
+ * Calculates km/pixel from the geographic bounds.
+ */
+function generateScaleBar(bounds: RouteBounds, width: number, mapHeight: number, color: string): string {
+  const cosLat = Math.cos(bounds.centerLat * Math.PI / 180)
+  const contentW = width - 100
+  const contentH = mapHeight - 100
+  const geoW = (bounds.maxLon - bounds.minLon) * cosLat * 111.32
+  const geoH = (bounds.maxLat - bounds.minLat) * 111.32
+  if (geoW <= 0 || geoH <= 0 || contentW <= 0 || contentH <= 0) return ''
+
+  const pxPerKmX = contentW / geoW
+  const pxPerKmY = contentH / geoH
+  const pxPerKm = Math.min(pxPerKmX, pxPerKmY)
+  const kmPerPx = 1 / pxPerKm
+
+  // Pick a nice round scale bar length targeting ~130px width
+  const targetKm = kmPerPx * 130
+  const niceValues = [0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000]
+  const barKm = niceValues.find(v => v >= targetKm) ?? niceValues[niceValues.length - 1]
+  const barPx = barKm / kmPerPx
+
+  const x = 72
+  const y = mapHeight - 72
+  const tickH = 9
+  const label = barKm >= 1 ? `${barKm} km` : `${Math.round(barKm * 1000)} m`
+
+  return `
+    <g opacity="0.85">
+      <line x1="${x}" y1="${y}" x2="${x + barPx}" y2="${y}"
+            stroke="${color}" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="${x}" y1="${y - tickH / 2}" x2="${x}" y2="${y + tickH / 2}"
+            stroke="${color}" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="${x + barPx}" y1="${y - tickH / 2}" x2="${x + barPx}" y2="${y + tickH / 2}"
+            stroke="${color}" stroke-width="2.5" stroke-linecap="round"/>
+      <text x="${x + barPx / 2}" y="${y - 14}" text-anchor="middle"
+            font-size="21" fill="${color}" font-family="system-ui, sans-serif" font-weight="600"
+            stroke="rgba(0,0,0,0.65)" stroke-width="5" paint-order="stroke fill"
+            stroke-linejoin="round">${label}</text>
+    </g>
+  `
+}
+
+/**
  * Generate a combined frame with map (top) and elevation chart (bottom).
  *
  * Both views are synchronized via a shared progress value (0-1).
@@ -533,6 +604,11 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     statsOverlayColor = '#ffffff',
     statsX = 1.0,
     statsY = 1.0,
+    annotations = [],
+    // Map visual enhancements
+    showNorthArrow = true,
+    showScaleBar = true,
+    showMapFade = true,
   } = options
 
   // Layout split
@@ -593,7 +669,13 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
       ? generateMapStartEndLabels(mapPoints, mapMarkerColor, 14)
       : ''
 
-    mapDefs = routeLine.defs
+    const fadeDef = showMapFade ? `
+      <linearGradient id="map-fade-gradient" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="${backgroundColor}" stop-opacity="0"/>
+        <stop offset="100%" stop-color="${backgroundColor}" stop-opacity="1"/>
+      </linearGradient>
+    ` : ''
+    mapDefs = [routeLine.defs, fadeDef].filter(Boolean).join('\n')
 
     // Wrap geo/contour layers in a clipping container — coordinates extend far
     // beyond the viewport since 110m data covers a wide area
@@ -604,6 +686,15 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     const geoClipped = allGeoHtml
       ? `<svg x="0" y="0" width="${width}" height="${mapHeight}" overflow="hidden">${allGeoHtml}</svg>`
       : ''
+
+    // These overlays are always in screen-space (unaffected by chase zoom)
+    const fadeOverlay = showMapFade
+      ? `<rect x="0" y="${Math.round(mapHeight * 0.62)}" width="${width}" height="${Math.round(mapHeight * 0.38)}"
+               fill="url(#map-fade-gradient)"/>`
+      : ''
+    const northArrowHtml = showNorthArrow ? generateNorthArrow(width, mapMarkerColor) : ''
+    const scaleBarHtml = showScaleBar ? generateScaleBar(routeBounds, width, mapHeight, mapMarkerColor) : ''
+    const mapOverlays = `${fadeOverlay}${northArrowHtml}${scaleBarHtml}`
 
     const mapInnerContent = `
       ${geoClipped}
@@ -629,6 +720,7 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
                preserveAspectRatio="xMidYMid slice">
             ${mapInnerContent}
           </svg>
+          ${mapOverlays}
         </g>
       `
     } else {
@@ -636,6 +728,7 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
       mapContent = `
         <g>
           ${mapInnerContent}
+          ${mapOverlays}
         </g>
       `
     }
@@ -746,6 +839,41 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     statsHtml = generateStatsOverlay(stats, width, mapHeight, statsOverlayColor, statsX, statsY)
   }
 
+  // ── Annotations ──
+  let annotationsHtml = ''
+  if (annotations.length > 0) {
+    // Find the most recently activated annotation
+    const active = annotations
+      .filter(a => a.enabled && effectiveProgress >= a.progress)
+      .sort((a, b) => b.progress - a.progress)[0]
+
+    if (active) {
+      const fadeOpacity = Math.min(1, (effectiveProgress - active.progress) / 0.03)
+      const escaped = active.text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+      const chipWidth = Math.max(200, escaped.length * 14 + 40)
+      const chipX = width / 2
+      const chipY = mapHeight - 80  // near bottom of map section
+      annotationsHtml = `
+        <g opacity="${fadeOpacity}">
+          <rect x="${chipX - chipWidth / 2}" y="${chipY - 22}"
+                width="${chipWidth}" height="34"
+                rx="17" ry="17"
+                fill="rgba(0,0,0,0.72)"
+                stroke="rgba(255,255,255,0.28)" stroke-width="1.5"/>
+          <text x="${chipX}" y="${chipY + 3}"
+                text-anchor="middle" dominant-baseline="middle"
+                font-size="26" font-weight="600"
+                font-family="system-ui, -apple-system, sans-serif"
+                fill="#ffffff">${escaped}</text>
+        </g>
+      `
+    }
+  }
+
   // ── Title Overlay ──
   let titleHtml = ''
   if (titleOverlay && titleOverlay.text && titleOverlay.opacity > 0) {
@@ -780,6 +908,7 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     ${bg.elements}
     ${mapContent}
     ${statsHtml}
+    ${annotationsHtml}
     ${elevContent}
     ${dividerHtml}
     ${opacityClose}

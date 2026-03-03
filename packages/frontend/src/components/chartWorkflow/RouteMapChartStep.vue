@@ -26,6 +26,7 @@
       v-model:collapsed="controlsCollapsed"
       :animation-config="animationConfig"
       :chart-title="chartTitle"
+      :chart-data="chartData"
       :time-array="timeArray"
       :is-playing="isPlaying"
       :playback-speed="playbackSpeed"
@@ -165,6 +166,12 @@ export interface RouteMapAnimationConfig {
   statsOverlayColor: string;
   statsX: number;   // 0-1 normalized horizontal position
   statsY: number;   // 0-1 normalized vertical position within map area
+  // Annotations — text chips shown at specific progress points
+  annotations?: import('../../utils/chartGenerators/elevationChart/types').Annotation[];
+  // Map visual enhancements
+  showNorthArrow: boolean;
+  showScaleBar: boolean;
+  showMapFade: boolean;
 }
 
 export const DEFAULT_ROUTEMAP_ANIMATION_CONFIG: RouteMapAnimationConfig = {
@@ -249,6 +256,11 @@ export const DEFAULT_ROUTEMAP_ANIMATION_CONFIG: RouteMapAnimationConfig = {
   statsOverlayColor: '#ffffff',
   statsX: 1.0,
   statsY: 1.0,
+  annotations: [],
+  // Map visual enhancements
+  showNorthArrow: true,
+  showScaleBar: true,
+  showMapFade: true,
 };
 </script>
 
@@ -606,6 +618,11 @@ function buildFrameOptions(progress: number, overrides: Partial<CombinedFrameOpt
     statsOverlayColor: cfg.statsOverlayColor,
     statsX: cfg.statsX ?? 1.0,
     statsY: cfg.statsY ?? 1.0,
+    annotations: cfg.annotations ?? [],
+    // Map visual enhancements
+    showNorthArrow: cfg.showNorthArrow ?? true,
+    showScaleBar: cfg.showScaleBar ?? true,
+    showMapFade: cfg.showMapFade ?? true,
     // Overrides
     ...overrides,
   }

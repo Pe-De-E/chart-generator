@@ -68,6 +68,13 @@
           </v-btn>
         </template>
       </v-tooltip>
+      <v-tooltip location="left" text="Momente">
+        <template v-slot:activator="{ props }">
+          <v-btn v-bind="props" icon variant="text" @click="controlsCollapsed = false; activeTab = 5">
+            <v-icon>mdi-map-marker-star</v-icon>
+          </v-btn>
+        </template>
+      </v-tooltip>
 
       <v-spacer />
 
@@ -136,6 +143,10 @@
           <v-icon size="16">mdi-palette</v-icon>
           <span class="tab-label">Stil</span>
         </v-tab>
+        <v-tab :value="5" class="tab-item">
+          <v-icon size="16">mdi-map-marker-star</v-icon>
+          <span class="tab-label">Momente</span>
+        </v-tab>
       </v-tabs>
 
       <!-- Tab Content -->
@@ -159,6 +170,12 @@
               </template>
               <v-color-picker v-model="dividerColor" mode="hexa" hide-inputs />
             </v-menu>
+
+            <v-divider class="my-3" />
+            <div class="section-label">Kartendetails</div>
+            <v-checkbox v-model="showNorthArrow" label="Nordpfeil" density="compact" hide-details color="primary" />
+            <v-checkbox v-model="showScaleBar" label="Maßstabsleiste" density="compact" hide-details color="primary" class="mt-1" />
+            <v-checkbox v-model="showMapFade" label="Übergang Karte → Profil" density="compact" hide-details color="primary" class="mt-1" />
 
             <v-divider class="my-3" />
             <div class="section-label">Kamera</div>
@@ -520,6 +537,77 @@
           </div>
         </div>
 
+        <!-- ── Tab 5: Momente ────────────────────────────── -->
+        <div v-show="activeTab === 5">
+          <div class="tab-panel">
+            <v-btn
+              block variant="tonal" color="primary"
+              prepend-icon="mdi-auto-fix"
+              :loading="isDetecting"
+              :disabled="chartData.length === 0"
+              @click="runDetection"
+            >
+              Momente erkennen
+            </v-btn>
+
+            <div v-if="annotations && annotations.length > 0" class="annotation-list mt-3">
+              <div v-for="annotation in annotations" :key="annotation.id" class="annotation-item">
+                <v-checkbox
+                  :model-value="annotation.enabled"
+                  density="compact" hide-details color="primary"
+                  class="annotation-toggle flex-shrink-0"
+                  @update:model-value="toggleAnnotation(annotation.id)"
+                />
+                <v-chip size="x-small" :color="annotationTypeColor(annotation.type)" class="mr-1 flex-shrink-0">
+                  <v-icon size="x-small">{{ annotationTypeIcon(annotation.type) }}</v-icon>
+                </v-chip>
+                <template v-if="editingId === annotation.id">
+                  <v-text-field
+                    v-model="editingText" density="compact" variant="outlined"
+                    hide-details autofocus class="flex-grow-1"
+                    @keydown.enter="commitEdit(annotation.id)"
+                    @keydown.escape="editingId = null"
+                  />
+                  <v-btn icon="mdi-check" size="x-small" variant="text" color="success" @click="commitEdit(annotation.id)" />
+                </template>
+                <template v-else>
+                  <span class="annotation-text flex-grow-1 text-caption" :class="{ 'text-disabled': !annotation.enabled }">
+                    {{ annotation.text }}
+                    <span class="text-grey ml-1">{{ Math.round(annotation.progress * 100) }}%</span>
+                  </span>
+                  <v-btn icon="mdi-pencil" size="x-small" variant="text" @click="startEdit(annotation)" />
+                  <v-btn icon="mdi-delete-outline" size="x-small" variant="text" color="error" @click="deleteAnnotation(annotation.id)" />
+                </template>
+              </div>
+            </div>
+
+            <div v-else class="text-caption text-medium-emphasis text-center py-2 mt-2">
+              Keine Momente. Klicke „Momente erkennen" oder füge eigene hinzu.
+            </div>
+
+            <v-divider class="my-3" />
+            <div class="section-label">Eigener Moment</div>
+            <v-text-field
+              v-model="newAnnotationText" label="Beschriftung" density="compact"
+              variant="outlined" hide-details placeholder="z.B. Aussichtspunkt" class="mb-2"
+            />
+            <div class="d-flex align-center gap-2">
+              <v-slider
+                v-model="newAnnotationProgress" :min="1" :max="99" :step="1"
+                density="compact" hide-details thumb-label color="primary" class="flex-grow-1"
+              />
+              <span class="text-caption text-no-wrap ml-2">{{ newAnnotationProgress }}%</span>
+            </div>
+            <v-btn
+              block variant="outlined" prepend-icon="mdi-plus"
+              :disabled="!newAnnotationText.trim()" class="mt-2"
+              @click="handleAddCustom"
+            >
+              Hinzufügen
+            </v-btn>
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -605,12 +693,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import type { PropType } from 'vue'
 import type { PlaybackSpeed } from '../../composables/useChartAnimation'
 import { useRouteMapConfig } from '../../composables/useRouteMapConfig'
 import { uploadService } from '../../services/upload.service'
 import type { RouteMapAnimationConfig } from './RouteMapChartStep.vue'
+import type { Annotation, AnnotationType } from '../../utils/chartGenerators/elevationChart/types'
+import { detectAnnotations } from '../../utils/chartGenerators/elevationChart/annotationDetection'
 
 const props = defineProps({
   animationConfig: {
@@ -669,6 +759,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  chartData: {
+    type: Array as PropType<Array<{ label: string; value: number }>>,
+    default: () => [],
+  },
 })
 
 const emit = defineEmits<{
@@ -692,6 +786,13 @@ const controlsCollapsed = computed({
 })
 const activeTab = ref(0)
 const imageUploading = ref(false)
+
+// Annotation local state
+const isDetecting = ref(false)
+const newAnnotationProgress = ref(50)
+const newAnnotationText = ref('')
+const editingId = ref<string | null>(null)
+const editingText = ref('')
 
 // --- Config composable ---
 
@@ -781,10 +882,72 @@ const {
   contourShowLabels,
   showStatsOverlay,
   statsOverlayColor,
+  showNorthArrow,
+  showScaleBar,
+  showMapFade,
+  annotations,
+  toggleAnnotation,
+  updateAnnotationText,
+  deleteAnnotation,
+  addCustomAnnotation,
 } = useRouteMapConfig(
   () => props.animationConfig,
   updateAnimationConfig,
 )
+
+// --- Annotation helpers ---
+
+async function runDetection() {
+  if (props.chartData.length === 0) return
+  isDetecting.value = true
+  await nextTick()
+  const detected = detectAnnotations(props.chartData)
+  const existingByType = new Map(
+    (annotations.value ?? []).filter(a => a.isAutoGenerated).map(a => [a.type, a])
+  )
+  const merged = detected.map(d => {
+    const existing = existingByType.get(d.type)
+    return existing ? { ...d, text: existing.text, enabled: existing.enabled } : d
+  })
+  const customAnnotations = (annotations.value ?? []).filter(a => !a.isAutoGenerated)
+  annotations.value = [...merged, ...customAnnotations]
+  isDetecting.value = false
+}
+
+function handleAddCustom() {
+  if (!newAnnotationText.value.trim()) return
+  addCustomAnnotation(newAnnotationProgress.value / 100, newAnnotationText.value.trim())
+  newAnnotationText.value = ''
+  newAnnotationProgress.value = 50
+}
+
+function startEdit(annotation: Annotation) {
+  editingId.value = annotation.id
+  editingText.value = annotation.text
+}
+
+function commitEdit(id: string) {
+  if (editingText.value.trim()) updateAnnotationText(id, editingText.value.trim())
+  editingId.value = null
+}
+
+function annotationTypeIcon(type: AnnotationType): string {
+  const icons: Record<AnnotationType, string> = {
+    summit: 'mdi-triangle', steepest_climb: 'mdi-trending-up',
+    steepest_descent: 'mdi-trending-down', longest_descent: 'mdi-ski-water',
+    custom: 'mdi-map-marker',
+  }
+  return icons[type] ?? 'mdi-map-marker'
+}
+
+function annotationTypeColor(type: AnnotationType): string {
+  const colors: Record<AnnotationType, string> = {
+    summit: 'amber', steepest_climb: 'red-lighten-1',
+    steepest_descent: 'blue-lighten-1', longest_descent: 'cyan-lighten-1',
+    custom: 'grey',
+  }
+  return colors[type] ?? 'grey'
+}
 
 // --- Image upload ---
 
@@ -910,6 +1073,30 @@ const imagePositionOptions = [
 
 .tab-panel {
   padding: 12px;
+}
+
+.annotation-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.annotation-item {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 36px;
+}
+
+.annotation-toggle {
+  margin: 0;
+  padding: 0;
+}
+
+.annotation-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .chart-name-section {

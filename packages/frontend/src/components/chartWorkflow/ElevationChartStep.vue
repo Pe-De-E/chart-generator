@@ -20,6 +20,7 @@
       v-model:collapsed="controlsCollapsed"
       :animation-config="animationConfig"
       :chart-title="chartTitle"
+      :chart-data="chartData"
       :time-array="timeArray"
       :is-playing="isPlaying"
       :playback-speed="playbackSpeed"
@@ -62,6 +63,10 @@
 <script lang="ts">
 // Background type options
 export type BackgroundType = 'solid' | 'gradient' | 'mesh' | 'grid' | 'dots' | 'image';
+
+// Re-export annotation types for use in parent components and sidebar
+export type { Annotation, AnnotationType } from '../../utils/chartGenerators/elevationChart/types';
+import type { Annotation } from '../../utils/chartGenerators/elevationChart/types';
 
 // Animation config interface for persistence - exported for use in parent components
 export interface ElevationAnimationConfig {
@@ -112,6 +117,8 @@ export interface ElevationAnimationConfig {
   panZoomEnabled: boolean;
   panZoomZoomLevel: number;         // 1.5-5, default 3
   panZoomZoomOutStart: number;      // 0.5-0.95, default 0.75
+  // Annotations — text labels shown at specific progress points
+  annotations?: Annotation[];
   // Legacy support
   useGradientBackground?: boolean;
 }
@@ -150,6 +157,7 @@ export const DEFAULT_ELEVATION_ANIMATION_CONFIG: ElevationAnimationConfig = {
   panZoomEnabled: false,
   panZoomZoomLevel: 3,
   panZoomZoomOutStart: 0.75,
+  annotations: [],
 };
 </script>
 
@@ -418,6 +426,7 @@ const animationSvg = computed(() => {
       zoomOutStart: props.animationConfig.panZoomZoomOutStart,
     } : undefined,
     curveOpacity: hasTitleCard.value ? fadeIn : undefined,
+    annotations: props.animationConfig.annotations ?? [],
   });
 });
 
@@ -560,6 +569,7 @@ async function startVideoExport(settings: ExportSettings) {
           zoomOutStart: props.animationConfig.panZoomZoomOutStart,
         } : undefined,
         curveOpacity: hasTitle ? fadeIn : undefined,
+        annotations: props.animationConfig.annotations ?? [],
       });
     }
   });

@@ -10,7 +10,7 @@ import {
   type ViewBoxPoint
 } from '../../coordinateContract'
 import { remapProgressByTime, remapProgressDirect, buildGradientTimeArray } from '../../timeMapping'
-import type { BackgroundType, PanZoomConfig } from './types'
+import type { Annotation, BackgroundType, PanZoomConfig } from './types'
 import { generateBackgroundElements } from './background'
 import { generateEffortCurve } from './effort'
 import { calculateCameraViewport } from './panZoom'
@@ -58,6 +58,82 @@ export function getMarkerPosition(
 }
 
 /**
+ * Render SVG elements for all visible annotations.
+ * Annotations appear as a dashed vertical line + text pill chip at their progress position.
+ */
+function generateAnnotationElements(
+  annotations: Annotation[],
+  offsetPoints: ViewBoxPoint[],
+  offsetChartArea: { x: number; y: number; width: number; height: number },
+  effectiveProgress: number,
+  width: number
+): string {
+  if (annotations.length === 0) return ''
+
+  const parts: string[] = []
+  for (const ann of annotations) {
+    if (!ann.enabled || effectiveProgress < ann.progress) continue
+
+    const pt = getMarkerPosition(offsetPoints, ann.progress)
+    if (!pt) continue
+
+    const fadeOpacity = Math.min(1, (effectiveProgress - ann.progress) / 0.03)
+    const x = pt.x
+
+    // Escape text for SVG
+    const escaped = ann.text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+
+    const chipWidth = Math.max(160, escaped.length * 13 + 32)
+    const chipY = offsetChartArea.y + 20  // Near top of chart area
+
+    // Horizontal overflow guard
+    let textAnchor = 'middle'
+    let chipX = x
+    if (x - chipWidth / 2 < (offsetChartArea.x + 10)) {
+      textAnchor = 'start'
+      chipX = offsetChartArea.x + 10
+    } else if (x + chipWidth / 2 > (width - 10)) {
+      textAnchor = 'end'
+      chipX = width - 10
+    }
+
+    // Dashed vertical line from near curve top to chip
+    const lineTop = chipY + 24
+    const lineBottom = pt.y - 12
+
+    parts.push(`
+      <g opacity="${fadeOpacity}">
+        ${lineBottom > lineTop ? `
+        <line x1="${x}" y1="${lineTop}" x2="${x}" y2="${lineBottom}"
+              stroke="rgba(255,255,255,0.6)" stroke-width="2" stroke-dasharray="6,4"/>
+        ` : ''}
+        <g transform="translate(${chipX}, ${chipY})">
+          <rect x="${textAnchor === 'middle' ? -chipWidth / 2 : textAnchor === 'start' ? 0 : -chipWidth}" y="-16"
+                width="${chipWidth}" height="26"
+                rx="13" ry="13"
+                fill="rgba(0,0,0,0.70)"
+                stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
+          <text x="0" y="3"
+                text-anchor="${textAnchor === 'middle' ? 'middle' : textAnchor === 'start' ? 'start' : 'end'}"
+                dominant-baseline="middle"
+                font-size="22" font-weight="600"
+                font-family="system-ui, -apple-system, sans-serif"
+                fill="#ffffff"
+                dx="${textAnchor === 'start' ? 14 : textAnchor === 'end' ? -14 : 0}"
+          >${escaped}</text>
+        </g>
+      </g>
+    `)
+  }
+
+  return parts.join('\n')
+}
+
+/**
  * Animated silhouette mode
  * Always uses Instagram Reel dimensions (1080x1920) for consistent preview/export
  * The SVG scales to fit the container while maintaining aspect ratio
@@ -102,7 +178,8 @@ export function generateAnimatedSilhouette(
   panZoomConfig?: PanZoomConfig,
   titleOverlay?: { text: string; opacity: number; color: string },
   cameraOverrideProgress?: number,
-  curveOpacity: number = 1
+  curveOpacity: number = 1,
+  annotations: Annotation[] = []
 ): string {
   if (data.length === 0) return '<svg></svg>'
 
@@ -342,6 +419,15 @@ export function generateAnimatedSilhouette(
     `
   })() : ''
 
+  // Annotation elements (rendered after marker, inside curve coordinate space)
+  const annotationsHtml = generateAnnotationElements(
+    annotations,
+    offsetPoints,
+    offsetChartArea,
+    effectiveProgress,
+    width
+  )
+
   // Pan-Zoom: wrap chart content in nested SVG with animated viewBox
   if (panZoomEnabled && panZoomConfig) {
     const camera = calculateCameraViewport(
@@ -379,6 +465,7 @@ export function generateAnimatedSilhouette(
             <circle ${markerGlow} cx="${markerPoint.x}" cy="${markerPoint.y}" r="${zoomedMarkerSize}"
                     fill="${markerColor}" stroke="${color}" stroke-width="${zoomedMarkerStroke}"/>
           ` : ''}
+          ${annotationsHtml}
         </svg>
         </g>
         ${titleOverlayHtml}
@@ -406,6 +493,7 @@ export function generateAnimatedSilhouette(
         <circle ${markerGlow} cx="${markerPoint.x}" cy="${markerPoint.y}" r="${scaledMarkerSize}"
                 fill="${markerColor}" stroke="${color}" stroke-width="${markerStrokeWidth}"/>
       ` : ''}
+      ${annotationsHtml}
       </g>
       ${titleOverlayHtml}
     </svg>
