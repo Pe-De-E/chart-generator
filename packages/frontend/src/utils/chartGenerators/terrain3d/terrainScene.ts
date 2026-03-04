@@ -164,32 +164,59 @@ function sampleElevation(lon: number, lat: number, grid: ElevationGrid): number 
 // ── Elevation Smoothing ───────────────────────────────────────────────────────
 
 /**
- * Apply N passes of 3×3 box-blur to the elevation grid.
- * Removes tile noise and Terrarium data artifacts (building edges, road artifacts)
- * that create artificial spiky ridges, especially on flat terrain.
+ * Separable Gaussian blur on the elevation grid.
+ *
+ * Why Gaussian instead of repeated box-blur:
+ * Multiple passes of 3×3 box-blur create equal-height round domes from every
+ * noise spike ("virus surface" look). A single Gaussian pass weights the
+ * neighbourhood by distance, preserving large-scale features (ridgelines,
+ * valleys) while averaging away sub-scale noise (vegetation canopy, buildings).
+ *
+ * sigma is in grid pixels. Rule of thumb: sigma ≈ 1.5–2 pixels smooths
+ * individual-pixel noise while keeping features wider than ~4px intact.
  */
-function smoothElevationGrid(grid: ElevationGrid, passes: number): ElevationGrid {
+function gaussianBlurGrid(grid: ElevationGrid, sigma: number): ElevationGrid {
   const { width, height, bounds } = grid
-  let src = grid.data
-  for (let p = 0; p < passes; p++) {
-    const dst = new Float32Array(width * height)
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        let sum = 0, count = 0
-        for (let dy = -1; dy <= 1; dy++) {
-          for (let dx = -1; dx <= 1; dx++) {
-            const nx = x + dx, ny = y + dy
-            if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
-              sum += src[ny * width + nx]; count++
-            }
-          }
-        }
-        dst[y * width + x] = sum / count
-      }
-    }
-    src = dst
+  const radius = Math.ceil(2.5 * sigma)
+  const kSize  = 2 * radius + 1
+
+  // Build normalised 1-D Gaussian kernel
+  const kernel = new Float32Array(kSize)
+  let ksum = 0
+  for (let i = 0; i < kSize; i++) {
+    const d = i - radius
+    kernel[i] = Math.exp(-(d * d) / (2 * sigma * sigma))
+    ksum += kernel[i]
   }
-  return { data: src, width, height, bounds }
+  for (let i = 0; i < kSize; i++) kernel[i] /= ksum
+
+  // Horizontal pass  (src → tmp)
+  const tmp = new Float32Array(width * height)
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      let v = 0
+      for (let k = 0; k < kSize; k++) {
+        const xi = Math.max(0, Math.min(width - 1, x + k - radius))
+        v += grid.data[y * width + xi] * kernel[k]
+      }
+      tmp[y * width + x] = v
+    }
+  }
+
+  // Vertical pass  (tmp → result)
+  const result = new Float32Array(width * height)
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      let v = 0
+      for (let k = 0; k < kSize; k++) {
+        const yi = Math.max(0, Math.min(height - 1, y + k - radius))
+        v += tmp[yi * width + x] * kernel[k]
+      }
+      result[y * width + x] = v
+    }
+  }
+
+  return { data: result, width, height, bounds }
 }
 
 // ── Terrain Style Colors ──────────────────────────────────────────────────────
@@ -420,22 +447,11 @@ export class TerrainScene {
     this.elevGrid = await fetchElevationGrid(minLon, maxLon, minLat, maxLat)
     console.log('[Terrain] elevation grid fetched, size:', this.elevGrid.width, 'x', this.elevGrid.height)
 
-    // Smooth the elevation grid to remove tile noise and data artifacts.
-    // Flat terrain needs more passes (high noise-to-signal ratio);
-    // mountainous terrain can use fewer (large real features dominate noise).
-    const previewRange = (() => {
-      let mn = Infinity, mx = -Infinity
-      for (let i = 0; i < this.elevGrid.data.length; i++) {
-        const e = this.elevGrid.data[i]
-        if (e < mn) mn = e; if (e > mx) mx = e
-      }
-      return mx - mn
-    })()
-    // Keep passes low to preserve terrain detail — too much blurring destroys ridgelines.
-    // At zoom 13 (20m/px), even 2 passes blur over 40m radius, removing real features.
-    const smoothPasses = previewRange < 200 ? 3 : previewRange < 500 ? 2 : 1
-    this.elevGrid = smoothElevationGrid(this.elevGrid, smoothPasses)
-    console.log('[Terrain] smoothed', smoothPasses, 'passes, range:', previewRange.toFixed(0), 'm')
+    // Gaussian blur to remove per-pixel noise (vegetation canopy, building edges)
+    // without creating artificial round domes ("virus" look) that box-blur produces.
+    // sigma=1.5 pixels smooths noise < 3px while keeping ridgelines (≥5px wide) intact.
+    this.elevGrid = gaussianBlurGrid(this.elevGrid, 1.5)
+    console.log('[Terrain] gaussian blur applied (sigma=1.5), grid:', this.elevGrid.width, '×', this.elevGrid.height)
 
     // ── Calculate route elevation range (for terrainMidY) ──
     let minElev = Infinity, maxElev = -Infinity
