@@ -72,9 +72,9 @@ function getTilesForBounds(
 
 function chooseZoom(latSpan: number, lonSpan: number): number {
   const extent = Math.max(latSpan, lonSpan)
-  if (extent < 0.05) return 13  // < ~5km: 20m/pixel
-  if (extent < 0.3)  return 12  // < ~30km: 40m/pixel
-  if (extent < 1.0)  return 11  // < ~100km: 80m/pixel
+  if (extent < 0.15) return 13  // < ~15km: 20m/pixel
+  if (extent < 0.5)  return 12  // < ~50km: 40m/pixel
+  if (extent < 1.5)  return 11  // < ~150km: 80m/pixel
   return 10
 }
 
@@ -431,7 +431,9 @@ export class TerrainScene {
       }
       return mx - mn
     })()
-    const smoothPasses = previewRange < 200 ? 6 : previewRange < 500 ? 5 : previewRange < 1000 ? 4 : 3
+    // Keep passes low to preserve terrain detail — too much blurring destroys ridgelines.
+    // At zoom 13 (20m/px), even 2 passes blur over 40m radius, removing real features.
+    const smoothPasses = previewRange < 200 ? 3 : previewRange < 500 ? 2 : 1
     this.elevGrid = smoothElevationGrid(this.elevGrid, smoothPasses)
     console.log('[Terrain] smoothed', smoothPasses, 'passes, range:', previewRange.toFixed(0), 'm')
 

@@ -78,9 +78,9 @@
           <div class="section-label mt-2">Auflösung</div>
           <v-btn-toggle :model-value="terrainSegments" mandatory density="compact" variant="outlined" divided class="w-100 mb-2" color="primary"
             @update:model-value="update('terrainSegments', $event)">
-            <v-btn :value="64" size="small" class="flex-grow-1">64</v-btn>
             <v-btn :value="128" size="small" class="flex-grow-1">128</v-btn>
             <v-btn :value="256" size="small" class="flex-grow-1">256</v-btn>
+            <v-btn :value="512" size="small" class="flex-grow-1">512</v-btn>
           </v-btn-toggle>
 
           <v-divider class="my-2" />
