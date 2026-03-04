@@ -24,7 +24,7 @@ import type { TerrainAnimationConfig, TerrainCameraMode } from './types'
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const TERRAIN_SIZE = 1000     // world units for terrain square
-const TERRAIN_PADDING = 0.10  // geographic padding fraction around route bounds — keep tight so route dominates
+const TERRAIN_PADDING = 0.05  // geographic padding fraction around route bounds — tight focus on route
 const TILE_URL = '/terrain-tiles'
 
 // ── Elevation Tile Data ───────────────────────────────────────────────────────
@@ -72,8 +72,9 @@ function getTilesForBounds(
 
 function chooseZoom(latSpan: number, lonSpan: number): number {
   const extent = Math.max(latSpan, lonSpan)
-  if (extent < 0.3) return 12
-  if (extent < 1.0) return 11
+  if (extent < 0.05) return 13  // < ~5km: 20m/pixel
+  if (extent < 0.3)  return 12  // < ~30km: 40m/pixel
+  if (extent < 1.0)  return 11  // < ~100km: 80m/pixel
   return 10
 }
 
@@ -158,6 +159,37 @@ function sampleElevation(lon: number, lat: number, grid: ElevationGrid): number 
     data[y1 * width + x0] * (1 - fx) * fy +
     data[y1 * width + x1] * fx * fy
   )
+}
+
+// ── Elevation Smoothing ───────────────────────────────────────────────────────
+
+/**
+ * Apply N passes of 3×3 box-blur to the elevation grid.
+ * Removes tile noise and Terrarium data artifacts (building edges, road artifacts)
+ * that create artificial spiky ridges, especially on flat terrain.
+ */
+function smoothElevationGrid(grid: ElevationGrid, passes: number): ElevationGrid {
+  const { width, height, bounds } = grid
+  let src = grid.data
+  for (let p = 0; p < passes; p++) {
+    const dst = new Float32Array(width * height)
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        let sum = 0, count = 0
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            const nx = x + dx, ny = y + dy
+            if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+              sum += src[ny * width + nx]; count++
+            }
+          }
+        }
+        dst[y * width + x] = sum / count
+      }
+    }
+    src = dst
+  }
+  return { data: src, width, height, bounds }
 }
 
 // ── Terrain Style Colors ──────────────────────────────────────────────────────
@@ -271,6 +303,7 @@ export class TerrainScene {
   private height: number
   private controls: OrbitControls
   private onControlsChange: (() => void) | null = null
+  private currentConfig: TerrainAnimationConfig | null = null
 
   constructor(canvas: HTMLCanvasElement, width: number, height: number) {
     this.width = width
@@ -320,7 +353,7 @@ export class TerrainScene {
   private syncControlsTarget(): void {
     this.controls.target.set(
       this.routeCentroid.x,
-      this.routeMedianY,
+      Math.max(0, this.routeMedianY),
       this.routeCentroid.y,
     )
     this.controls.update()
@@ -354,6 +387,7 @@ export class TerrainScene {
 
   /** Load terrain + route for the given GPX points and config */
   async load(routePoints: RoutePoint[], config: TerrainAnimationConfig): Promise<void> {
+    this.currentConfig = config
     this.clearScene()
     console.log('[Terrain] load() start, routePoints:', routePoints.length)
 
@@ -386,6 +420,21 @@ export class TerrainScene {
     this.elevGrid = await fetchElevationGrid(minLon, maxLon, minLat, maxLat)
     console.log('[Terrain] elevation grid fetched, size:', this.elevGrid.width, 'x', this.elevGrid.height)
 
+    // Smooth the elevation grid to remove tile noise and data artifacts.
+    // Flat terrain needs more passes (high noise-to-signal ratio);
+    // mountainous terrain can use fewer (large real features dominate noise).
+    const previewRange = (() => {
+      let mn = Infinity, mx = -Infinity
+      for (let i = 0; i < this.elevGrid.data.length; i++) {
+        const e = this.elevGrid.data[i]
+        if (e < mn) mn = e; if (e > mx) mx = e
+      }
+      return mx - mn
+    })()
+    const smoothPasses = previewRange < 200 ? 6 : previewRange < 500 ? 5 : previewRange < 1000 ? 4 : 3
+    this.elevGrid = smoothElevationGrid(this.elevGrid, smoothPasses)
+    console.log('[Terrain] smoothed', smoothPasses, 'passes, range:', previewRange.toFixed(0), 'm')
+
     // ── Calculate route elevation range (for terrainMidY) ──
     let minElev = Infinity, maxElev = -Infinity
     for (const p of routePoints) {
@@ -404,8 +453,10 @@ export class TerrainScene {
     }
     const gridElevRange = Math.max(gridMaxElev - gridMinElev, 100)
     this.baseElev = Math.max(0, gridMinElev)
-    // Target: the terrain grid's full relief spans ~22% of TERRAIN_SIZE
-    this.elevScale = (TERRAIN_SIZE * 0.22) / gridElevRange
+    // Scale terrain so its relief spans ~22% of TERRAIN_SIZE at the reference range.
+    // We use Math.max(gridElevRange, 400) so flat terrain (small elevation range)
+    // doesn't get over-amplified into fake mountains — 400m is the minimum assumed range.
+    this.elevScale = (TERRAIN_SIZE * 0.22) / Math.max(gridElevRange, 400)
 
     // terrainMidY: world Y of the route's mid-elevation (camera looks at this height)
     const routeElevMid = (minElev + maxElev) / 2
@@ -453,7 +504,6 @@ export class TerrainScene {
 
     const positions = geometry.attributes.position
     const colors: number[] = []
-    let minY = Infinity, maxY = -Infinity
 
     // First pass: set y positions
     for (let i = 0; i < positions.count; i++) {
@@ -465,14 +515,19 @@ export class TerrainScene {
       const elev = sampleElevation(lon, lat, this.elevGrid!)
       const y = (elev - this.baseElev) * config.terrainExaggeration * this.elevScale
       positions.setY(i, y)
-      minY = Math.min(minY, y)
-      maxY = Math.max(maxY, y)
     }
 
-    // Second pass: assign colors
+    // Second pass: assign colors based on ABSOLUTE elevation.
+    // Using relative min/max (old approach) gave flat terrain rock/snow colors
+    // just because it happened to be the local maximum — wrong for a 70m flat route.
+    // Instead, normalize against a fixed reference elevation so colors reflect
+    // actual altitude: forest at low elevation, snow only above ~2000m.
+    const worldScale = config.terrainExaggeration * this.elevScale
+    const ELEV_COLOR_REF = 3500  // meters — elevation at which snow colors appear
     for (let i = 0; i < positions.count; i++) {
       const y = positions.getY(i)
-      const normalizedH = maxY > minY ? (y - minY) / (maxY - minY) : 0
+      const elev = worldScale > 0 ? y / worldScale + this.baseElev : this.baseElev
+      const normalizedH = Math.max(0, Math.min(1, elev / ELEV_COLOR_REF))
       const color = getTerrainColor(normalizedH, config.terrainStyle)
       colors.push(color.r, color.g, color.b)
     }
@@ -589,30 +644,45 @@ export class TerrainScene {
     const half = TERRAIN_SIZE * 0.5
     const approxTerrainMaxY = TERRAIN_SIZE * 0.22 * config.terrainExaggeration
 
-    // ── Behind-start camera: positioned behind route start, looking toward end ──
-    // Dynamically computed from routeDir so it works for any route orientation.
-    // Camera sits behind the 5th percentile point (route start region) at a
-    // distance that keeps it outside or near the terrain edge.
-    const camDist = half * 0.45 * config.cameraDistance   // ~225 at dist=1
-    const startPt = this.allRoute3D.length > 5
-      ? this.allRoute3D[Math.floor(this.allRoute3D.length * 0.05)]
-      : (this.allRoute3D[0] ?? new THREE.Vector3())
-
-    const rawCamX = startPt.x - this.routeDir.x * camDist
-    const rawCamZ = startPt.z - this.routeDir.z * camDist
-    // Allow slight exceedance of terrain bounds — no mesh out there, just sky
-    const camX = Math.max(-half * 1.2, Math.min(half * 1.2, rawCamX))
-    const camZ = Math.max(-half * 1.2, Math.min(half * 1.2, rawCamZ))
-
-    // Camera height: slightly below peak tops so terrain fills the upper frame
-    const angleOffset = (config.cameraElevationAngle - 45) * (approxTerrainMaxY * 0.02)
-    const camY = approxTerrainMaxY * 0.85 + angleOffset
-
-    // LookAt: centroid, raised well above route median toward the distant peaks
-    // This tilts the camera toward the horizon, replacing sky with terrain.
     const cx = this.routeCentroid.x
-    const cz = this.routeCentroid.y
-    const lookAtY = Math.max(0, this.routeMedianY + approxTerrainMaxY * 0.35)
+    const cz = this.routeCentroid.y  // THREE.Vector2 .y = world Z
+
+    // ── Detect loop route: start and end within 15% of total route length ──
+    const pts = this.allRoute3D
+    const isLoop = pts.length >= 4 && (() => {
+      const start = pts[0], end = pts[pts.length - 1]
+      const dx = end.x - start.x, dz = end.z - start.z
+      const dist = Math.sqrt(dx * dx + dz * dz)
+      const routeSpan = Math.sqrt(
+        (pts[Math.floor(pts.length * 0.9)].x - pts[Math.floor(pts.length * 0.1)].x) ** 2 +
+        (pts[Math.floor(pts.length * 0.9)].z - pts[Math.floor(pts.length * 0.1)].z) ** 2
+      )
+      return dist < routeSpan * 0.25
+    })()
+
+    let camX: number, camZ: number
+
+    if (isLoop) {
+      // Loop route: side-angle overview — camera from +X+Z corner, looking at centroid
+      const sideDist = half * 0.75 * config.cameraDistance
+      camX = cx + sideDist * 0.7
+      camZ = cz + sideDist * 0.7
+    } else {
+      // Linear route: behind-start camera
+      const camDist = half * 0.45 * config.cameraDistance
+      const startPt = pts.length > 5 ? pts[Math.floor(pts.length * 0.05)] : (pts[0] ?? new THREE.Vector3())
+      const rawCamX = startPt.x - this.routeDir.x * camDist
+      const rawCamZ = startPt.z - this.routeDir.z * camDist
+      camX = Math.max(-half * 1.2, Math.min(half * 1.2, rawCamX))
+      camZ = Math.max(-half * 1.2, Math.min(half * 1.2, rawCamZ))
+    }
+
+    // Camera height: above terrain, adjusted by elevation angle slider
+    const angleOffset = (config.cameraElevationAngle - 45) * (approxTerrainMaxY * 0.02)
+    const camY = approxTerrainMaxY * 0.9 + angleOffset
+
+    // LookAt: centroid at route median elevation
+    const lookAtY = Math.max(0, this.routeMedianY)
     const lookAt = new THREE.Vector3(cx, lookAtY, cz)
 
     console.log('[Camera] behind-start pos:', camX.toFixed(0), camY.toFixed(0), camZ.toFixed(0),
@@ -624,12 +694,60 @@ export class TerrainScene {
       this.orthoCamera.position.set(camX, camY, camZ)
       this.orthoCamera.lookAt(lookAt)
       this.orthoCamera.updateProjectionMatrix()
+      this.controls.enabled = true
+    } else if (config.cameraMode === 'chase') {
+      // Chase mode: camera will be updated per-frame in setProgress()
+      // Disable OrbitControls — the chase camera owns the transform
+      this.activeCamera = this.perspCamera
+      this.controls.enabled = false
     } else {
+      // overview-perspective (default)
       this.activeCamera = this.perspCamera
       this.perspCamera.position.set(camX, camY, camZ)
       this.perspCamera.lookAt(lookAt)
       this.perspCamera.updateProjectionMatrix()
+      this.controls.enabled = true
     }
+  }
+
+  /**
+   * Chase camera — called every frame in setProgress() when mode === 'chase'.
+   * Positions the camera behind and above the current route point,
+   * looking forward toward the next segment.
+   */
+  private updateChaseCamera(idx: number): void {
+    const pts = this.allRoute3D
+    const config = this.currentConfig
+    if (pts.length < 2 || !config) return
+
+    const current = pts[idx]
+
+    // Look ahead 6% of route (min 3 points) to compute travel direction
+    const lookahead = Math.max(3, Math.round(pts.length * 0.06))
+    const aheadIdx  = Math.min(pts.length - 1, idx + lookahead)
+    const ahead     = pts[aheadIdx]
+
+    // Horizontal travel direction (XZ plane)
+    const dx  = ahead.x - current.x
+    const dz  = ahead.z - current.z
+    const len = Math.sqrt(dx * dx + dz * dz)
+    if (len < 0.5) return   // barely moving — keep last camera
+
+    const dirX = dx / len
+    const dirZ = dz / len
+
+    // Camera: behind current point, elevated
+    const camBack   = 120 * config.cameraDistance
+    const camHeight = 60 + (config.cameraElevationAngle - 45) * 2
+
+    const camX = current.x - dirX * camBack
+    const camY = current.y + camHeight
+    const camZ = current.z - dirZ * camBack
+
+    // Look slightly above the ahead point so the route horizon is visible
+    this.perspCamera.position.set(camX, camY, camZ)
+    this.perspCamera.lookAt(ahead.x, ahead.y + 20, ahead.z)
+    this.perspCamera.updateProjectionMatrix()
   }
 
   /** Update the animated route reveal to the given progress (0–1) */
@@ -646,6 +764,11 @@ export class TerrainScene {
     if (this.markerMesh && visiblePoints.length > 0) {
       this.markerMesh.position.copy(visiblePoints[visiblePoints.length - 1])
     }
+
+    // Chase camera: update every frame
+    if (this.currentConfig?.cameraMode === 'chase') {
+      this.updateChaseCamera(endIdx)
+    }
   }
 
   private updateLine2(line: Line2 | null, points: THREE.Vector3[]): void {
@@ -659,7 +782,8 @@ export class TerrainScene {
 
   /** Update camera mode at runtime */
   setCameraMode(mode: TerrainCameraMode, config: TerrainAnimationConfig): void {
-    this.positionCamera({ ...config, cameraMode: mode })
+    this.currentConfig = { ...config, cameraMode: mode }
+    this.positionCamera(this.currentConfig)
   }
 
   /** Resize renderer and update camera aspect */

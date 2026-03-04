@@ -55,8 +55,8 @@ export const DEFAULT_TERRAIN_ANIMATION_CONFIG: TerrainAnimationConfig = {
   cameraDistance: 1.0,
 
   terrainStyle: 'alpine',
-  terrainExaggeration: 2.0,
-  terrainSegments: 128,
+  terrainExaggeration: 1.0,
+  terrainSegments: 256,
 
   routeColor: '#ff5500',
   routeWidth: 14,

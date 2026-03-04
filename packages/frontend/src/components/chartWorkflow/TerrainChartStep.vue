@@ -340,6 +340,10 @@ watch(() => props.animationConfig, async (newCfg, oldCfg) => {
   )
   if (needsReload) {
     await initScene()
+  } else if (newCfg.cameraMode !== oldCfg.cameraMode) {
+    // Switch camera mode without full reload
+    terrainScene.setCameraMode(newCfg.cameraMode, newCfg)
+    terrainScene.render()
   }
 }, { deep: false })
 

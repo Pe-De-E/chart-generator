@@ -125,6 +125,20 @@
             Kamera zurücksetzen
           </v-btn>
 
+          <div class="section-label">Modus</div>
+          <v-btn-toggle :model-value="cameraMode" mandatory density="compact" variant="outlined" divided class="w-100 mb-3" color="primary"
+            @update:model-value="update('cameraMode', $event)">
+            <v-btn value="overview-perspective" size="small" class="flex-grow-1">Frei</v-btn>
+            <v-btn value="overview-iso" size="small" class="flex-grow-1">Iso</v-btn>
+            <v-btn value="chase" size="small" class="flex-grow-1">
+              <v-icon size="16" class="mr-1">mdi-racing-helmet</v-icon>Chase
+            </v-btn>
+          </v-btn-toggle>
+
+          <v-alert v-if="cameraMode === 'chase'" type="info" variant="tonal" density="compact" class="mb-2 text-caption">
+            Kamera folgt der Route. Animation abspielen um den Effekt zu sehen.
+          </v-alert>
+
           <div class="section-label">Startposition</div>
           <div class="section-label mt-2">Winkel: {{ cameraElevationAngle }}°</div>
           <v-slider :model-value="cameraElevationAngle" :min="15" :max="75" :step="5" density="compact" hide-details thumb-label color="primary"
