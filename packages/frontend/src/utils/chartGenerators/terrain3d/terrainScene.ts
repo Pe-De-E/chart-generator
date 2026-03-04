@@ -24,7 +24,7 @@ import type { TerrainAnimationConfig, TerrainCameraMode } from './types'
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const TERRAIN_SIZE = 1000     // world units for terrain square
-const TERRAIN_PADDING = 0.05  // geographic padding fraction around route bounds — tight focus on route
+const TERRAIN_PADDING = 0.25  // geographic padding — show surrounding landscape for orientation
 const TILE_URL = '/terrain-tiles'
 
 // ── Elevation Tile Data ───────────────────────────────────────────────────────
@@ -447,10 +447,9 @@ export class TerrainScene {
     this.elevGrid = await fetchElevationGrid(minLon, maxLon, minLat, maxLat)
     console.log('[Terrain] elevation grid fetched, size:', this.elevGrid.width, 'x', this.elevGrid.height)
 
-    // Gaussian blur to remove per-pixel noise (vegetation canopy, building edges)
-    // without creating artificial round domes ("virus" look) that box-blur produces.
-    // sigma=1.5 pixels smooths noise < 3px while keeping ridgelines (≥5px wide) intact.
-    this.elevGrid = gaussianBlurGrid(this.elevGrid, 1.5)
+    // Gaussian blur to remove per-pixel noise (vegetation canopy, building edges).
+    // sigma=1.0 pixel smooths sub-20m noise while keeping real terrain features intact.
+    this.elevGrid = gaussianBlurGrid(this.elevGrid, 1.0)
     console.log('[Terrain] gaussian blur applied (sigma=1.5), grid:', this.elevGrid.width, '×', this.elevGrid.height)
 
     // ── Calculate route elevation range (for terrainMidY) ──
@@ -522,6 +521,7 @@ export class TerrainScene {
 
     const positions = geometry.attributes.position
     const colors: number[] = []
+    let minY = Infinity, maxY = -Infinity
 
     // First pass: set y positions
     for (let i = 0; i < positions.count; i++) {
@@ -533,19 +533,25 @@ export class TerrainScene {
       const elev = sampleElevation(lon, lat, this.elevGrid!)
       const y = (elev - this.baseElev) * config.terrainExaggeration * this.elevScale
       positions.setY(i, y)
+      if (y < minY) minY = y
+      if (y > maxY) maxY = y
     }
 
-    // Second pass: assign colors based on ABSOLUTE elevation.
-    // Using relative min/max (old approach) gave flat terrain rock/snow colors
-    // just because it happened to be the local maximum — wrong for a 70m flat route.
-    // Instead, normalize against a fixed reference elevation so colors reflect
-    // actual altitude: forest at low elevation, snow only above ~2000m.
+    // Second pass: assign colors using a blend of absolute and relative elevation.
+    //
+    // - Absolute component (40%): maps real altitude against a 3500m reference so
+    //   flat low-elevation terrain stays green and snow only appears near 2000m+.
+    // - Relative component (60%): maps each vertex against the local mesh min/max,
+    //   giving full-range color contrast so valleys vs ridgelines are visually
+    //   distinct even on a 70m flat route — essential for landscape recognition.
     const worldScale = config.terrainExaggeration * this.elevScale
-    const ELEV_COLOR_REF = 3500  // meters — elevation at which snow colors appear
+    const ELEV_COLOR_REF = 3500
     for (let i = 0; i < positions.count; i++) {
       const y = positions.getY(i)
       const elev = worldScale > 0 ? y / worldScale + this.baseElev : this.baseElev
-      const normalizedH = Math.max(0, Math.min(1, elev / ELEV_COLOR_REF))
+      const absT = Math.max(0, Math.min(1, elev / ELEV_COLOR_REF))
+      const relT = maxY > minY ? (y - minY) / (maxY - minY) : 0
+      const normalizedH = absT * 0.4 + relT * 0.6
       const color = getTerrainColor(normalizedH, config.terrainStyle)
       colors.push(color.r, color.g, color.b)
     }
