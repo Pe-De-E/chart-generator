@@ -18,8 +18,10 @@ import { Line2 } from 'three/examples/jsm/lines/Line2.js'
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js'
 import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import { contours as d3Contours } from 'd3-contour'
 import type { RoutePoint } from '@chart-generator/shared'
 import type { TerrainAnimationConfig, TerrainCameraMode } from './types'
+import citiesData from '../../../data/geo/cities.json'
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -299,6 +301,129 @@ function geoToWorld(lon: number, lat: number, elev: number, bounds: SceneBounds,
   return new THREE.Vector3(x, y, z)
 }
 
+// ── Contour Layer Helpers ─────────────────────────────────────────────────────
+
+/** Map a d3-contour grid pixel [col, row] to Three.js world XZ coordinates */
+function gridPixelToWorld(px: number, py: number, gw: number, gh: number): [number, number] {
+  return [
+    (px / (gw - 1) - 0.5) * TERRAIN_SIZE,
+    (py / (gh - 1) - 0.5) * TERRAIN_SIZE,
+  ]
+}
+
+/** Choose a round contour interval that yields roughly 30 layers for the given range */
+function niceContourInterval(range: number): number {
+  const approx = range / 30
+  const nice = [2, 5, 10, 20, 25, 50, 100, 150, 200, 250, 500, 1000]
+  return nice.find(v => v >= approx) ?? 1000
+}
+
+/**
+ * Chaikin corner-cutting smoothing for polygon rings.
+ * Each pass replaces every edge AB with two points at 25% and 75%.
+ * Caps at maxPts to prevent memory explosion on large boundary polygons.
+ */
+function chaikinSmooth(pts: [number, number][], passes: number, maxPts = 800): [number, number][] {
+  // Downsample first if ring is already very large
+  let r = pts
+  if (r.length > maxPts) {
+    const step = Math.ceil(r.length / maxPts)
+    r = r.filter((_, i) => i % step === 0)
+  }
+  for (let p = 0; p < passes; p++) {
+    const s: [number, number][] = []
+    for (let i = 0; i < r.length; i++) {
+      const a = r[i], b = r[(i + 1) % r.length]
+      s.push([a[0] + 0.25 * (b[0] - a[0]), a[1] + 0.25 * (b[1] - a[1])])
+      s.push([a[0] + 0.75 * (b[0] - a[0]), a[1] + 0.75 * (b[1] - a[1])])
+    }
+    r = s
+  }
+  return r
+}
+
+// ── Geo Overlay: Rivers + Places ─────────────────────────────────────────────
+
+interface OverpassWay {
+  geometry: Array<{ lat: number; lon: number }>
+  tags?: Record<string, string>
+}
+
+interface CityPoint {
+  name: string
+  lat: number
+  lon: number
+  pop: number
+}
+
+const riverCache = new Map<string, OverpassWay[]>()
+
+async function fetchTerrainRivers(
+  minLon: number, maxLon: number, minLat: number, maxLat: number,
+): Promise<OverpassWay[]> {
+  const key = `${minLat.toFixed(4)},${minLon.toFixed(4)},${maxLat.toFixed(4)},${maxLon.toFixed(4)}`
+  if (riverCache.has(key)) return riverCache.get(key)!
+
+  const query =
+    `[out:json][bbox:${minLat.toFixed(5)},${minLon.toFixed(5)},${maxLat.toFixed(5)},${maxLon.toFixed(5)}][timeout:20];\n` +
+    `way[waterway~"^(river|canal)$"];\n` +
+    `out geom;`
+
+  try {
+    const res = await fetch('/overpass/interpreter', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `data=${encodeURIComponent(query)}`,
+    })
+    if (!res.ok) throw new Error(`Overpass ${res.status}`)
+    const data = await res.json()
+    const ways = (data.elements ?? []).filter(
+      (e: any) => e.type === 'way' && e.geometry?.length >= 2,
+    ) as OverpassWay[]
+    riverCache.set(key, ways)
+    return ways
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Billboard text sprite rendered via OffscreenCanvas.
+ * Always faces the camera (THREE.Sprite default behaviour).
+ */
+function makeTextSprite(text: string, fontSize = 30): THREE.Sprite {
+  const padding = 8
+  // Measure first, then allocate correctly sized canvas
+  const tmp = new OffscreenCanvas(1, 1)
+  const tmpCtx = tmp.getContext('2d')!
+  tmpCtx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, sans-serif`
+  const textW = Math.ceil(tmpCtx.measureText(text).width)
+
+  const canvasW = textW + padding * 2
+  const canvasH = fontSize + padding * 2
+  const canvas = new OffscreenCanvas(canvasW, canvasH)
+  const ctx = canvas.getContext('2d')!
+
+  ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, sans-serif`
+  ctx.textBaseline = 'top'
+  ctx.shadowColor = 'rgba(0,0,0,0.95)'
+  ctx.shadowBlur = 5
+  ctx.shadowOffsetX = 1
+  ctx.shadowOffsetY = 1
+  ctx.fillStyle = '#ffffff'
+  ctx.fillText(text, padding, padding)
+
+  const texture = new THREE.CanvasTexture(canvas as unknown as HTMLCanvasElement)
+  const mat = new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false })
+  const sprite = new THREE.Sprite(mat)
+
+  // Scale: 200 world units ≈ a "normal" label width reference
+  const worldWidth = Math.max(60, (canvasW / 256) * 200)
+  const worldHeight = (canvasH / 256) * 200
+  sprite.scale.set(worldWidth, worldHeight, 1)
+  return sprite
+}
+
 // ── TerrainScene ──────────────────────────────────────────────────────────────
 
 export class TerrainScene {
@@ -320,6 +445,7 @@ export class TerrainScene {
   private elevScale = 1
   private baseElev = 0      // min elevation in terrain grid → terrain base sits at Y=0
   private terrainMidY = 0   // world-space Y of terrain mid-point (for camera lookAt)
+  private contourInterval = 0  // elevation interval used in contour-layers mode
 
   // Dynamic camera orientation — computed from actual route direction
   private routeDir      = new THREE.Vector3(0, 0, -1) // start → end direction (unit vector)
@@ -489,6 +615,17 @@ export class TerrainScene {
     // ── Build marker ──
     this.buildMarker(config)
 
+    // ── Geo overlays (realistic mode only) ──
+    if (config.terrainRenderStyle === 'realistic') {
+      if (config.showPlaces) this.buildPlaces(config)
+      if (config.showRivers) {
+        // Rivers are fetched async; update scene after terrain is already visible
+        fetchTerrainRivers(minLon, maxLon, minLat, maxLat)
+          .then(ways => { if (ways.length > 0) this.buildRivers(ways, config) })
+          .catch(() => { /* ignore river fetch errors */ })
+      }
+    }
+
     // ── Compute route orientation for dynamic camera ──
     this.computeRouteOrientation()
 
@@ -514,6 +651,11 @@ export class TerrainScene {
 
   private buildTerrainMesh(config: TerrainAnimationConfig): void {
     if (!this.elevGrid || !this.sceneBounds) return
+
+    if (config.terrainRenderStyle === 'contour-layers') {
+      this.buildContourLayers(config)
+      return
+    }
 
     const segments = config.terrainSegments
     const geometry = new THREE.PlaneGeometry(TERRAIN_SIZE, TERRAIN_SIZE, segments, segments)
@@ -570,15 +712,127 @@ export class TerrainScene {
     this.scene.add(this.terrainMesh)
   }
 
+  /**
+   * Rayshader-style contour layers: stacked extruded polygons, one per elevation band.
+   * Each layer = all terrain above that threshold, extruded downward by one interval height.
+   * Produces the "cardboard topo model" aesthetic — zero tile noise, purely data-driven.
+   */
+  private buildContourLayers(config: TerrainAnimationConfig): void {
+    if (!this.elevGrid) return
+    const { data, width, height } = this.elevGrid
+
+    // ── Elevation range ──
+    let gridMin = Infinity, gridMax = -Infinity
+    for (let i = 0; i < data.length; i++) {
+      if (data[i] < gridMin) gridMin = data[i]
+      if (data[i] > gridMax) gridMax = data[i]
+    }
+    const gridRange = Math.max(gridMax - gridMin, 1)
+    const interval  = niceContourInterval(gridRange)
+    this.contourInterval = interval
+
+    // Start at the first nice multiple above gridMin so all terrain is covered
+    const thresholds: number[] = []
+    let t0 = Math.floor(gridMin / interval) * interval
+    if (t0 < gridMin) t0 += interval
+    for (let t = t0; t <= gridMax; t += interval) thresholds.push(t)
+    if (thresholds.length === 0) return
+
+    // ── Contour polygons via d3-contour (marching squares) ──
+    const gen = d3Contours().size([width, height]).thresholds(thresholds)
+    const contourData = gen(Array.from(data))
+
+    const worldScale   = config.terrainExaggeration * this.elevScale
+    const layerDepth   = Math.max(interval * worldScale, 1)
+    const minY         = (gridMin - this.baseElev) * worldScale
+    const maxY         = (gridMax - this.baseElev) * worldScale
+    const ELEV_REF     = 3500
+
+    for (const contour of contourData) {
+      const threshold = contour.value
+      const layerY    = (threshold - this.baseElev) * worldScale
+
+      // Color: 40% absolute altitude + 60% relative within grid for visual contrast
+      const absT = Math.max(0, Math.min(1, threshold / ELEV_REF))
+      const relT = maxY > minY ? (layerY - minY) / (maxY - minY) : 0
+      const color = getTerrainColor(absT * 0.4 + relT * 0.6, config.terrainStyle)
+
+      const mat = new THREE.MeshStandardMaterial({
+        color: color.getHex(),
+        roughness: 0.82,
+        metalness: 0.0,
+      })
+
+      for (const polygon of contour.coordinates) {
+        const outer = polygon[0]
+        if (outer.length < 3) continue
+
+        // Smooth the marching-squares staircase artifacts before building geometry.
+        // 4 passes of Chaikin corner-cutting converts jagged pixel-steps into
+        // smooth organic curves — essential for the Rayshader aesthetic.
+        const smoothedOuter = chaikinSmooth(outer as [number, number][], 4)
+
+        const shape = new THREE.Shape()
+        const [x0, z0] = gridPixelToWorld(smoothedOuter[0][0], smoothedOuter[0][1], width, height)
+        shape.moveTo(x0, z0)
+        for (let i = 1; i < smoothedOuter.length; i++) {
+          const [x, z] = gridPixelToWorld(smoothedOuter[i][0], smoothedOuter[i][1], width, height)
+          shape.lineTo(x, z)
+        }
+        for (let h = 1; h < polygon.length; h++) {
+          const smoothedHole = chaikinSmooth(polygon[h] as [number, number][], 4)
+          const path = new THREE.Path()
+          const [hx0, hz0] = gridPixelToWorld(smoothedHole[0][0], smoothedHole[0][1], width, height)
+          path.moveTo(hx0, hz0)
+          for (let i = 1; i < smoothedHole.length; i++) {
+            const [hx, hz] = gridPixelToWorld(smoothedHole[i][0], smoothedHole[i][1], width, height)
+            path.lineTo(hx, hz)
+          }
+          shape.holes.push(path)
+        }
+
+        // Extrude downward by one interval height — layers stack perfectly
+        let geo: THREE.ExtrudeGeometry
+        try {
+          geo = new THREE.ExtrudeGeometry(shape, { depth: layerDepth, bevelEnabled: false })
+        } catch {
+          continue  // skip degenerate polygons without crashing
+        }
+        geo.rotateX(-Math.PI / 2)   // lay flat (XY shape → XZ plane)
+
+        const mesh = new THREE.Mesh(geo, mat)
+        mesh.position.y = layerY   // top face sits exactly at threshold elevation
+        this.scene.add(mesh)
+      }
+    }
+  }
+
   private buildRouteLines(routePoints: RoutePoint[], config: TerrainAnimationConfig): void {
     if (!this.elevGrid || !this.sceneBounds) return
 
-    // Sample elevation at each route point from the terrain grid
+    // Sample elevation at each route point and position on the terrain surface.
+    // Contour-layers mode: snap to the top face of the correct layer (tiny +3 offset).
+    // Realistic mode: lift +30 to clear the mesh polygon faces (z-fighting prevention).
     this.allRoute3D = routePoints.map(p => {
-      const terrainElev = sampleElevation(p.lon, p.lat, this.elevGrid!)
-      // Lift route well above terrain surface to prevent z-fighting with mesh faces.
-      // The segment size at 128 divisions is ~7.8 world units; offset must exceed that.
-      const elev = Math.max(terrainElev, p.elevation) + 30
+      let elev: number
+      if (config.terrainRenderStyle === 'contour-layers' && this.contourInterval > 0) {
+        // Use terrain grid elevation (same source as contour layers) for snapping —
+        // GPS elevation can be 20-50m off from tile data, causing route/layer mismatch.
+        //
+        // ExtrudeGeometry extrudes in +Z → after rotateX(-π/2) this becomes +Y.
+        // So each layer's VISIBLE top face is at layerY + layerDepth, not layerY.
+        // Adding contourInterval puts the route on the correct top face.
+        const terrainElev = sampleElevation(p.lon, p.lat, this.elevGrid!)
+        const snapped = Math.floor(terrainElev / this.contourInterval) * this.contourInterval
+        const worldScale = config.terrainExaggeration * this.elevScale
+        elev = snapped + this.contourInterval + 3 / worldScale
+      } else {
+        // Realistic mode: sit 5 world units above the sampled terrain surface.
+        // +5 world units prevents z-fighting without visible floating.
+        const terrainElev = sampleElevation(p.lon, p.lat, this.elevGrid!)
+        const worldScale = config.terrainExaggeration * this.elevScale
+        elev = Math.max(terrainElev, p.elevation) + 5 / worldScale
+      }
       return geoToWorld(p.lon, p.lat, elev, this.sceneBounds!, config.terrainExaggeration, this.elevScale, this.baseElev)
     })
 
@@ -614,6 +868,83 @@ export class TerrainScene {
     const line = new Line2(geo, mat)
     if (points.length >= 2) line.computeLineDistances()
     return line
+  }
+
+  /** Render river/canal ways as blue lines on the terrain surface. */
+  private buildRivers(ways: OverpassWay[], config: TerrainAnimationConfig): void {
+    if (!this.elevGrid || !this.sceneBounds) return
+    const worldScale = config.terrainExaggeration * this.elevScale
+
+    for (const way of ways) {
+      const pts: THREE.Vector3[] = way.geometry
+        .filter(n =>
+          n.lon >= this.sceneBounds!.minLon && n.lon <= this.sceneBounds!.maxLon &&
+          n.lat >= this.sceneBounds!.minLat && n.lat <= this.sceneBounds!.maxLat,
+        )
+        .map(n => {
+          const elev = sampleElevation(n.lon, n.lat, this.elevGrid!)
+          const elevAdj = elev + 5 / worldScale   // 5 world units above terrain
+          return geoToWorld(n.lon, n.lat, elevAdj, this.sceneBounds!, config.terrainExaggeration, this.elevScale, this.baseElev)
+        })
+
+      if (pts.length < 2) continue
+      const line = this.makeLine2(pts, '#4a90d9', 2, 0.75)
+      this.scene.add(line)
+    }
+  }
+
+  /** Render city/town/village markers and labels from Natural Earth static data. */
+  private buildPlaces(config: TerrainAnimationConfig): void {
+    if (!this.elevGrid || !this.sceneBounds) return
+    const worldScale = config.terrainExaggeration * this.elevScale
+    const sb = this.sceneBounds
+
+    // Filter cities within terrain bounds
+    const cities = (citiesData as unknown as CityPoint[]).filter(
+      c => c.lon >= sb.minLon && c.lon <= sb.maxLon && c.lat >= sb.minLat && c.lat <= sb.maxLat,
+    )
+    if (cities.length === 0) return
+
+    // Sort by population desc; keep top 15
+    cities.sort((a, b) => (b.pop ?? 0) - (a.pop ?? 0))
+    const maxPop = cities[0]?.pop ?? 1
+
+    // Declutter: min 80 world units between labels
+    const MIN_SPACING = 80
+    const selected: Array<CityPoint & { wx: number; wz: number }> = []
+
+    for (const city of cities) {
+      if (selected.length >= 15) break
+      const elev = sampleElevation(city.lon, city.lat, this.elevGrid!)
+      const pos = geoToWorld(city.lon, city.lat, elev, sb, config.terrainExaggeration, this.elevScale, this.baseElev)
+      const tooClose = selected.some(s => {
+        const dx = s.wx - pos.x, dz = s.wz - pos.z
+        return Math.sqrt(dx * dx + dz * dz) < MIN_SPACING
+      })
+      if (!tooClose) selected.push({ ...city, wx: pos.x, wz: pos.z })
+    }
+
+    for (const city of selected) {
+      const t = Math.sqrt((city.pop ?? 0) / maxPop)
+      const dotRadius = 3 + t * 5    // 3–8 world units
+
+      const elev = sampleElevation(city.lon, city.lat, this.elevGrid!)
+      const elevAdj = elev + (dotRadius + 5) / worldScale
+      const pos = geoToWorld(city.lon, city.lat, elevAdj, sb, config.terrainExaggeration, this.elevScale, this.baseElev)
+
+      // Dot marker
+      const geo = new THREE.SphereGeometry(dotRadius, 8, 6)
+      const mat = new THREE.MeshBasicMaterial({ color: 0xffffff, depthWrite: true })
+      const sphere = new THREE.Mesh(geo, mat)
+      sphere.position.copy(pos)
+      this.scene.add(sphere)
+
+      // Billboard label
+      const fontSize = Math.round(22 + t * 12)  // 22–34px
+      const sprite = makeTextSprite(city.name, fontSize)
+      sprite.position.set(pos.x, pos.y + dotRadius + 18, pos.z)
+      this.scene.add(sprite)
+    }
   }
 
   private buildMarker(config: TerrainAnimationConfig): void {

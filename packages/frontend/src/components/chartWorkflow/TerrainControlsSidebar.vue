@@ -62,6 +62,15 @@
 
         <!-- ── Tab 0: Gelände ── -->
         <div v-show="activeTab === 0">
+          <div class="section-label">Render-Modus</div>
+          <v-btn-toggle :model-value="terrainRenderStyle" mandatory density="compact" variant="outlined" divided class="w-100 mb-3" color="primary"
+            @update:model-value="update('terrainRenderStyle', $event)">
+            <v-btn value="realistic" size="small" class="flex-grow-1">Realistisch</v-btn>
+            <v-btn value="contour-layers" size="small" class="flex-grow-1">
+              <v-icon size="14" class="mr-1">mdi-layers</v-icon>Rayshader
+            </v-btn>
+          </v-btn-toggle>
+
           <div class="section-label">Stil</div>
           <v-btn-toggle :model-value="terrainStyle" mandatory density="compact" variant="outlined" divided class="w-100 mb-2" color="primary"
             @update:model-value="update('terrainStyle', $event)">
@@ -103,6 +112,15 @@
             <label class="text-caption text-medium-emphasis d-block mb-1 mt-1">Intensität: {{ routeGlowIntensity }}</label>
             <v-slider :model-value="routeGlowIntensity" :min="1" :max="8" :step="1" density="compact" hide-details thumb-label color="primary"
               @update:model-value="update('routeGlowIntensity', $event)" />
+          </template>
+
+          <template v-if="terrainRenderStyle === 'realistic'">
+            <v-divider class="my-2" />
+            <div class="section-label">Geo</div>
+            <v-checkbox :model-value="showRivers" label="Flüsse" density="compact" hide-details color="primary"
+              @update:model-value="update('showRivers', $event ?? false)" />
+            <v-checkbox :model-value="showPlaces" label="Orte" density="compact" hide-details color="primary"
+              @update:model-value="update('showPlaces', $event ?? false)" />
           </template>
 
           <v-divider class="my-2" />
@@ -257,6 +275,7 @@ const activeTab = ref(0)
 
 // Shorthand computed accessors
 const cfg = computed(() => props.animationConfig)
+const terrainRenderStyle = computed(() => cfg.value.terrainRenderStyle)
 const terrainStyle = computed(() => cfg.value.terrainStyle)
 const terrainExaggeration = computed(() => cfg.value.terrainExaggeration)
 const terrainSegments = computed(() => cfg.value.terrainSegments)
@@ -272,6 +291,8 @@ const routeGlowIntensity = computed(() => cfg.value.routeGlowIntensity)
 const duration = computed(() => cfg.value.duration)
 const easing = computed(() => cfg.value.easing)
 const backgroundColor = computed(() => cfg.value.backgroundColor)
+const showRivers = computed(() => cfg.value.showRivers)
+const showPlaces = computed(() => cfg.value.showPlaces)
 
 function update<K extends keyof TerrainAnimationConfig>(key: K, value: TerrainAnimationConfig[K]) {
   emit('update:animationConfig', { ...props.animationConfig, [key]: value })

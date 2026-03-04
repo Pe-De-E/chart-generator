@@ -4,6 +4,7 @@
 
 export type TerrainStyle = 'dark' | 'alpine' | 'desert' | 'topo'
 export type TerrainCameraMode = 'overview-iso' | 'overview-perspective' | 'chase'
+export type TerrainRenderStyle = 'realistic' | 'contour-layers'
 
 export interface TerrainAnimationConfig {
   // Playback
@@ -21,9 +22,10 @@ export interface TerrainAnimationConfig {
   cameraDistance: number           // 0.5–2.0, multiplier on default distance
 
   // Terrain
+  terrainRenderStyle: TerrainRenderStyle  // 'realistic' | 'contour-layers'
   terrainStyle: TerrainStyle
   terrainExaggeration: number      // vertical scale multiplier, 1–5, default 2.5
-  terrainSegments: number          // mesh resolution: 64 | 128 | 256
+  terrainSegments: number          // mesh resolution: 128 | 256 | 512 (realistic mode only)
 
   // Route
   routeColor: string
@@ -40,6 +42,10 @@ export interface TerrainAnimationConfig {
   showMarker: boolean
   markerColor: string
   markerSize: number
+
+  // Geo overlays (realistic mode only)
+  showRivers: boolean
+  showPlaces: boolean
 }
 
 export const DEFAULT_TERRAIN_ANIMATION_CONFIG: TerrainAnimationConfig = {
@@ -54,8 +60,9 @@ export const DEFAULT_TERRAIN_ANIMATION_CONFIG: TerrainAnimationConfig = {
   cameraElevationAngle: 45,
   cameraDistance: 1.0,
 
+  terrainRenderStyle: 'contour-layers',
   terrainStyle: 'alpine',
-  terrainExaggeration: 1.0,
+  terrainExaggeration: 2.5,
   terrainSegments: 256,
 
   routeColor: '#ff5500',
@@ -70,4 +77,7 @@ export const DEFAULT_TERRAIN_ANIMATION_CONFIG: TerrainAnimationConfig = {
   showMarker: true,
   markerColor: '#ffffff',
   markerSize: 8,
+
+  showRivers: true,
+  showPlaces: true,
 }

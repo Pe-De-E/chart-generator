@@ -329,6 +329,7 @@ watch(() => props.animationConfig, async (newCfg, oldCfg) => {
   if (!terrainScene) return
   // Reload if style-changing properties changed
   const needsReload = (
+    newCfg.terrainRenderStyle !== oldCfg.terrainRenderStyle ||
     newCfg.terrainStyle !== oldCfg.terrainStyle ||
     newCfg.terrainExaggeration !== oldCfg.terrainExaggeration ||
     newCfg.terrainSegments !== oldCfg.terrainSegments ||
@@ -336,7 +337,9 @@ watch(() => props.animationConfig, async (newCfg, oldCfg) => {
     newCfg.routeWidth !== oldCfg.routeWidth ||
     newCfg.routeGlow !== oldCfg.routeGlow ||
     newCfg.routeGlowIntensity !== oldCfg.routeGlowIntensity ||
-    newCfg.backgroundColor !== oldCfg.backgroundColor
+    newCfg.backgroundColor !== oldCfg.backgroundColor ||
+    newCfg.showRivers !== oldCfg.showRivers ||
+    newCfg.showPlaces !== oldCfg.showPlaces
   )
   if (needsReload) {
     await initScene()
