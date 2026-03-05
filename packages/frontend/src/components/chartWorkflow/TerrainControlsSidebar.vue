@@ -65,6 +65,9 @@
           <div class="section-label">Render-Modus</div>
           <v-btn-toggle :model-value="terrainRenderStyle" mandatory density="compact" variant="outlined" divided class="w-100 mb-3" color="primary"
             @update:model-value="update('terrainRenderStyle', $event)">
+            <v-btn value="flat-map" size="small" class="flex-grow-1">
+              <v-icon size="14" class="mr-1">mdi-map</v-icon>Karte
+            </v-btn>
             <v-btn value="realistic" size="small" class="flex-grow-1">Realistisch</v-btn>
             <v-btn value="contour-layers" size="small" class="flex-grow-1">
               <v-icon size="14" class="mr-1">mdi-layers</v-icon>Rayshader
@@ -114,13 +117,18 @@
               @update:model-value="update('routeGlowIntensity', $event)" />
           </template>
 
-          <template v-if="terrainRenderStyle === 'realistic'">
+          <template v-if="terrainRenderStyle === 'realistic' || terrainRenderStyle === 'flat-map'">
             <v-divider class="my-2" />
             <div class="section-label">Geo</div>
             <v-checkbox :model-value="showRivers" label="Flüsse" density="compact" hide-details color="primary"
               @update:model-value="update('showRivers', $event ?? false)" />
             <v-checkbox :model-value="showPlaces" label="Orte" density="compact" hide-details color="primary"
               @update:model-value="update('showPlaces', $event ?? false)" />
+            <v-checkbox :model-value="showContourLines" label="Höhenlinien" density="compact" hide-details color="primary"
+              @update:model-value="update('showContourLines', $event ?? false)" />
+            <div class="param-label mt-1">Höhenlinien Deckkraft</div>
+            <v-slider :model-value="contourLineOpacity" min="0.05" max="0.8" step="0.05" density="compact" hide-details
+              @update:model-value="update('contourLineOpacity', $event)" />
           </template>
 
           <v-divider class="my-2" />
@@ -293,6 +301,8 @@ const easing = computed(() => cfg.value.easing)
 const backgroundColor = computed(() => cfg.value.backgroundColor)
 const showRivers = computed(() => cfg.value.showRivers)
 const showPlaces = computed(() => cfg.value.showPlaces)
+const showContourLines = computed(() => cfg.value.showContourLines)
+const contourLineOpacity = computed(() => cfg.value.contourLineOpacity)
 
 function update<K extends keyof TerrainAnimationConfig>(key: K, value: TerrainAnimationConfig[K]) {
   emit('update:animationConfig', { ...props.animationConfig, [key]: value })

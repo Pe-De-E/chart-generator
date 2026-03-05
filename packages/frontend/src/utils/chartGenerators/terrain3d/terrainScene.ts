@@ -18,6 +18,10 @@ import { Line2 } from 'three/examples/jsm/lines/Line2.js'
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js'
 import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js'
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
+import { GTAOPass } from 'three/examples/jsm/postprocessing/GTAOPass.js'
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
 import { contours as d3Contours } from 'd3-contour'
 import type { RoutePoint } from '@chart-generator/shared'
 import type { TerrainAnimationConfig, TerrainCameraMode } from './types'
@@ -163,19 +167,71 @@ function sampleElevation(lon: number, lat: number, grid: ElevationGrid): number 
   )
 }
 
+/**
+ * Sample the minimum elevation in a radius-px neighbourhood around (lon, lat).
+ * Rivers always flow at the lowest nearby point (valley floor), so taking the
+ * minimum rather than the bilinearly-interpolated value prevents them from
+ * appearing on cliff faces or flowing uphill across terrain steps.
+ */
+function sampleElevationMin(lon: number, lat: number, grid: ElevationGrid, radiusPx = 3): number {
+  const { data, width, height, bounds } = grid
+  const nx = (lon - bounds.minLon) / (bounds.maxLon - bounds.minLon)
+  const ny = 1 - (lat - bounds.minLat) / (bounds.maxLat - bounds.minLat)
+  const cx = Math.max(0, Math.min(nx, 1)) * (width - 1)
+  const cy = Math.max(0, Math.min(ny, 1)) * (height - 1)
+  let min = Infinity
+  for (let dy = -radiusPx; dy <= radiusPx; dy++) {
+    for (let dx = -radiusPx; dx <= radiusPx; dx++) {
+      const px = Math.max(0, Math.min(width - 1, Math.round(cx + dx)))
+      const py = Math.max(0, Math.min(height - 1, Math.round(cy + dy)))
+      const e = data[py * width + px]
+      if (e < min) min = e
+    }
+  }
+  return isFinite(min) ? min : sampleElevation(lon, lat, grid)
+}
+
 // ── Elevation Smoothing ───────────────────────────────────────────────────────
+
+/**
+ * Snap every elevation value to the nearest multiple of `interval` (floor).
+ *
+ * This is the key noise-removal step: any DSM artefact shorter than `interval`
+ * (a tree at +8 m, a building at +6 m, a road embankment at +3 m) collapses
+ * into the surrounding base contour level and simply disappears.
+ * Features taller than `interval` still show up — correctly — as one step higher.
+ *
+ * The adaptive interval is chosen so the total number of levels stays ~15–25
+ * regardless of the terrain's absolute relief, which keeps the Gaussian blur
+ * step well-scaled at every zoom level.
+ */
+function contourQuantize(grid: ElevationGrid, interval: number): ElevationGrid {
+  const q = new Float32Array(grid.data.length)
+  for (let i = 0; i < grid.data.length; i++) {
+    q[i] = Math.floor(grid.data[i] / interval) * interval
+  }
+  return { data: q, width: grid.width, height: grid.height, bounds: grid.bounds }
+}
+
+function adaptiveQuantizeInterval(elevRange: number): number {
+  if (elevRange <  150) return  5
+  if (elevRange <  400) return 10
+  if (elevRange < 1000) return 25
+  if (elevRange < 2000) return 50
+  return 100
+}
 
 /**
  * Separable Gaussian blur on the elevation grid.
  *
- * Why Gaussian instead of repeated box-blur:
- * Multiple passes of 3×3 box-blur create equal-height round domes from every
- * noise spike ("virus surface" look). A single Gaussian pass weights the
- * neighbourhood by distance, preserving large-scale features (ridgelines,
- * valleys) while averaging away sub-scale noise (vegetation canopy, buildings).
+ * Applied AFTER contour-quantization: the quantized grid has clean, level
+ * plateau regions separated by sharp vertical steps. The Gaussian blur
+ * converts those sharp steps into smooth, curved transitions — exactly what
+ * the user described as "die Linien dazwischen abrunden".
  *
- * sigma is in grid pixels. Rule of thumb: sigma ≈ 1.5–2 pixels smooths
- * individual-pixel noise while keeping features wider than ~4px intact.
+ * sigma is in grid pixels. sigma=2 spreads a step over ~5 pixels, which at
+ * zoom 13 (20 m/px) corresponds to ~100 m of horizontal smoothing — enough
+ * to give gently rolling hills without smearing large-scale features.
  */
 function gaussianBlurGrid(grid: ElevationGrid, sigma: number): ElevationGrid {
   const { width, height, bounds } = grid
@@ -221,6 +277,41 @@ function gaussianBlurGrid(grid: ElevationGrid, sigma: number): ElevationGrid {
   return { data: result, width, height, bounds }
 }
 
+// ── Terrain Color Normalization ───────────────────────────────────────────────
+
+/**
+ * Maps an elevation value to a 0–1 color-ramp position that is appropriate
+ * for the terrain's actual elevation range.
+ *
+ * Problem with the old 40%abs + 60%rel blend:
+ *   A 70 m hilltop gets relT=1.0, pushing it into the rock/snow zone of an
+ *   alpine ramp — even though 70 m terrain is purely lowland.
+ *
+ * Fix — "anchored window" approach:
+ *   1. Find where the terrain's floor and ceiling sit in the global ramp
+ *      (floorT and ceilT, both referenced against 3500 m).
+ *   2. Map the local relative elevation into [floorT, floorT + spread].
+ *   3. The spread is the real relief (ceilT−floorT), amplified slightly for
+ *      visual depth on flat terrain, but never exceeding the actual ramp range.
+ *
+ * This means:
+ *   - A 0–100 m lowland uses only the "dark-green valley → meadow" portion.
+ *   - A 1000–2500 m alpine route uses the "rock → snow" portion.
+ *   - A 0–3500 m transect uses the full ramp.
+ */
+const ELEV_COLOR_REF = 3500
+
+function computeTerrainColorT(elev: number, gridMin: number, gridMax: number): number {
+  const floorT = Math.max(0, Math.min(1, gridMin / ELEV_COLOR_REF))
+  const ceilT  = Math.max(0, Math.min(1, gridMax  / ELEV_COLOR_REF))
+  // Stretch local relief for visual depth, but never overshoot the ramp ceiling.
+  // Minimum spread of 0.15 keeps flat terrain from looking like a single flat colour.
+  const relief = ceilT - floorT
+  const spread = Math.max(relief * 1.5, Math.min(0.15, floorT + 0.15))
+  const relT   = gridMax > gridMin ? (elev - gridMin) / (gridMax - gridMin) : 0
+  return Math.max(0, Math.min(1, floorT + Math.max(0, Math.min(1, relT)) * spread))
+}
+
 // ── Terrain Style Colors ──────────────────────────────────────────────────────
 
 function lerpColor(a: THREE.Color, b: THREE.Color, t: number): THREE.Color {
@@ -236,15 +327,23 @@ function getTerrainColor(normalizedHeight: number, style: string): THREE.Color {
 
   switch (style) {
     case 'alpine': {
-      // 4-stop ramp: deep valley (dark forest) → meadow → bare rock → snow cap
-      // More stops = clearer distinction between elevation bands
-      const deepValley = new THREE.Color('#1a3a0a')  // dark forest floor
-      const meadow    = new THREE.Color('#3a6e1e')   // alpine meadow
-      const rock      = new THREE.Color('#5a5348')   // bare rock
-      const snow      = new THREE.Color('#dde4ea')   // snow cap
-      if (t < 0.28) return lerpColor(deepValley, meadow, t / 0.28)
-      if (t < 0.58) return lerpColor(meadow, rock, (t - 0.28) / 0.30)
-      return lerpColor(rock, snow, (t - 0.58) / 0.42)
+      // 5-stop ramp anchored to absolute elevation via the incoming t value.
+      //
+      // Lowland terrain (< ~400 m) uses a muted olive-green that reads as
+      // "countryside" rather than "alpine valley".  Neighbouring stops are
+      // close enough in brightness that small elevation variations (the
+      // 5–20 m noise typical in DSM tiles) produce only subtle colour shifts
+      // rather than the high-contrast farmland ↔ dark-forest flickering that
+      // occurs when the palette has a large luminosity jump at a low threshold.
+      const lowland = new THREE.Color('#4e7a20')  // muted olive-green — lowland / Mittelgebirge
+      const forest  = new THREE.Color('#2e5c12')  // mixed forest (400–900 m)
+      const alpine  = new THREE.Color('#3a6e1e')  // subalpine meadow (900–1600 m)
+      const rock    = new THREE.Color('#5a5348')  // bare rock (1600–2800 m)
+      const snow    = new THREE.Color('#dde4ea')  // snow cap (> 2800 m)
+      if (t < 0.15) return lerpColor(lowland, forest, t / 0.15)
+      if (t < 0.30) return lerpColor(forest,  alpine, (t - 0.15) / 0.15)
+      if (t < 0.60) return lerpColor(alpine,  rock,   (t - 0.30) / 0.30)
+      return lerpColor(rock, snow, (t - 0.60) / 0.40)
     }
     case 'desert': {
       const low = new THREE.Color('#5a3e1b')
@@ -301,6 +400,18 @@ function geoToWorld(lon: number, lat: number, elev: number, bounds: SceneBounds,
   return new THREE.Vector3(x, y, z)
 }
 
+/** Flat XZ world position with given Y — used for the flat-map render mode. */
+function geoToFlat(lon: number, lat: number, flatY: number, bounds: SceneBounds): THREE.Vector3 {
+  const x = ((lon - bounds.minLon) / bounds.lonRange - 0.5) * TERRAIN_SIZE
+  const z = -((lat - bounds.minLat) / bounds.latRange - 0.5) * TERRAIN_SIZE
+  return new THREE.Vector3(x, flatY, z)
+}
+
+/** Convert an elevation value to a world-Y height for flat-map mode. */
+function elevToFlatY(elev: number, baseElev: number, exaggeration: number, elevScale: number): number {
+  return (elev - baseElev) * exaggeration * elevScale
+}
+
 // ── Contour Layer Helpers ─────────────────────────────────────────────────────
 
 /** Map a d3-contour grid pixel [col, row] to Three.js world XZ coordinates */
@@ -311,10 +422,24 @@ function gridPixelToWorld(px: number, py: number, gw: number, gh: number): [numb
   ]
 }
 
-/** Choose a round contour interval that yields roughly 30 layers for the given range */
+/**
+ * Choose a round contour interval for the contour-layers (Rayshader) mode.
+ * Targets ~30 layers — many layers = clear topo-model stack look.
+ */
 function niceContourInterval(range: number): number {
   const approx = range / 30
   const nice = [2, 5, 10, 20, 25, 50, 100, 150, 200, 250, 500, 1000]
+  return nice.find(v => v >= approx) ?? 1000
+}
+
+/**
+ * Choose a round contour interval for the realistic overlay lines.
+ * Targets ~15 lines and enforces a 10 m minimum so lines stay readable
+ * even on blurred flat terrain where the effective range is compressed.
+ */
+function niceContourOverlayInterval(range: number): number {
+  const approx = range / 15
+  const nice = [10, 20, 25, 50, 100, 150, 200, 250, 500, 1000]
   return nice.find(v => v >= approx) ?? 1000
 }
 
@@ -434,6 +559,7 @@ export class TerrainScene {
   private activeCamera: THREE.Camera
 
   private terrainMesh: THREE.Mesh | null = null
+  private rawElevGrid: ElevationGrid | null = null  // unblurred — used for river/route surface snapping
   private trailLine: Line2 | null = null
   private revealedLine: Line2 | null = null
   private revealedGlowLine: Line2 | null = null
@@ -446,6 +572,7 @@ export class TerrainScene {
   private baseElev = 0      // min elevation in terrain grid → terrain base sits at Y=0
   private terrainMidY = 0   // world-space Y of terrain mid-point (for camera lookAt)
   private contourInterval = 0  // elevation interval used in contour-layers mode
+  private gridElevMax = 0      // actual max elevation in terrain grid (for colour mapping)
 
   // Dynamic camera orientation — computed from actual route direction
   private routeDir      = new THREE.Vector3(0, 0, -1) // start → end direction (unit vector)
@@ -457,6 +584,11 @@ export class TerrainScene {
   private controls: OrbitControls
   private onControlsChange: (() => void) | null = null
   private currentConfig: TerrainAnimationConfig | null = null
+
+  // Post-processing
+  private composer: EffectComposer
+  private renderPass: RenderPass
+  private gtaoPass: GTAOPass
 
   constructor(canvas: HTMLCanvasElement, width: number, height: number) {
     this.width = width
@@ -483,6 +615,33 @@ export class TerrainScene {
     this.controls.maxPolarAngle = Math.PI * 0.85  // don't flip underground
 
     this.setupLighting()
+
+    // ── Post-processing: GTAO (Ground Truth Ambient Occlusion) ──────────────
+    // GTAO is the modern successor to SSAO. It darkens crevices and valleys
+    // based on how much of the hemisphere above each surface point is occluded
+    // by nearby geometry — giving the characteristic "soft, sculpted" look of
+    // Rayshader output.
+    this.composer  = new EffectComposer(this.renderer)
+    this.renderPass = new RenderPass(this.scene, this.perspCamera)
+    this.composer.addPass(this.renderPass)
+
+    this.gtaoPass = new GTAOPass(this.scene, this.perspCamera, width, height)
+    this.gtaoPass.updateGtaoMaterial({
+      radius:           25,   // world-unit sampling radius — larger = more global valley shadowing
+      distanceExponent: 2,    // quadratic falloff — natural, not too harsh
+      thickness:        1,    // thin-ridge clamp — stops AO bleeding across sharp ridges
+      distanceFallOff:  1,
+    })
+    this.gtaoPass.updatePdMaterial({
+      radius:         6,      // Poisson denoise kernel radius (pixels)
+      radiusExponent: 2,
+    })
+    this.gtaoPass.blendIntensity = 1.0
+    this.composer.addPass(this.gtaoPass)
+
+    // OutputPass converts the composer's internal linear colour buffer to sRGB
+    // so colours match what renderer.render() would produce without post-processing.
+    this.composer.addPass(new OutputPass())
   }
 
   /**
@@ -571,12 +730,8 @@ export class TerrainScene {
     // ── Fetch elevation grid ──
     console.log('[Terrain] fetching elevation grid for bounds:', { minLon, maxLon, minLat, maxLat })
     this.elevGrid = await fetchElevationGrid(minLon, maxLon, minLat, maxLat)
+    this.rawElevGrid = this.elevGrid  // keep unblurred copy for river/route snapping
     console.log('[Terrain] elevation grid fetched, size:', this.elevGrid.width, 'x', this.elevGrid.height)
-
-    // Gaussian blur to remove per-pixel noise (vegetation canopy, building edges).
-    // sigma=1.0 pixel smooths sub-20m noise while keeping real terrain features intact.
-    this.elevGrid = gaussianBlurGrid(this.elevGrid, 1.0)
-    console.log('[Terrain] gaussian blur applied (sigma=1.5), grid:', this.elevGrid.width, '×', this.elevGrid.height)
 
     // ── Calculate route elevation range (for terrainMidY) ──
     let minElev = Infinity, maxElev = -Infinity
@@ -595,11 +750,37 @@ export class TerrainScene {
       if (e > gridMaxElev) gridMaxElev = e
     }
     const gridElevRange = Math.max(gridMaxElev - gridMinElev, 100)
-    this.baseElev = Math.max(0, gridMinElev)
-    // Scale terrain so its relief spans ~22% of TERRAIN_SIZE at the reference range.
-    // We use Math.max(gridElevRange, 400) so flat terrain (small elevation range)
-    // doesn't get over-amplified into fake mountains — 400m is the minimum assumed range.
-    this.elevScale = (TERRAIN_SIZE * 0.22) / Math.max(gridElevRange, 400)
+    this.baseElev    = Math.max(0, gridMinElev)
+    this.gridElevMax = gridMaxElev
+
+    // ── Terrain data processing (mode-dependent) ──
+    //
+    // Realistic mode: Gaussian blur only.
+    //   Removes DSM noise (tree canopy, buildings, road embankments) while
+    //   keeping the continuous natural terrain shape. sigma=4 px = ~80–160 m
+    //   smoothing radius depending on zoom — enough to erase building-scale
+    //   artefacts without blurring real ridges and valleys.
+    //   No quantize step here: quantization introduces visible plateau banding
+    //   that makes realistic terrain look artificial.
+    //
+    // Contour-layers mode: quantize only.
+    //   Snaps every cell to the nearest lower contour level so that d3-contour
+    //   produces clean, well-defined polygon rings. The Chaikin smoothing
+    //   applied later handles any jagged marching-squares edges.
+    //   No blur here: blurring after quantize smears the sharp contour boundaries
+    //   and defeats the purpose of the stepped-layer aesthetic.
+    if (config.terrainRenderStyle === 'contour-layers') {
+      const quantizeInterval = adaptiveQuantizeInterval(gridElevRange)
+      this.elevGrid = contourQuantize(this.elevGrid, quantizeInterval)
+      console.log('[Terrain] contour-quantize (interval:', quantizeInterval, 'm) for contour-layers mode')
+    } else {
+      this.elevGrid = gaussianBlurGrid(this.elevGrid, 6.0)
+      console.log('[Terrain] Gaussian blur (sigma=6.0) for realistic mode')
+    }
+    // Scale terrain so its relief spans ~5% of TERRAIN_SIZE at the reference range.
+    // This keeps hills and valleys proportional to their real-world size —
+    // the old 22% made even moderate terrain look like extreme alpine peaks.
+    this.elevScale = (TERRAIN_SIZE * 0.05) / Math.max(gridElevRange, 400)
 
     // terrainMidY: world Y of the route's mid-elevation (camera looks at this height)
     const routeElevMid = (minElev + maxElev) / 2
@@ -609,19 +790,29 @@ export class TerrainScene {
     // ── Build terrain mesh ──
     this.buildTerrainMesh(config)
 
+    // ── Contour overlays (flat-map only) ──
+    if (config.terrainRenderStyle === 'flat-map') {
+      this.buildFlatContours(config)
+    }
+
     // ── Build route lines ──
     this.buildRouteLines(routePoints, config)
 
     // ── Build marker ──
     this.buildMarker(config)
 
-    // ── Geo overlays (realistic mode only) ──
-    if (config.terrainRenderStyle === 'realistic') {
+    // ── Geo overlays (realistic + flat-map) ──
+    if (config.terrainRenderStyle === 'realistic' || config.terrainRenderStyle === 'flat-map') {
       if (config.showPlaces) this.buildPlaces(config)
       if (config.showRivers) {
-        // Rivers are fetched async; update scene after terrain is already visible
+        // Rivers are fetched async; trigger a render once they arrive
         fetchTerrainRivers(minLon, maxLon, minLat, maxLat)
-          .then(ways => { if (ways.length > 0) this.buildRivers(ways, config) })
+          .then(ways => {
+            if (ways.length > 0) {
+              this.buildRivers(ways, config)
+              this.render()
+            }
+          })
           .catch(() => { /* ignore river fetch errors */ })
       }
     }
@@ -633,31 +824,45 @@ export class TerrainScene {
     this.positionCamera(config)
     this.syncControlsTarget()
 
-    // ── Clip plane: hides the far terrain edge behind the route end ──
-    // Camera is behind route start. The far edge (at +routeDir extreme) can look
-    // like a cliff wall framing the horizon. Clip it away cleanly.
-    const half = TERRAIN_SIZE * 0.5
-    const clipNormal = this.routeDir.clone().negate()
-    this.renderer.clippingPlanes = [new THREE.Plane(clipNormal, half - 30)]
-
-    // Set scene background + atmosphere fog
+    // Set scene background
     const bgHex = config.backgroundColor.startsWith('#') && config.backgroundColor.length === 9
       ? config.backgroundColor.slice(0, 7) : config.backgroundColor
     const bgColor = new THREE.Color(bgHex)
     this.scene.background = bgColor
-    this.scene.fog = new THREE.FogExp2(bgColor, 0.0008)
+
+    if (config.terrainRenderStyle === 'flat-map') {
+      // Flat map: no fog, no clip plane — show everything from above
+      this.scene.fog = null
+      this.renderer.clippingPlanes = []
+    } else {
+      // 3D modes: clip far terrain edge + atmosphere fog
+      const half = TERRAIN_SIZE * 0.5
+      const clipNormal = this.routeDir.clone().negate()
+      this.renderer.clippingPlanes = [new THREE.Plane(clipNormal, half - 30)]
+      this.scene.fog = new THREE.FogExp2(bgColor, 0.0008)
+    }
     console.log('[Terrain] load() complete, scene objects:', this.scene.children.length)
   }
 
   private buildTerrainMesh(config: TerrainAnimationConfig): void {
     if (!this.elevGrid || !this.sceneBounds) return
 
+    if (config.terrainRenderStyle === 'flat-map') return  // no mesh — flat map only
     if (config.terrainRenderStyle === 'contour-layers') {
       this.buildContourLayers(config)
       return
     }
 
-    const segments = config.terrainSegments
+    // Match mesh resolution to the elevation grid so every grid pixel gets its
+    // own mesh vertex. This eliminates the mismatch where contour lines (computed
+    // at full grid resolution) appear to cut through mesh faces or run vertically
+    // because the mesh had skipped the terrain features they're tracing.
+    // Cap at config.terrainSegments (user performance limit, default 512).
+    const segments = Math.min(
+      config.terrainSegments,
+      this.elevGrid.width - 1,
+      this.elevGrid.height - 1,
+    )
     const geometry = new THREE.PlaneGeometry(TERRAIN_SIZE, TERRAIN_SIZE, segments, segments)
     geometry.rotateX(-Math.PI / 2)
 
@@ -679,21 +884,14 @@ export class TerrainScene {
       if (y > maxY) maxY = y
     }
 
-    // Second pass: assign colors using a blend of absolute and relative elevation.
-    //
-    // - Absolute component (40%): maps real altitude against a 3500m reference so
-    //   flat low-elevation terrain stays green and snow only appears near 2000m+.
-    // - Relative component (60%): maps each vertex against the local mesh min/max,
-    //   giving full-range color contrast so valleys vs ridgelines are visually
-    //   distinct even on a 70m flat route — essential for landscape recognition.
+    // Second pass: assign colours using the anchored-window colour mapping.
+    // See computeTerrainColorT() for the rationale — this keeps lowland terrain
+    // green and only shows rock/snow at appropriate real-world altitudes.
     const worldScale = config.terrainExaggeration * this.elevScale
-    const ELEV_COLOR_REF = 3500
     for (let i = 0; i < positions.count; i++) {
-      const y = positions.getY(i)
+      const y    = positions.getY(i)
       const elev = worldScale > 0 ? y / worldScale + this.baseElev : this.baseElev
-      const absT = Math.max(0, Math.min(1, elev / ELEV_COLOR_REF))
-      const relT = maxY > minY ? (y - minY) / (maxY - minY) : 0
-      const normalizedH = absT * 0.4 + relT * 0.6
+      const normalizedH = computeTerrainColorT(elev, this.baseElev, this.gridElevMax)
       const color = getTerrainColor(normalizedH, config.terrainStyle)
       colors.push(color.r, color.g, color.b)
     }
@@ -744,18 +942,14 @@ export class TerrainScene {
 
     const worldScale   = config.terrainExaggeration * this.elevScale
     const layerDepth   = Math.max(interval * worldScale, 1)
-    const minY         = (gridMin - this.baseElev) * worldScale
-    const maxY         = (gridMax - this.baseElev) * worldScale
-    const ELEV_REF     = 3500
-
     for (const contour of contourData) {
       const threshold = contour.value
       const layerY    = (threshold - this.baseElev) * worldScale
 
-      // Color: 40% absolute altitude + 60% relative within grid for visual contrast
-      const absT = Math.max(0, Math.min(1, threshold / ELEV_REF))
-      const relT = maxY > minY ? (layerY - minY) / (maxY - minY) : 0
-      const color = getTerrainColor(absT * 0.4 + relT * 0.6, config.terrainStyle)
+      const color = getTerrainColor(
+        computeTerrainColorT(threshold, this.baseElev, this.gridElevMax),
+        config.terrainStyle,
+      )
 
       const mat = new THREE.MeshStandardMaterial({
         color: color.getHex(),
@@ -807,6 +1001,120 @@ export class TerrainScene {
     }
   }
 
+  /**
+   * Draws contour lines as thin Line2 objects that hug the terrain surface.
+   * Uses the same elevation grid and interval logic as buildContourLayers so
+   * the lines align exactly with the terrain mesh geometry.
+   */
+  private buildContourOverlay(config: TerrainAnimationConfig): void {
+    if (!this.elevGrid || !this.sceneBounds) return
+
+    const { data, width, height } = this.elevGrid
+
+    let gridMin = Infinity, gridMax = -Infinity
+    for (let i = 0; i < data.length; i++) {
+      if (data[i] < gridMin) gridMin = data[i]
+      if (data[i] > gridMax) gridMax = data[i]
+    }
+    const gridRange = Math.max(gridMax - gridMin, 1)
+    const interval  = niceContourOverlayInterval(gridRange)
+    console.log('[Terrain] contour overlay interval:', interval, 'm for range:', Math.round(gridRange), 'm')
+
+    const thresholds: number[] = []
+    let t0 = Math.floor(gridMin / interval) * interval
+    if (t0 < gridMin) t0 += interval
+    for (let t = t0; t <= gridMax; t += interval) thresholds.push(t)
+    if (thresholds.length === 0) return
+
+    const gen = d3Contours().size([width, height]).thresholds(thresholds)
+    const contourData = gen(Array.from(data))
+
+    for (const contour of contourData) {
+      for (const polygon of contour.coordinates) {
+        // Only outer ring — holes would just add noise
+        const ring = polygon[0]
+        if (ring.length < 4) continue
+
+        const smoothed = chaikinSmooth(ring as [number, number][], 3)
+
+        const points: THREE.Vector3[] = smoothed.map(([px, py]) => {
+          const [x, z] = gridPixelToWorld(px, py, width, height)
+          // Sample the BLURRED terrain elevation at this XZ position so the
+          // line sits exactly on the rendered terrain surface, not through it.
+          const lon = (x / TERRAIN_SIZE + 0.5) * this.sceneBounds!.lonRange + this.sceneBounds!.minLon
+          const lat = (-z / TERRAIN_SIZE + 0.5) * this.sceneBounds!.latRange + this.sceneBounds!.minLat
+          const elev = sampleElevation(lon, lat, this.elevGrid!)
+          const y = (elev - this.baseElev) * config.terrainExaggeration * this.elevScale + 1.5
+          return new THREE.Vector3(x, y, z)
+        })
+
+        if (points.length < 2) continue
+        const line = this.makeLine2(points, '#ffffff', 1, config.contourLineOpacity)
+        this.scene.add(line)
+      }
+    }
+  }
+
+  /**
+   * Flat-map mode: draws contour lines at a fixed 5 m interval on a flat XZ plane.
+   * Uses the raw (pre-blur) elevation grid so small terrain features survive at 5 m detail.
+   * All lines sit at Y = 1 (just above the flat background).
+   */
+  private buildFlatContours(config: TerrainAnimationConfig): void {
+    const grid = this.rawElevGrid ?? this.elevGrid
+    if (!grid || !this.sceneBounds) return
+
+    const { data, width, height } = grid
+
+    let gridMin = Infinity, gridMax = -Infinity
+    for (let i = 0; i < data.length; i++) {
+      if (data[i] < gridMin) gridMin = data[i]
+      if (data[i] > gridMax) gridMax = data[i]
+    }
+
+    const interval = 5  // fixed 5 m as requested
+    const thresholds: number[] = []
+    let t0 = Math.ceil(gridMin / interval) * interval
+    for (let t = t0; t <= gridMax; t += interval) thresholds.push(t)
+    if (thresholds.length === 0) return
+    console.log('[FlatMap] contour lines:', thresholds.length, 'at 5m interval, range:', Math.round(gridMax - gridMin), 'm')
+
+    const gen = d3Contours().size([width, height]).thresholds(thresholds)
+    const contourData = gen(Array.from(data))
+
+    for (const contour of contourData) {
+      // Index contours every 25 m are slightly brighter
+      const isIndex = contour.value % 25 === 0
+      const opacity = isIndex ? 0.7 : 0.35
+      const linewidth = isIndex ? 1.2 : 0.7
+
+      for (const polygon of contour.coordinates) {
+        const ring = polygon[0]
+        if (ring.length < 4) continue
+
+        const smoothed = chaikinSmooth(ring as [number, number][], 2)
+
+        // Convert grid-pixel coordinates to geographic coordinates using the
+        // ACTUAL tile bounds, then to world XZ using sceneBounds.
+        // gridPixelToWorld() assumes the grid fills exactly ±500 world units,
+        // but tile boundaries extend slightly beyond sceneBounds — this causes
+        // rivers (which use geoToFlat with sceneBounds) to be misaligned with
+        // contour lines that used gridPixelToWorld. The two-step conversion
+        // below fixes the alignment.
+        const gb = grid.bounds
+        const contourY = elevToFlatY(contour.value, this.baseElev, config.terrainExaggeration, this.elevScale)
+        const points: THREE.Vector3[] = smoothed.map(([cx, cy]) => {
+          const lon = gb.minLon + (cx / (width  - 1)) * (gb.maxLon - gb.minLon)
+          const lat = gb.maxLat - (cy / (height - 1)) * (gb.maxLat - gb.minLat)
+          return geoToFlat(lon, lat, contourY, this.sceneBounds!)
+        })
+
+        if (points.length < 2) continue
+        this.scene.add(this.makeLine2(points, '#c8b98a', linewidth, opacity))
+      }
+    }
+  }
+
   private buildRouteLines(routePoints: RoutePoint[], config: TerrainAnimationConfig): void {
     if (!this.elevGrid || !this.sceneBounds) return
 
@@ -814,6 +1122,11 @@ export class TerrainScene {
     // Contour-layers mode: snap to the top face of the correct layer (tiny +3 offset).
     // Realistic mode: lift +30 to clear the mesh polygon faces (z-fighting prevention).
     this.allRoute3D = routePoints.map(p => {
+      if (config.terrainRenderStyle === 'flat-map') {
+        const elev = sampleElevation(p.lon, p.lat, this.rawElevGrid ?? this.elevGrid!)
+        const y = elevToFlatY(elev, this.baseElev, config.terrainExaggeration, this.elevScale)
+        return geoToFlat(p.lon, p.lat, y + 2, this.sceneBounds!)
+      }
       let elev: number
       if (config.terrainRenderStyle === 'contour-layers' && this.contourInterval > 0) {
         // Use terrain grid elevation (same source as contour layers) for snapping —
@@ -835,10 +1148,6 @@ export class TerrainScene {
       }
       return geoToWorld(p.lon, p.lat, elev, this.sceneBounds!, config.terrainExaggeration, this.elevScale, this.baseElev)
     })
-
-    // Full route trail — visible even before animation starts (progress=0)
-    this.trailLine = this.makeLine2(this.allRoute3D, config.routeColor, config.routeWidth * 1.0, 0.55)
-    this.scene.add(this.trailLine)
 
     // Revealed route (bright, animated)
     this.revealedLine = this.makeLine2([], config.routeColor, config.routeWidth, 1.0)
@@ -882,8 +1191,13 @@ export class TerrainScene {
           n.lat >= this.sceneBounds!.minLat && n.lat <= this.sceneBounds!.maxLat,
         )
         .map(n => {
-          const elev = sampleElevation(n.lon, n.lat, this.elevGrid!)
-          const elevAdj = elev + 5 / worldScale   // 5 world units above terrain
+          if (config.terrainRenderStyle === 'flat-map') {
+            const elev = sampleElevationMin(n.lon, n.lat, this.rawElevGrid ?? this.elevGrid!)
+            const y = elevToFlatY(elev, this.baseElev, config.terrainExaggeration, this.elevScale)
+            return geoToFlat(n.lon, n.lat, y + 1, this.sceneBounds!)
+          }
+          const elev = sampleElevationMin(n.lon, n.lat, this.rawElevGrid ?? this.elevGrid!)
+          const elevAdj = elev + 10 / worldScale
           return geoToWorld(n.lon, n.lat, elevAdj, this.sceneBounds!, config.terrainExaggeration, this.elevScale, this.baseElev)
         })
 
@@ -913,10 +1227,17 @@ export class TerrainScene {
     const MIN_SPACING = 80
     const selected: Array<CityPoint & { wx: number; wz: number }> = []
 
+    const isFlat = config.terrainRenderStyle === 'flat-map'
+
     for (const city of cities) {
       if (selected.length >= 15) break
-      const elev = sampleElevation(city.lon, city.lat, this.elevGrid!)
-      const pos = geoToWorld(city.lon, city.lat, elev, sb, config.terrainExaggeration, this.elevScale, this.baseElev)
+      const pos = isFlat
+        ? (() => {
+            const elev = sampleElevation(city.lon, city.lat, this.rawElevGrid ?? this.elevGrid!)
+            const y = elevToFlatY(elev, this.baseElev, config.terrainExaggeration, this.elevScale)
+            return geoToFlat(city.lon, city.lat, y + 3, sb)
+          })()
+        : geoToWorld(city.lon, city.lat, sampleElevation(city.lon, city.lat, this.elevGrid!), sb, config.terrainExaggeration, this.elevScale, this.baseElev)
       const tooClose = selected.some(s => {
         const dx = s.wx - pos.x, dz = s.wz - pos.z
         return Math.sqrt(dx * dx + dz * dz) < MIN_SPACING
@@ -926,11 +1247,18 @@ export class TerrainScene {
 
     for (const city of selected) {
       const t = Math.sqrt((city.pop ?? 0) / maxPop)
-      const dotRadius = 3 + t * 5    // 3–8 world units
+      const dotRadius = 3 + t * 5
 
-      const elev = sampleElevation(city.lon, city.lat, this.elevGrid!)
-      const elevAdj = elev + (dotRadius + 5) / worldScale
-      const pos = geoToWorld(city.lon, city.lat, elevAdj, sb, config.terrainExaggeration, this.elevScale, this.baseElev)
+      const pos = isFlat
+        ? (() => {
+            const elev = sampleElevation(city.lon, city.lat, this.rawElevGrid ?? this.elevGrid!)
+            const y = elevToFlatY(elev, this.baseElev, config.terrainExaggeration, this.elevScale)
+            return geoToFlat(city.lon, city.lat, y + 3, sb)
+          })()
+        : (() => {
+            const elev = sampleElevation(city.lon, city.lat, this.elevGrid!)
+            return geoToWorld(city.lon, city.lat, elev + (dotRadius + 5) / worldScale, sb, config.terrainExaggeration, this.elevScale, this.baseElev)
+          })()
 
       // Dot marker
       const geo = new THREE.SphereGeometry(dotRadius, 8, 6)
@@ -940,7 +1268,7 @@ export class TerrainScene {
       this.scene.add(sphere)
 
       // Billboard label
-      const fontSize = Math.round(22 + t * 12)  // 22–34px
+      const fontSize = Math.round(22 + t * 12)
       const sprite = makeTextSprite(city.name, fontSize)
       sprite.position.set(pos.x, pos.y + dotRadius + 18, pos.z)
       this.scene.add(sprite)
@@ -1044,13 +1372,69 @@ export class TerrainScene {
                 'lookAt:', cx.toFixed(0), lookAtY.toFixed(0), cz.toFixed(0),
                 'routeDir:', this.routeDir.x.toFixed(2), this.routeDir.z.toFixed(2))
 
+    if (config.terrainRenderStyle === 'flat-map') {
+      // Isometric map view — orthographic camera at 35° elevation, north roughly up.
+      //
+      // Elevation angle: 35° above the horizontal plane gives a classic ISO look
+      // (less steep than 45° top-down, more readable than 20° oblique).
+      //
+      // OrbitControls is switched to the orthoCamera so mouse/touch interaction
+      // actually moves the visible camera (not the unused perspCamera).
+      const elevAngle  = 65 * Math.PI / 180
+      const dist       = 2000
+      const camY       = dist * Math.sin(elevAngle)   // vertical component
+      const camHoriz   = dist * Math.cos(elevAngle)   // southward offset
+
+      // Frustum: wide enough to frame the full terrain with a small margin
+      const halfW = TERRAIN_SIZE * 0.52
+      const halfH = halfW * (this.height / this.width)
+      this.orthoCamera.left   = -halfW
+      this.orthoCamera.right  =  halfW
+      this.orthoCamera.top    =  halfH
+      this.orthoCamera.bottom = -halfH
+
+      this.activeCamera  = this.orthoCamera
+      this.controls.object = this.orthoCamera  // hand control to the ortho cam
+
+      // Camera sits south of the map centre, elevated at 35° — looks toward north.
+      // Standard up (0,1,0) keeps north at the top of the screen naturally.
+      this.orthoCamera.up.set(0, 1, 0)
+      this.orthoCamera.position.set(cx, camY, cz + camHoriz)
+      this.orthoCamera.lookAt(cx, 0, cz)
+      this.orthoCamera.updateProjectionMatrix()
+
+      // Tighten controls for map feel: less damping, screen-space panning
+      this.controls.dampingFactor = 0.25
+      this.controls.screenSpacePanning = true
+      this.controls.rotateSpeed = 0.6
+      this.controls.zoomSpeed = 1.2
+
+      // Target at mid-elevation so orbiting feels centred on the terrain
+      const midY = (this.gridElevMax > this.baseElev)
+        ? elevToFlatY((this.baseElev + this.gridElevMax) / 2, this.baseElev, config.terrainExaggeration, this.elevScale)
+        : 0
+      this.controls.target.set(cx, midY, cz)
+      this.controls.minPolarAngle = 0
+      this.controls.maxPolarAngle = Math.PI
+      this.controls.update()
+      this.controls.enabled = true
+      return
+    } else {
+      // Restore 3-D mode control settings
+      this.controls.object = this.perspCamera
+      this.controls.dampingFactor = 0.08
+      this.controls.screenSpacePanning = false
+      this.controls.rotateSpeed = 1.0
+      this.controls.zoomSpeed = 1.0
+    }
+
     if (config.cameraMode === 'overview-iso') {
       this.activeCamera = this.orthoCamera
       this.orthoCamera.position.set(camX, camY, camZ)
       this.orthoCamera.lookAt(lookAt)
       this.orthoCamera.updateProjectionMatrix()
       this.controls.enabled = true
-    } else if (config.cameraMode === 'chase') {
+    } else if (config.cameraMode === 'chase' && config.terrainRenderStyle !== 'flat-map') {
       // Chase mode: camera will be updated per-frame in setProgress()
       // Disable OrbitControls — the chase camera owns the transform
       this.activeCamera = this.perspCamera
@@ -1146,6 +1530,7 @@ export class TerrainScene {
     this.width = width
     this.height = height
     this.renderer.setSize(width, height, false)
+    this.composer.setSize(width, height)
     this.perspCamera.aspect = width / height
     this.perspCamera.updateProjectionMatrix()
 
@@ -1159,14 +1544,39 @@ export class TerrainScene {
     if (line) (line.material as LineMaterial).resolution.set(w, h)
   }
 
-  /** Render one frame */
+  /** Render one frame (via EffectComposer + GTAO post-processing) */
   render(): void {
-    this.renderer.render(this.scene, this.activeCamera)
+    // Sync camera into both passes whenever the active camera changes
+    this.renderPass.camera = this.activeCamera
+    this.gtaoPass.camera   = this.activeCamera
+    this.composer.render()
   }
 
   /** Get the underlying canvas element */
   get canvas(): HTMLCanvasElement {
     return this.renderer.domElement
+  }
+
+  /** Returns the current camera elevation angle (0° = horizontal, 90° = top-down) and compass direction. */
+  getCameraInfo(): { elevationDeg: number; azimuthDeg: number; compassDir: string } {
+    const cam = this.activeCamera
+    const target = this.controls.target
+
+    const dx = target.x - cam.position.x
+    const dy = target.y - cam.position.y
+    const dz = target.z - cam.position.z
+
+    const horizontal = Math.sqrt(dx * dx + dz * dz)
+    const elevationDeg = Math.round(Math.atan2(-dy, horizontal) * 180 / Math.PI)
+
+    // Azimuth: angle of look direction from north (−Z axis), clockwise
+    const azimuthRad = Math.atan2(dx, -dz)
+    const azimuthDeg = Math.round((azimuthRad * 180 / Math.PI + 360) % 360)
+
+    const dirs = ['N', 'NO', 'O', 'SO', 'S', 'SW', 'W', 'NW']
+    const compassDir = dirs[Math.round(azimuthDeg / 45) % 8]
+
+    return { elevationDeg, azimuthDeg, compassDir }
   }
 
   private clearScene(): void {
@@ -1185,6 +1595,7 @@ export class TerrainScene {
       }
     })
     this.terrainMesh = null
+    this.rawElevGrid = null
     this.trailLine = null
     this.revealedLine = null
     this.revealedGlowLine = null
@@ -1199,6 +1610,8 @@ export class TerrainScene {
   dispose(): void {
     this.clearScene()
     this.controls.dispose()
+    this.gtaoPass.dispose()
+    this.composer.dispose()
     this.renderer.dispose()
   }
 }

@@ -11,6 +11,9 @@
               :style="{ height: `${terrainRatio * 100}%` }"
             >
               <canvas ref="threeCanvas" class="terrain-canvas" />
+              <div v-if="animationConfig.terrainRenderStyle === 'flat-map'" class="camera-info-overlay">
+                <span class="camera-info-chip">{{ cameraInfo.compassDir }} · {{ cameraInfo.elevationDeg }}°</span>
+              </div>
               <div v-if="isLoading" class="terrain-loading">
                 <v-progress-circular indeterminate color="primary" size="48" />
                 <div class="text-caption text-white mt-2">Geländedaten werden geladen…</div>
@@ -122,6 +125,7 @@ const emit = defineEmits<{
 const controlsCollapsed = ref(false)
 const sliderProgress = ref(0)
 const isLoading = ref(false)
+const cameraInfo = ref({ elevationDeg: 65, azimuthDeg: 180, compassDir: 'S' })
 const showExportDialog = ref(false)
 const showExportSettingsDialog = ref(false)
 
@@ -249,8 +253,9 @@ async function initScene(): Promise<void> {
     isLoading.value = false
   }
 
-  // Render on camera drag even when animation is paused
+  // Render on camera drag even when animation is paused; update camera info overlay
   terrainScene.setControlsChangeCallback(() => {
+    cameraInfo.value = terrainScene!.getCameraInfo()
     if (!isPlaying.value) terrainScene!.render()
   })
 
@@ -479,6 +484,27 @@ function closeExportDialog() {
   display: block;
   width: 100% !important;
   height: 100% !important;
+}
+
+.camera-info-overlay {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.camera-info-chip {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 11px;
+  font-family: monospace;
+  letter-spacing: 0.04em;
+  border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .terrain-loading {

@@ -4,7 +4,7 @@
 
 export type TerrainStyle = 'dark' | 'alpine' | 'desert' | 'topo'
 export type TerrainCameraMode = 'overview-iso' | 'overview-perspective' | 'chase'
-export type TerrainRenderStyle = 'realistic' | 'contour-layers'
+export type TerrainRenderStyle = 'realistic' | 'contour-layers' | 'flat-map'
 
 export interface TerrainAnimationConfig {
   // Playback
@@ -46,6 +46,10 @@ export interface TerrainAnimationConfig {
   // Geo overlays (realistic mode only)
   showRivers: boolean
   showPlaces: boolean
+
+  // Contour line overlay (realistic mode only)
+  showContourLines: boolean
+  contourLineOpacity: number
 }
 
 export const DEFAULT_TERRAIN_ANIMATION_CONFIG: TerrainAnimationConfig = {
@@ -60,10 +64,10 @@ export const DEFAULT_TERRAIN_ANIMATION_CONFIG: TerrainAnimationConfig = {
   cameraElevationAngle: 45,
   cameraDistance: 1.0,
 
-  terrainRenderStyle: 'contour-layers',
+  terrainRenderStyle: 'flat-map',
   terrainStyle: 'alpine',
   terrainExaggeration: 2.5,
-  terrainSegments: 256,
+  terrainSegments: 512,
 
   routeColor: '#ff5500',
   routeWidth: 14,
@@ -80,4 +84,7 @@ export const DEFAULT_TERRAIN_ANIMATION_CONFIG: TerrainAnimationConfig = {
 
   showRivers: true,
   showPlaces: true,
+
+  showContourLines: true,
+  contourLineOpacity: 0.35,
 }
