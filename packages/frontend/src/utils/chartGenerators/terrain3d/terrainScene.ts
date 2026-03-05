@@ -150,6 +150,53 @@ async function fetchElevationGrid(
   }
 }
 
+interface SatelliteGrid {
+  canvas: OffscreenCanvas
+  bounds: ElevationGrid['bounds']
+}
+
+async function fetchSatelliteGrid(
+  minLon: number, maxLon: number, minLat: number, maxLat: number,
+): Promise<SatelliteGrid | null> {
+  const latSpan = maxLat - minLat
+  const lonSpan = maxLon - minLon
+  const zoom  = chooseZoom(latSpan, lonSpan)
+  const tiles = getTilesForBounds(minLon, maxLon, minLat, maxLat, zoom)
+  if (tiles.length === 0) return null
+
+  const tileSize = 256
+  const minTX = Math.min(...tiles.map(t => t.x))
+  const maxTX = Math.max(...tiles.map(t => t.x))
+  const minTY = Math.min(...tiles.map(t => t.y))
+  const maxTY = Math.max(...tiles.map(t => t.y))
+  const gridW  = (maxTX - minTX + 1) * tileSize
+  const gridH  = (maxTY - minTY + 1) * tileSize
+
+  const canvas = new OffscreenCanvas(gridW, gridH)
+  const ctx    = canvas.getContext('2d')!
+
+  // Esri World Imagery URL format: {z}/{row}/{col} = {z}/{y}/{x}
+  await Promise.all(tiles.map(async t => {
+    try {
+      const res = await fetch(`/satellite-tiles/${t.z}/${t.y}/${t.x}`)
+      if (!res.ok) return
+      const blob   = await res.blob()
+      const bitmap = await createImageBitmap(blob)
+      const ox = (t.x - minTX) * tileSize
+      const oy = (t.y - minTY) * tileSize
+      ctx.drawImage(bitmap, ox, oy)
+      bitmap.close()
+    } catch { /* skip failed tiles */ }
+  }))
+
+  const tl = tileBounds({ z: zoom, x: minTX, y: minTY })
+  const br = tileBounds({ z: zoom, x: maxTX, y: maxTY })
+  return {
+    canvas,
+    bounds: { minLon: tl.minLon, maxLon: br.maxLon, minLat: br.minLat, maxLat: tl.maxLat },
+  }
+}
+
 function sampleElevation(lon: number, lat: number, grid: ElevationGrid): number {
   const { data, width, height, bounds } = grid
   const nx = (lon - bounds.minLon) / (bounds.maxLon - bounds.minLon)
@@ -585,6 +632,11 @@ export class TerrainScene {
   private onControlsChange: (() => void) | null = null
   private currentConfig: TerrainAnimationConfig | null = null
 
+  // Smoothed chase camera state — lerped each frame to avoid snapping
+  private chasePos        = new THREE.Vector3()
+  private chaseTarget     = new THREE.Vector3()
+  private chaseReady      = false   // false = snap on first frame, then lerp
+
   // Post-processing
   private composer: EffectComposer
   private renderPass: RenderPass
@@ -727,10 +779,17 @@ export class TerrainScene {
     }
     this.sceneBounds = sceneBounds
 
-    // ── Fetch elevation grid ──
-    console.log('[Terrain] fetching elevation grid for bounds:', { minLon, maxLon, minLat, maxLat })
-    this.elevGrid = await fetchElevationGrid(minLon, maxLon, minLat, maxLat)
-    this.rawElevGrid = this.elevGrid  // keep unblurred copy for river/route snapping
+    // ── Fetch elevation + satellite tiles in parallel ──
+    console.log('[Terrain] fetching elevation + satellite tiles for bounds:', { minLon, maxLon, minLat, maxLat })
+    const fetchSat = config.terrainRenderStyle === 'realistic'
+      ? fetchSatelliteGrid(minLon, maxLon, minLat, maxLat)
+      : Promise.resolve(null)
+    const [elevGrid, satGrid] = await Promise.all([
+      fetchElevationGrid(minLon, maxLon, minLat, maxLat),
+      fetchSat,
+    ])
+    this.elevGrid    = elevGrid
+    this.rawElevGrid = elevGrid  // keep unblurred copy for river/route snapping
     console.log('[Terrain] elevation grid fetched, size:', this.elevGrid.width, 'x', this.elevGrid.height)
 
     // ── Calculate route elevation range (for terrainMidY) ──
@@ -788,7 +847,7 @@ export class TerrainScene {
     console.log('[Terrain] baseElev:', this.baseElev, 'gridElevRange:', gridElevRange, 'terrainMidY:', this.terrainMidY, 'elevScale:', this.elevScale)
 
     // ── Build terrain mesh ──
-    this.buildTerrainMesh(config)
+    this.buildTerrainMesh(config, satGrid)
 
     // ── Contour overlays (flat-map only) ──
     if (config.terrainRenderStyle === 'flat-map') {
@@ -844,7 +903,7 @@ export class TerrainScene {
     console.log('[Terrain] load() complete, scene objects:', this.scene.children.length)
   }
 
-  private buildTerrainMesh(config: TerrainAnimationConfig): void {
+  private buildTerrainMesh(config: TerrainAnimationConfig, satGrid: SatelliteGrid | null = null): void {
     if (!this.elevGrid || !this.sceneBounds) return
 
     if (config.terrainRenderStyle === 'flat-map') return  // no mesh — flat map only
@@ -853,11 +912,6 @@ export class TerrainScene {
       return
     }
 
-    // Match mesh resolution to the elevation grid so every grid pixel gets its
-    // own mesh vertex. This eliminates the mismatch where contour lines (computed
-    // at full grid resolution) appear to cut through mesh faces or run vertically
-    // because the mesh had skipped the terrain features they're tracing.
-    // Cap at config.terrainSegments (user performance limit, default 512).
     const segments = Math.min(
       config.terrainSegments,
       this.elevGrid.width - 1,
@@ -867,44 +921,61 @@ export class TerrainScene {
     geometry.rotateX(-Math.PI / 2)
 
     const positions = geometry.attributes.position
+    const useSatellite = satGrid !== null
     const colors: number[] = []
-    let minY = Infinity, maxY = -Infinity
+    const uvs: number[]    = []
 
-    // First pass: set y positions
+    const sb = this.sceneBounds!
+    const tb = satGrid?.bounds  // tile bounds (slightly larger than sceneBounds)
+
     for (let i = 0; i < positions.count; i++) {
       const x = positions.getX(i)
       const z = positions.getZ(i)
-      // Map x,z back to lon,lat
-      const lon = (x / TERRAIN_SIZE + 0.5) * this.sceneBounds!.lonRange + this.sceneBounds!.minLon
-      const lat = (-z / TERRAIN_SIZE + 0.5) * this.sceneBounds!.latRange + this.sceneBounds!.minLat
+
+      const lon = (x / TERRAIN_SIZE + 0.5) * sb.lonRange + sb.minLon
+      const lat = (-z / TERRAIN_SIZE + 0.5) * sb.latRange + sb.minLat
+
+      // Elevation
       const elev = sampleElevation(lon, lat, this.elevGrid!)
-      const y = (elev - this.baseElev) * config.terrainExaggeration * this.elevScale
-      positions.setY(i, y)
-      if (y < minY) minY = y
-      if (y > maxY) maxY = y
+      positions.setY(i, (elev - this.baseElev) * config.terrainExaggeration * this.elevScale)
+
+      if (useSatellite && tb) {
+        // UV: map lon/lat into the satellite tile canvas (roughly equirectangular
+        // over the small area of a single route — error < 0.5% at mid-latitudes)
+        const u = (lon - tb.minLon) / (tb.maxLon - tb.minLon)
+        const v = (tb.maxLat - lat) / (tb.maxLat - tb.minLat)
+        uvs.push(u, v)
+      } else {
+        // Fallback: vertex colours
+        const worldScale = config.terrainExaggeration * this.elevScale
+        const e = worldScale > 0 ? positions.getY(i) / worldScale + this.baseElev : this.baseElev
+        const color = getTerrainColor(computeTerrainColorT(e, this.baseElev, this.gridElevMax), config.terrainStyle)
+        colors.push(color.r, color.g, color.b)
+      }
     }
 
-    // Second pass: assign colours using the anchored-window colour mapping.
-    // See computeTerrainColorT() for the rationale — this keeps lowland terrain
-    // green and only shows rock/snow at appropriate real-world altitudes.
-    const worldScale = config.terrainExaggeration * this.elevScale
-    for (let i = 0; i < positions.count; i++) {
-      const y    = positions.getY(i)
-      const elev = worldScale > 0 ? y / worldScale + this.baseElev : this.baseElev
-      const normalizedH = computeTerrainColorT(elev, this.baseElev, this.gridElevMax)
-      const color = getTerrainColor(normalizedH, config.terrainStyle)
-      colors.push(color.r, color.g, color.b)
-    }
-
-    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
     geometry.computeVertexNormals()
 
-    const material = new THREE.MeshStandardMaterial({
-      vertexColors: true,
-      roughness: 0.88,
-      metalness: 0.0,
-      side: THREE.FrontSide,
-    })
+    let material: THREE.MeshStandardMaterial
+    if (useSatellite) {
+      geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2))
+      const texture = new THREE.CanvasTexture(satGrid!.canvas as unknown as HTMLCanvasElement)
+      texture.colorSpace = THREE.SRGBColorSpace
+      material = new THREE.MeshStandardMaterial({
+        map: texture,
+        roughness: 0.92,
+        metalness: 0.0,
+        side: THREE.FrontSide,
+      })
+    } else {
+      geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
+      material = new THREE.MeshStandardMaterial({
+        vertexColors: true,
+        roughness: 0.88,
+        metalness: 0.0,
+        side: THREE.FrontSide,
+      })
+    }
 
     this.terrainMesh = new THREE.Mesh(geometry, material)
     this.scene.add(this.terrainMesh)
@@ -1140,11 +1211,11 @@ export class TerrainScene {
         const worldScale = config.terrainExaggeration * this.elevScale
         elev = snapped + this.contourInterval + 3 / worldScale
       } else {
-        // Realistic mode: sit 5 world units above the sampled terrain surface.
-        // +5 world units prevents z-fighting without visible floating.
+        // Realistic mode: sit just above the sampled terrain surface.
+        // Small offset prevents z-fighting without visible floating.
         const terrainElev = sampleElevation(p.lon, p.lat, this.elevGrid!)
         const worldScale = config.terrainExaggeration * this.elevScale
-        elev = Math.max(terrainElev, p.elevation) + 5 / worldScale
+        elev = Math.max(terrainElev, p.elevation) + 1.5 / worldScale
       }
       return geoToWorld(p.lon, p.lat, elev, this.sceneBounds!, config.terrainExaggeration, this.elevScale, this.baseElev)
     })
@@ -1197,7 +1268,7 @@ export class TerrainScene {
             return geoToFlat(n.lon, n.lat, y + 1, this.sceneBounds!)
           }
           const elev = sampleElevationMin(n.lon, n.lat, this.rawElevGrid ?? this.elevGrid!)
-          const elevAdj = elev + 10 / worldScale
+          const elevAdj = elev + 1.5 / worldScale
           return geoToWorld(n.lon, n.lat, elevAdj, this.sceneBounds!, config.terrainExaggeration, this.elevScale, this.baseElev)
         })
 
@@ -1451,41 +1522,62 @@ export class TerrainScene {
 
   /**
    * Chase camera — called every frame in setProgress() when mode === 'chase'.
-   * Positions the camera behind and above the current route point,
-   * looking forward toward the next segment.
+   *
+   * Desired position is computed behind + above the current point, then
+   * smoothly interpolated (lerped) toward that target each frame. This removes
+   * the jitter that occurs when route points are unevenly spaced, and gives
+   * the cinematic "weight" of a real camera following a subject.
+   *
+   * Two separate lerp speeds:
+   *   - Position: 0.07 — slightly lazy, gives the trailing feel
+   *   - LookAt target: 0.12 — a bit snappier so the camera always faces ahead
    */
   private updateChaseCamera(idx: number): void {
-    const pts = this.allRoute3D
+    const pts    = this.allRoute3D
     const config = this.currentConfig
     if (pts.length < 2 || !config) return
 
     const current = pts[idx]
 
-    // Look ahead 6% of route (min 3 points) to compute travel direction
-    const lookahead = Math.max(3, Math.round(pts.length * 0.06))
+    // Look-ahead: 8% of route for direction (smooths sharp corners)
+    const lookahead = Math.max(4, Math.round(pts.length * 0.08))
     const aheadIdx  = Math.min(pts.length - 1, idx + lookahead)
     const ahead     = pts[aheadIdx]
 
-    // Horizontal travel direction (XZ plane)
     const dx  = ahead.x - current.x
     const dz  = ahead.z - current.z
     const len = Math.sqrt(dx * dx + dz * dz)
-    if (len < 0.5) return   // barely moving — keep last camera
+    if (len < 0.5) return
 
     const dirX = dx / len
     const dirZ = dz / len
 
-    // Camera: behind current point, elevated
-    const camBack   = 120 * config.cameraDistance
-    const camHeight = 60 + (config.cameraElevationAngle - 45) * 2
+    // Desired camera position: behind and above current point
+    const camBack   = 100 * config.cameraDistance
+    const camHeight = 50 + (config.cameraElevationAngle - 45) * 1.5
 
-    const camX = current.x - dirX * camBack
-    const camY = current.y + camHeight
-    const camZ = current.z - dirZ * camBack
+    const desiredPos = new THREE.Vector3(
+      current.x - dirX * camBack,
+      current.y + camHeight,
+      current.z - dirZ * camBack,
+    )
 
-    // Look slightly above the ahead point so the route horizon is visible
-    this.perspCamera.position.set(camX, camY, camZ)
-    this.perspCamera.lookAt(ahead.x, ahead.y + 20, ahead.z)
+    // Desired look-at: slightly above the ahead point for a natural horizon
+    const desiredTarget = new THREE.Vector3(ahead.x, ahead.y + 15, ahead.z)
+
+    if (!this.chaseReady) {
+      // First frame: snap directly so there's no initial slide-in
+      this.chasePos.copy(desiredPos)
+      this.chaseTarget.copy(desiredTarget)
+      this.chaseReady = true
+    } else {
+      // Subsequent frames: lerp toward desired
+      this.chasePos.lerp(desiredPos, 0.07)
+      this.chaseTarget.lerp(desiredTarget, 0.12)
+    }
+
+    this.perspCamera.position.copy(this.chasePos)
+    this.perspCamera.lookAt(this.chaseTarget)
     this.perspCamera.updateProjectionMatrix()
   }
 
@@ -1596,6 +1688,7 @@ export class TerrainScene {
     })
     this.terrainMesh = null
     this.rawElevGrid = null
+    this.chaseReady  = false
     this.trailLine = null
     this.revealedLine = null
     this.revealedGlowLine = null

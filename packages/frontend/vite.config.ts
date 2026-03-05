@@ -23,6 +23,11 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path: string) => path.replace(/^\/overpass/, ''),
       },
+      '/satellite-tiles': {
+        target: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile',
+        changeOrigin: true,
+        rewrite: (path: string) => path.replace(/^\/satellite-tiles/, ''),
+      },
     },
   },
   optimizeDeps: {
