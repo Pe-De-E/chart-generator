@@ -21,8 +21,8 @@ import { calculateMapCameraViewport, DEFAULT_MAP_CAMERA_CONFIG } from './mapCame
 import { getMarkerPosition } from '../elevationChart/animation'
 import {
   gpxToViewBox,
-  pointsToPolyline,
-  pointsToAreaPolygon,
+  pointsToSmoothPath,
+  pointsToSmoothAreaPath,
   type GPXPoint,
   type ViewBoxConfig,
   type ViewBoxPoint,
@@ -765,8 +765,8 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     const offsetPoints = viewBoxPoints.map(p => ({ ...p, y: p.y + mapHeight }))
     const offsetChartArea = { ...elevChartArea, y: elevChartArea.y + mapHeight }
 
-    const linePoints = pointsToPolyline(offsetPoints)
-    const areaPath = pointsToAreaPolygon(offsetPoints, offsetChartArea)
+    const smoothLinePath = pointsToSmoothPath(offsetPoints)
+    const smoothAreaPath = pointsToSmoothAreaPath(offsetPoints, offsetChartArea)
 
     const elevGradientId = 'combined-elev-gradient'
     const elevClipId = 'combined-elev-clip'
@@ -813,11 +813,11 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
       curveElements = `${coloredArea}\n${coloredLine}`
     } else {
       const areaFillElement = showAreaFill
-        ? `<polygon points="${areaPath}" fill="url(#${elevGradientId})"/>`
+        ? `<path d="${smoothAreaPath}" fill="url(#${elevGradientId})"/>`
         : ''
       curveElements = `${areaFillElement}
-        <polyline points="${linePoints}" fill="none" stroke="${curveColor}"
-                  stroke-width="${strokeWidth}" stroke-linejoin="round" stroke-linecap="round"/>`
+        <path d="${smoothLinePath}" fill="none" stroke="${curveColor}"
+              stroke-width="${strokeWidth}" stroke-linejoin="round" stroke-linecap="round"/>`
     }
 
     elevContent = `

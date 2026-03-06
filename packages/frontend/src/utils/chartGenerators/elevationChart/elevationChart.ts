@@ -2,8 +2,8 @@ import type { ChartOptions } from '@chart-generator/shared'
 import { renderStatisticalOverlays, hasAnyOverlayEnabled } from '../statisticalOverlayRenderer'
 import {
   gpxToViewBox,
-  pointsToPolyline,
-  pointsToAreaPolygon,
+  pointsToSmoothPath,
+  pointsToSmoothAreaPath,
   getChartArea,
   VIEW_BOX_PRESETS,
   type GPXPoint,
@@ -73,8 +73,8 @@ function generateSilhouette(
   const offsetPoints = viewBoxPoints.map(p => ({ ...p, y: p.y + curveY }))
   const offsetChartArea = { ...chartArea, y: chartArea.y + curveY }
 
-  const linePoints = pointsToPolyline(offsetPoints)
-  const areaPath = pointsToAreaPolygon(offsetPoints, offsetChartArea)
+  const smoothLinePath = pointsToSmoothPath(offsetPoints)
+  const smoothAreaPath = pointsToSmoothAreaPath(offsetPoints, offsetChartArea)
 
   const gradientId = `silhouette-gradient-${Date.now()}`
   const bgGradientId = `background-gradient-${Date.now()}`
@@ -93,9 +93,9 @@ function generateSilhouette(
         </linearGradient>
       </defs>
       <rect width="${width}" height="${height}" fill="url(#${bgGradientId})"/>
-      <polygon points="${areaPath}" fill="url(#${gradientId})"/>
-      <polyline points="${linePoints}" fill="none" stroke="${color}"
-                stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/>
+      <path d="${smoothAreaPath}" fill="url(#${gradientId})"/>
+      <path d="${smoothLinePath}" fill="none" stroke="${color}"
+            stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/>
     </svg>
   `
 }
@@ -167,8 +167,8 @@ function generateSingleSeriesElevation(
   const gradientId = `elevation-gradient-${Date.now()}`
 
   // Use coordinate contract for line and area paths
-  const linePoints = pointsToPolyline(viewBoxPoints)
-  const fullAreaPath = pointsToAreaPolygon(viewBoxPoints, chartArea)
+  const smoothLinePath = pointsToSmoothPath(viewBoxPoints)
+  const smoothAreaPath = pointsToSmoothAreaPath(viewBoxPoints, chartArea)
 
   // X-axis labels (distance) - use ViewBox points for x coordinates
   const xLabels = data.map((d, i) => {
@@ -264,13 +264,13 @@ function generateSingleSeriesElevation(
       ${statisticalOverlay}
 
       <!-- Filled area with gradient -->
-      <polygon id="elevation-area" class="editable" data-type="area" data-series="main" data-editable="true"
-               points="${fullAreaPath}" fill="url(#${gradientId})"/>
+      <path id="elevation-area" class="editable" data-type="area" data-series="main" data-editable="true"
+            d="${smoothAreaPath}" fill="url(#${gradientId})"/>
 
       <!-- Line on top -->
-      <polyline id="elevation-line" class="editable" data-type="line" data-series="main" data-editable="true"
-                points="${linePoints}" fill="none" stroke="${primaryColor}"
-                stroke-width="2" stroke-linejoin="round"/>
+      <path id="elevation-line" class="editable" data-type="line" data-series="main" data-editable="true"
+            d="${smoothLinePath}" fill="none" stroke="${primaryColor}"
+            stroke-width="2" stroke-linejoin="round"/>
 
       ${xLabels}
 
@@ -386,8 +386,8 @@ function generateMultiSeriesElevation(
     }
 
     const { viewBoxPoints } = gpxToViewBox(gpxPoints, config, { bounds: sharedBounds })
-    const linePoints = pointsToPolyline(viewBoxPoints)
-    const fullAreaPath = pointsToAreaPolygon(viewBoxPoints, chartArea)
+    const smoothLinePath = pointsToSmoothPath(viewBoxPoints)
+    const smoothAreaPath = pointsToSmoothAreaPath(viewBoxPoints, chartArea)
 
     allLines += `
       <defs>
@@ -396,13 +396,13 @@ function generateMultiSeriesElevation(
           <stop offset="100%" style="stop-color:${seriesColor};stop-opacity:0.1"/>
         </linearGradient>
       </defs>
-      <polygon id="area-${series.name}" class="editable" data-type="area"
-               data-series="${series.name}" data-editable="true"
-               points="${fullAreaPath}" fill="url(#${gradientId})"/>
-      <polyline id="line-${series.name}" class="editable" data-type="line"
-                data-series="${series.name}" data-editable="true"
-                points="${linePoints}" fill="none" stroke="${seriesColor}"
-                stroke-width="2" stroke-linejoin="round"/>
+      <path id="area-${series.name}" class="editable" data-type="area"
+            data-series="${series.name}" data-editable="true"
+            d="${smoothAreaPath}" fill="url(#${gradientId})"/>
+      <path id="line-${series.name}" class="editable" data-type="line"
+            data-series="${series.name}" data-editable="true"
+            d="${smoothLinePath}" fill="none" stroke="${seriesColor}"
+            stroke-width="2" stroke-linejoin="round"/>
     `
   })
 

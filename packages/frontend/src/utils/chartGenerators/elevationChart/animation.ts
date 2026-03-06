@@ -2,8 +2,8 @@ import type { ChartOptions, CurveEndpoint, ImageBackgroundOptions } from '@chart
 import { renderStatisticalOverlays, hasAnyOverlayEnabled } from '../statisticalOverlayRenderer'
 import {
   gpxToViewBox,
-  pointsToPolyline,
-  pointsToAreaPolygon,
+  pointsToSmoothPath,
+  pointsToSmoothAreaPath,
   VIEW_BOX_PRESETS,
   type GPXPoint,
   type ViewBoxConfig,
@@ -233,8 +233,8 @@ export function generateAnimatedSilhouette(
   // Adjust chartArea for offset
   const offsetChartArea = { ...chartArea, y: chartArea.y + curveY }
 
-  const linePoints = pointsToPolyline(offsetPoints)
-  const areaPath = pointsToAreaPolygon(offsetPoints, offsetChartArea)
+  const smoothLinePath = pointsToSmoothPath(offsetPoints)
+  const smoothAreaPath = pointsToSmoothAreaPath(offsetPoints, offsetChartArea)
 
   const gradientId = `silhouette-gradient-anim`
   const clipId = `reveal-clip-anim`
@@ -372,13 +372,13 @@ export function generateAnimatedSilhouette(
 
   // Standard curve rendering (with optional area fill)
   const areaFillElement = showAreaFill
-    ? `<polygon points="${areaPath}" fill="url(#${gradientId})"/>`
+    ? `<path d="${smoothAreaPath}" fill="url(#${gradientId})"/>`
     : ''
 
   const standardCurve = `
     ${areaFillElement}
-    <polyline points="${linePoints}" fill="none" stroke="${color}"
-              stroke-width="${strokeWidth}" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="${smoothLinePath}" fill="none" stroke="${color}"
+          stroke-width="${strokeWidth}" stroke-linejoin="round" stroke-linecap="round"/>
   `
 
   // Choose which curve to render
@@ -565,8 +565,8 @@ export function generateAnimatedSingleSeries(
   const gradientId = `elevation-gradient-anim`
   const clipId = `reveal-clip-anim`
 
-  const linePoints = pointsToPolyline(viewBoxPoints)
-  const fullAreaPath = pointsToAreaPolygon(viewBoxPoints, chartArea)
+  const smoothLinePath = pointsToSmoothPath(viewBoxPoints)
+  const smoothAreaPath = pointsToSmoothAreaPath(viewBoxPoints, chartArea)
 
   // Calculate clip width based on progress
   const clipWidth = chartArea.width * progress
@@ -673,11 +673,11 @@ export function generateAnimatedSingleSeries(
 
       <!-- Animated elevation curve with clip-path -->
       <g clip-path="url(#${clipId})">
-        <polygon id="elevation-area" class="editable" data-type="area" data-series="main" data-editable="true"
-                 points="${fullAreaPath}" fill="url(#${gradientId})"/>
-        <polyline id="elevation-line" class="editable" data-type="line" data-series="main" data-editable="true"
-                  points="${linePoints}" fill="none" stroke="${primaryColor}"
-                  stroke-width="2" stroke-linejoin="round"/>
+        <path id="elevation-area" class="editable" data-type="area" data-series="main" data-editable="true"
+              d="${smoothAreaPath}" fill="url(#${gradientId})"/>
+        <path id="elevation-line" class="editable" data-type="line" data-series="main" data-editable="true"
+              d="${smoothLinePath}" fill="none" stroke="${primaryColor}"
+              stroke-width="2" stroke-linejoin="round"/>
       </g>
 
       <!-- Marker at current position -->
