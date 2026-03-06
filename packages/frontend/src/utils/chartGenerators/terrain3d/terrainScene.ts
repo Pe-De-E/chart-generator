@@ -176,6 +176,7 @@ async function fetchSatelliteGrid(
   const ctx    = canvas.getContext('2d')!
 
   // Esri World Imagery URL format: {z}/{row}/{col} = {z}/{y}/{x}
+  let loaded = 0
   await Promise.all(tiles.map(async t => {
     try {
       const res = await fetch(`/satellite-tiles/${t.z}/${t.y}/${t.x}`)
@@ -186,8 +187,15 @@ async function fetchSatelliteGrid(
       const oy = (t.y - minTY) * tileSize
       ctx.drawImage(bitmap, ox, oy)
       bitmap.close()
+      loaded++
     } catch { /* skip failed tiles */ }
   }))
+
+  // If no tiles loaded the canvas is black — fall back to vertex colours
+  if (loaded === 0) {
+    console.warn('[Satellite] no tiles loaded, falling back to vertex colours')
+    return null
+  }
 
   const tl = tileBounds({ z: zoom, x: minTX, y: minTY })
   const br = tileBounds({ z: zoom, x: maxTX, y: maxTY })
@@ -564,29 +572,51 @@ async function fetchTerrainRivers(
  * Always faces the camera (THREE.Sprite default behaviour).
  */
 function makeTextSprite(text: string, fontSize = 30): THREE.Sprite {
-  const padding = 8
-  // Measure first, then allocate correctly sized canvas
-  const tmp = new OffscreenCanvas(1, 1)
-  const tmpCtx = tmp.getContext('2d')!
-  tmpCtx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, sans-serif`
-  const textW = Math.ceil(tmpCtx.measureText(text).width)
+  const padding = 10
+  const fontStr = `bold ${fontSize}px Arial, sans-serif`
 
-  const canvasW = textW + padding * 2
-  const canvasH = fontSize + padding * 2
-  const canvas = new OffscreenCanvas(canvasW, canvasH)
+  // Use a real HTMLCanvasElement — OffscreenCanvas has compatibility issues
+  // with THREE.CanvasTexture in some browsers (black output, no text visible).
+  const canvas = document.createElement('canvas')
   const ctx = canvas.getContext('2d')!
 
-  ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, sans-serif`
-  ctx.textBaseline = 'top'
-  ctx.shadowColor = 'rgba(0,0,0,0.95)'
-  ctx.shadowBlur = 5
-  ctx.shadowOffsetX = 1
-  ctx.shadowOffsetY = 1
-  ctx.fillStyle = '#ffffff'
-  ctx.fillText(text, padding, padding)
+  // Measure on a temporary canvas first
+  ctx.font = fontStr
+  const measured = Math.ceil(ctx.measureText(text).width)
+  const textW = Math.max(measured, fontSize)
 
-  const texture = new THREE.CanvasTexture(canvas as unknown as HTMLCanvasElement)
-  const mat = new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false })
+  canvas.width  = textW + padding * 2
+  canvas.height = fontSize + padding * 2
+  const canvasW = canvas.width
+  const canvasH = canvas.height
+
+  // Re-apply font after resize (resize resets canvas state)
+  ctx.font = fontStr
+
+  // Dark pill background
+  const r = canvasH / 2
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.65)'
+  ctx.beginPath()
+  ctx.moveTo(r, 0)
+  ctx.lineTo(canvasW - r, 0)
+  ctx.arc(canvasW - r, r, r, -Math.PI / 2, Math.PI / 2)
+  ctx.lineTo(r, canvasH)
+  ctx.arc(r, r, r, Math.PI / 2, -Math.PI / 2)
+  ctx.closePath()
+  ctx.fill()
+
+  ctx.font = fontStr
+  ctx.textBaseline = 'middle'
+  ctx.fillStyle = '#ffffff'
+  ctx.fillText(text, padding, canvasH / 2)
+
+  // Read raw pixels via getImageData → DataTexture bypasses any browser-specific
+  // CanvasTexture upload issues (black output in Firefox with detached canvas).
+  const imageData = ctx.getImageData(0, 0, canvasW, canvasH)
+  const texture = new THREE.DataTexture(imageData.data, canvasW, canvasH, THREE.RGBAFormat)
+  texture.needsUpdate = true
+  texture.flipY = true  // canvas Y is top-down, Three.js textures are bottom-up
+  const mat = new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false, depthTest: false })
   const sprite = new THREE.Sprite(mat)
 
   // Scale: 200 world units ≈ a "normal" label width reference
@@ -601,6 +631,7 @@ function makeTextSprite(text: string, fontSize = 30): THREE.Sprite {
 export class TerrainScene {
   private renderer: THREE.WebGLRenderer
   private scene: THREE.Scene
+  private labelScene: THREE.Scene   // rendered after GTAO so labels are never darkened
   private perspCamera: THREE.PerspectiveCamera
   private orthoCamera: THREE.OrthographicCamera
   private activeCamera: THREE.Camera
@@ -610,7 +641,7 @@ export class TerrainScene {
   private trailLine: Line2 | null = null
   private revealedLine: Line2 | null = null
   private revealedGlowLine: Line2 | null = null
-  private markerMesh: THREE.Mesh | null = null
+  private markerMesh: THREE.Object3D | null = null
 
   private allRoute3D: THREE.Vector3[] = []
   private elevGrid: ElevationGrid | null = null
@@ -652,6 +683,7 @@ export class TerrainScene {
     this.renderer.shadowMap.enabled = false
 
     this.scene = new THREE.Scene()
+    this.labelScene = new THREE.Scene()
 
     this.perspCamera = new THREE.PerspectiveCamera(60, width / height, 1, 20000)
     this.orthoCamera = new THREE.OrthographicCamera(-TERRAIN_SIZE * 0.8, TERRAIN_SIZE * 0.8, TERRAIN_SIZE * 0.8 * (height / width), -TERRAIN_SIZE * 0.8 * (height / width), 1, 20000)
@@ -1211,14 +1243,21 @@ export class TerrainScene {
         const worldScale = config.terrainExaggeration * this.elevScale
         elev = snapped + this.contourInterval + 3 / worldScale
       } else {
-        // Realistic mode: sit just above the sampled terrain surface.
-        // Small offset prevents z-fighting without visible floating.
+        // Realistic mode: sit above the sampled terrain surface.
+        // Offset of 4 world units prevents z-fighting with the mesh.
         const terrainElev = sampleElevation(p.lon, p.lat, this.elevGrid!)
         const worldScale = config.terrainExaggeration * this.elevScale
-        elev = Math.max(terrainElev, p.elevation) + 1.5 / worldScale
+        elev = Math.max(terrainElev, p.elevation) + 4 / worldScale
       }
       return geoToWorld(p.lon, p.lat, elev, this.sceneBounds!, config.terrainExaggeration, this.elevScale, this.baseElev)
     })
+
+    // Ghost trail — full route, always visible, dimmed
+    // Essential for chase mode: the camera looks forward so the revealed
+    // (already-traveled) portion is behind the camera and not visible.
+    // The ghost trail shows the entire route ahead so you know where you're going.
+    this.trailLine = this.makeLine2(this.allRoute3D, config.routeColor, config.routeWidth * 0.6, 0.25)
+    this.scene.add(this.trailLine)
 
     // Revealed route (bright, animated)
     this.revealedLine = this.makeLine2([], config.routeColor, config.routeWidth, 1.0)
@@ -1338,23 +1377,41 @@ export class TerrainScene {
       sphere.position.copy(pos)
       this.scene.add(sphere)
 
-      // Billboard label
+      // Billboard label — added to labelScene so GTAO doesn't darken it
       const fontSize = Math.round(22 + t * 12)
       const sprite = makeTextSprite(city.name, fontSize)
       sprite.position.set(pos.x, pos.y + dotRadius + 18, pos.z)
-      this.scene.add(sprite)
+      this.labelScene.add(sprite)
     }
   }
 
   private buildMarker(config: TerrainAnimationConfig): void {
-    const geo = new THREE.SphereGeometry(config.markerSize * 1.5, 16, 12)
-    const mat = new THREE.MeshBasicMaterial({ color: toThreeColor(config.markerColor) })
-    this.markerMesh = new THREE.Mesh(geo, mat)
-    this.markerMesh.visible = config.showMarker && this.allRoute3D.length > 0
-    if (this.allRoute3D.length > 0) {
-      this.markerMesh.position.copy(this.allRoute3D[0])
-    }
-    this.scene.add(this.markerMesh)
+    const s = config.markerSize * 1.5
+    const mat = new THREE.MeshBasicMaterial({
+      color: toThreeColor(config.markerColor),
+      side: THREE.DoubleSide,
+    })
+
+    // Flat chevron arrow — purely 2D shape, no protrusions
+    // Tip points toward local +Z (forward), rotated flat onto XZ plane
+    const shape = new THREE.Shape()
+    shape.moveTo(0,       s * 1.1)   // tip
+    shape.lineTo(-s * 0.75, -s * 0.6)
+    shape.lineTo(-s * 0.25, -s * 0.2)
+    shape.lineTo(0,       -s * 0.55)
+    shape.lineTo( s * 0.25, -s * 0.2)
+    shape.lineTo( s * 0.75, -s * 0.6)
+    shape.closePath()
+
+    const geo = new THREE.ShapeGeometry(shape)
+    geo.rotateX(Math.PI / 2)   // lay flat on XZ plane, tip toward local +Z
+
+    const mesh = new THREE.Mesh(geo, mat)
+    mesh.visible = config.showMarker && this.allRoute3D.length > 0
+    if (this.allRoute3D.length > 0) mesh.position.copy(this.allRoute3D[0])
+
+    this.markerMesh = mesh
+    this.scene.add(mesh)
   }
 
   /**
@@ -1396,7 +1453,9 @@ export class TerrainScene {
 
   private positionCamera(config: TerrainAnimationConfig): void {
     const half = TERRAIN_SIZE * 0.5
-    const approxTerrainMaxY = TERRAIN_SIZE * 0.22 * config.terrainExaggeration
+    // Use actual terrain height rather than the old hardcoded 0.22 fraction —
+    // elevScale changed from 0.22 to 0.05 so the old formula put the camera 10× too high.
+    const approxTerrainMaxY = (this.gridElevMax - this.baseElev) * config.terrainExaggeration * this.elevScale
 
     const cx = this.routeCentroid.x
     const cz = this.routeCentroid.y  // THREE.Vector2 .y = world Z
@@ -1591,9 +1650,18 @@ export class TerrainScene {
     this.updateLine2(this.revealedLine, visiblePoints)
     this.updateLine2(this.revealedGlowLine, visiblePoints)
 
-    // Update marker position
+    // Update marker position + rotation (arrow points in travel direction)
     if (this.markerMesh && visiblePoints.length > 0) {
-      this.markerMesh.position.copy(visiblePoints[visiblePoints.length - 1])
+      const tip = visiblePoints[visiblePoints.length - 1]
+      this.markerMesh.position.copy(tip)
+      if (visiblePoints.length >= 2) {
+        const prev = visiblePoints[visiblePoints.length - 2]
+        const dx = tip.x - prev.x
+        const dz = tip.z - prev.z
+        if (Math.sqrt(dx * dx + dz * dz) > 0.1) {
+          this.markerMesh.rotation.y = Math.atan2(dx, dz)
+        }
+      }
     }
 
     // Chase camera: update every frame
@@ -1638,10 +1706,14 @@ export class TerrainScene {
 
   /** Render one frame (via EffectComposer + GTAO post-processing) */
   render(): void {
-    // Sync camera into both passes whenever the active camera changes
     this.renderPass.camera = this.activeCamera
     this.gtaoPass.camera   = this.activeCamera
     this.composer.render()
+    // Render labels on top — bypass GTAO and depth test issues from OutputPass quad
+    this.renderer.autoClear = false
+    this.renderer.clearDepth()
+    this.renderer.render(this.labelScene, this.activeCamera)
+    this.renderer.autoClear = true
   }
 
   /** Get the underlying canvas element */
@@ -1698,6 +1770,7 @@ export class TerrainScene {
     this.terrainMidY = 0
     this.scene.fog = null
     this.renderer.clippingPlanes = []
+    this.labelScene.clear()
   }
 
   dispose(): void {
