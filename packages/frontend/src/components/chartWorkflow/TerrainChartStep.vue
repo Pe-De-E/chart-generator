@@ -206,6 +206,7 @@ const elevationSvg = computed(() => {
     routePoints: props.routePoints,
     chartData: props.chartData,
     progress: chartProgress,
+    elevationClipProgress: 1,  // always show full curve; only marker animates
     width: elevW,
     height: elevH,
     mapHeightRatio: 0.001,  // near-zero map, full frame is elevation

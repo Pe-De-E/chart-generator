@@ -98,6 +98,10 @@ export interface CombinedFrameOptions {
   // Overall opacity (for fade transitions)
   sceneOpacity?: number
 
+  // Separate clip progress for the elevation curve reveal (default: same as progress).
+  // Set to 1 to always show the full curve while the marker still tracks progress.
+  elevationClipProgress?: number
+
   // Geographic context layers (borders, rivers, cities)
   geoLayers?: GeoLayerConfig
 
@@ -592,6 +596,8 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     dividerWidth = 2,
     // Opacity
     sceneOpacity,
+    // Elevation clip progress
+    elevationClipProgress,
     // Geo context
     geoLayers,
     contourLayerSvg,
@@ -765,7 +771,8 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     const elevGradientId = 'combined-elev-gradient'
     const elevClipId = 'combined-elev-clip'
 
-    const clipWidth = elevChartArea.width * effectiveProgress
+    const clipProgress = elevationClipProgress ?? effectiveProgress
+    const clipWidth = elevChartArea.width * clipProgress
     const fullClipWidth = elevChartArea.x + clipWidth
 
     const markerPoint = getMarkerPosition(offsetPoints, effectiveProgress)
