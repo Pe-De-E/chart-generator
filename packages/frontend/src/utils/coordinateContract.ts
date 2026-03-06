@@ -449,7 +449,35 @@ export function pointsToAreaPolygon(
 }
 
 /**
+ * Apply a Gaussian-weighted moving average to an array of Y values.
+ * Removes GPS elevation noise without distorting the overall profile shape.
+ * radius=2 uses a 5-tap kernel [0.06, 0.24, 0.40, 0.24, 0.06].
+ */
+function gaussianSmoothY(ys: number[], radius: number): number[] {
+  if (radius < 1) return ys
+  // Build a Gaussian kernel of the given radius
+  const kernel: number[] = []
+  let sum = 0
+  for (let k = -radius; k <= radius; k++) {
+    const w = Math.exp(-(k * k) / (2 * radius * radius / 2))
+    kernel.push(w)
+    sum += w
+  }
+  const norm = kernel.map(w => w / sum)
+
+  return ys.map((_, i) => {
+    let val = 0
+    for (let k = -radius; k <= radius; k++) {
+      const j = Math.max(0, Math.min(ys.length - 1, i + k))
+      val += norm[k + radius] * ys[j]
+    }
+    return val
+  })
+}
+
+/**
  * Generate a smooth SVG path using Catmull-Rom → cubic-bezier conversion.
+ * Also applies a Gaussian smoothing pass on the Y values to remove GPS noise.
  * Produces a visually smooth curve for elevation profiles with few data points.
  */
 export function pointsToSmoothPath(points: ViewBoxPoint[]): string {
@@ -459,14 +487,21 @@ export function pointsToSmoothPath(points: ViewBoxPoint[]): string {
     return `M ${points[0].x.toFixed(1)},${points[0].y.toFixed(1)} L ${points[1].x.toFixed(1)},${points[1].y.toFixed(1)}`
   }
 
-  const alpha = 0.4  // tension — lower = tighter to data, higher = smoother
-  const d: string[] = [`M ${points[0].x.toFixed(1)},${points[0].y.toFixed(1)}`]
+  // Gaussian smooth the Y values to remove GPS elevation noise.
+  // Radius scales with point count: more points → wider kernel (more noise to remove).
+  const radius = Math.max(2, Math.min(8, Math.round(points.length / 40)))
+  const smoothedY = gaussianSmoothY(points.map(p => p.y), radius)
+  const pts = points.map((p, i) => ({ ...p, y: smoothedY[i] }))
 
-  for (let i = 0; i < points.length - 1; i++) {
-    const p0 = points[Math.max(0, i - 1)]
-    const p1 = points[i]
-    const p2 = points[i + 1]
-    const p3 = points[Math.min(points.length - 1, i + 2)]
+  // Catmull-Rom → cubic bezier — makes the path smooth between anchor points
+  const alpha = 0.35
+  const d: string[] = [`M ${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`]
+
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[Math.max(0, i - 1)]
+    const p1 = pts[i]
+    const p2 = pts[i + 1]
+    const p3 = pts[Math.min(pts.length - 1, i + 2)]
 
     const cp1x = p1.x + (p2.x - p0.x) * alpha
     const cp1y = p1.y + (p2.y - p0.y) * alpha
