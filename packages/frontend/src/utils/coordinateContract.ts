@@ -476,6 +476,18 @@ function gaussianSmoothY(ys: number[], radius: number): number[] {
 }
 
 /**
+ * Smooth the Y display coordinates of ViewBoxPoints using the same Gaussian kernel
+ * as pointsToSmoothPath. Preserves originalElevation for color calculations.
+ * Use this before rendering colored-segment elevation charts.
+ */
+export function smoothViewBoxPointsY(points: ViewBoxPoint[]): ViewBoxPoint[] {
+  if (points.length <= 2) return points
+  const radius = Math.max(2, Math.min(8, Math.round(points.length / 40)))
+  const smoothedY = gaussianSmoothY(points.map(p => p.y), radius)
+  return points.map((p, i) => ({ ...p, y: smoothedY[i] }))
+}
+
+/**
  * Generate a smooth SVG path using Catmull-Rom → cubic-bezier conversion.
  * Also applies a Gaussian smoothing pass on the Y values to remove GPS noise.
  * Produces a visually smooth curve for elevation profiles with few data points.

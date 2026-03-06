@@ -23,6 +23,7 @@ import {
   gpxToViewBox,
   pointsToSmoothPath,
   pointsToSmoothAreaPath,
+  smoothViewBoxPointsY,
   type GPXPoint,
   type ViewBoxConfig,
   type ViewBoxPoint,
@@ -806,10 +807,11 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     // Curve rendering: colored segments or standard monochrome
     let curveElements: string
     if (elevationCurveColoring) {
+      const smoothedForColor = smoothViewBoxPointsY(offsetPoints)
       const coloredArea = showAreaFill
-        ? generateColoredElevationArea(offsetPoints, offsetChartArea, elevationColorIntensity)
+        ? generateColoredElevationArea(smoothedForColor, offsetChartArea, elevationColorIntensity)
         : ''
-      const coloredLine = generateColoredElevationLine(offsetPoints, elevationColorIntensity, strokeWidth)
+      const coloredLine = generateColoredElevationLine(smoothedForColor, elevationColorIntensity, strokeWidth)
       curveElements = `${coloredArea}\n${coloredLine}`
     } else {
       const areaFillElement = showAreaFill
