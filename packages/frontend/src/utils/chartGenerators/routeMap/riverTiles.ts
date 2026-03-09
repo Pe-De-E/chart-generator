@@ -52,7 +52,7 @@ async function fetchRiverGeometries(bounds: RouteBounds): Promise<OverpassElemen
 
   const query =
     `[out:json][bbox:${minLat.toFixed(5)},${minLon.toFixed(5)},${maxLat.toFixed(5)},${maxLon.toFixed(5)}][timeout:25];\n` +
-    `way[waterway~"^(river|canal)$"];\n` +
+    `way[waterway~"^(river|canal|stream)$"];\n` +
     `out geom;`
 
   const response = await fetch(OVERPASS_URL, {
@@ -78,7 +78,8 @@ function renderRiverSvg(
   viewWidth: number,
   viewHeight: number,
 ): string {
-  const paths: string[] = []
+  const glows: string[] = []
+  const lines: string[] = []
   const longestByName = new Map<string, { len: number; pts: Point2D[] }>()
 
   for (const el of elements) {
@@ -89,10 +90,17 @@ function renderRiverSvg(
     if (!d) continue
 
     const cls = el.tags?.waterway || 'river'
-    const strokeWidth = cls === 'river' ? 1.5 : 1.0
+    const strokeWidth = cls === 'river' ? 2.5 : cls === 'canal' ? 1.5 : 0.8
+    const glowWidth = strokeWidth * 3.5
+    const glowOpacity = cls === 'stream' ? 0.25 : 0.35
 
-    paths.push(
-      `<path d="${d}" fill="none" stroke="${config.color}" stroke-width="${strokeWidth}" stroke-linecap="round"/>`
+    // Glow layer (wide, soft)
+    glows.push(
+      `<path d="${d}" fill="none" stroke="${config.color}" stroke-width="${glowWidth}" stroke-linecap="round" opacity="${glowOpacity}"/>`
+    )
+    // Crisp line on top
+    lines.push(
+      `<path d="${d}" fill="none" stroke="${config.color}" stroke-width="${strokeWidth}" stroke-linecap="round" opacity="0.9"/>`
     )
 
     // Track longest visible segment per river name for label placement
@@ -109,7 +117,7 @@ function renderRiverSvg(
     }
   }
 
-  if (paths.length === 0) return ''
+  if (lines.length === 0) return ''
 
   const labels: string[] = []
   const MIN_LABEL_LENGTH_PX = 80
@@ -129,7 +137,9 @@ function renderRiverSvg(
     )
   }
 
-  return `<g opacity="${config.opacity.toFixed(2)}">${paths.join('\n')}${labels.length > 0 ? '\n' + labels.join('\n') : ''}</g>`
+  const glowGroup = `<g>${glows.join('\n')}</g>`
+  const lineGroup = `<g>${lines.join('\n')}</g>`
+  return `<g opacity="${config.opacity.toFixed(2)}">${glowGroup}\n${lineGroup}${labels.length > 0 ? '\n' + labels.join('\n') : ''}</g>`
 }
 
 // ── Cache & Export ────────────────────────────────────────────────────────────
