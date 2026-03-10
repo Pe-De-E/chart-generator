@@ -39,6 +39,7 @@
       :river-loading="riverLoading"
       :peak-loading="peakLoading"
       :place-boundary-loading="placeBoundaryLoading"
+      :forest-loading="forestLoading"
       @update:animation-config="$emit('update:animationConfig', $event)"
       @update:chart-title="$emit('update:chartTitle', $event)"
       @back="$emit('back')"
@@ -157,6 +158,8 @@ export interface RouteMapAnimationConfig {
   peakOpacity: number;
   showPlaceBoundaries: boolean;
   placeBoundaryOpacity: number;
+  showForests: boolean;
+  forestOpacity: number;
   // Contour lines
   showContours: boolean;
   contourColor: string;
@@ -249,6 +252,8 @@ export const DEFAULT_ROUTEMAP_ANIMATION_CONFIG: RouteMapAnimationConfig = {
   peakOpacity: 0.70,
   showPlaceBoundaries: false,
   placeBoundaryOpacity: 0.50,
+  showForests: false,
+  forestOpacity: 0.60,
   // Contour lines
   showContours: false,
   contourColor: '#8B7355',
@@ -292,6 +297,8 @@ import type { RiverConfig } from '../../utils/chartGenerators/routeMap/riverTile
 import { usePeakLayer } from '../../composables/usePeakLayer'
 import { usePlaceBoundaries } from '../../composables/usePlaceBoundaries'
 import type { PlaceBoundaryConfig } from '../../utils/chartGenerators/routeMap/placeBoundaries'
+import { useForestLayer } from '../../composables/useForestLayer'
+import type { ForestConfig } from '../../utils/chartGenerators/routeMap/forestLayer'
 import type { PeakConfig } from '../../utils/chartGenerators/routeMap/peakLayer'
 
 // Slider progress state
@@ -491,6 +498,23 @@ const { placeBoundarySvg, isLoading: placeBoundaryLoading } = usePlaceBoundaries
   contourMapHeight,
 )
 
+// ── Forest layer (async fetch from Overpass API) ──
+const forestConfig = computed<ForestConfig | null>(() => {
+  const cfg = props.animationConfig
+  if (!cfg.showForests) return null
+  return {
+    color: '#4a8c3f',
+    opacity: cfg.forestOpacity,
+  }
+})
+const { forestSvg, isLoading: forestLoading } = useForestLayer(
+  contourRouteBounds,
+  contourProjParams,
+  forestConfig,
+  computed(() => 1080),
+  contourMapHeight,
+)
+
 // Animation phases: Title (optional) → Chart animation → Outro (full image)
 const hasTitleCard = computed(() => !!props.chartTitle.trim())
 const chartDurationMs = computed(() => props.animationConfig.duration * 1000)
@@ -638,6 +662,7 @@ function buildFrameOptions(progress: number, overrides: Partial<CombinedFrameOpt
     riverLayerSvg: riverSvg.value,
     peakLayerSvg: peakSvg.value,
     placeBoundaryLayerSvg: placeBoundarySvg.value,
+    forestLayerSvg: forestSvg.value,
     // Stats overlay
     showStatsOverlay: cfg.showStatsOverlay,
     statsOverlayColor: cfg.statsOverlayColor,

@@ -195,6 +195,16 @@ export function useRouteMapConfig(
     set: (value: number) => updateConfig({ placeBoundaryOpacity: value }),
   })
 
+  const showForests = computed({
+    get: () => getConfig().showForests ?? false,
+    set: (value: boolean) => updateConfig({ showForests: value }),
+  })
+
+  const forestOpacity = computed({
+    get: () => getConfig().forestOpacity ?? 0.60,
+    set: (value: number) => updateConfig({ forestOpacity: value }),
+  })
+
   // --- Contour Lines ---
 
   const showContours = computed({
@@ -355,6 +365,8 @@ export function useRouteMapConfig(
     cityOpacity,
     showPlaceBoundaries,
     placeBoundaryOpacity,
+    showForests,
+    forestOpacity,
     // Peaks
     showPeaks,
     peakOpacity,

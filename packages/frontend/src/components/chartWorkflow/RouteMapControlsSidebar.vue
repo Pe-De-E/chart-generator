@@ -221,6 +221,12 @@
               <label class="text-caption text-medium-emphasis d-block mb-1 mt-1">Deckkraft: {{ Math.round(placeBoundaryOpacity * 100) }}%</label>
               <v-slider v-model="placeBoundaryOpacity" :min="0.05" :max="1" :step="0.05" density="compact" hide-details />
             </template>
+            <v-checkbox v-model="showForests" label="Waelder" density="compact" hide-details class="mt-1" />
+            <v-progress-linear v-if="showForests && forestLoading" indeterminate color="primary" height="2" class="mt-1" />
+            <template v-if="showForests">
+              <label class="text-caption text-medium-emphasis d-block mb-1 mt-1">Deckkraft: {{ Math.round(forestOpacity * 100) }}%</label>
+              <v-slider v-model="forestOpacity" :min="0.05" :max="1" :step="0.05" density="compact" hide-details />
+            </template>
             <v-checkbox v-model="showPeaks" label="Gipfel" density="compact" hide-details class="mt-1" />
             <v-progress-linear v-if="showPeaks && peakLoading" indeterminate color="primary" height="2" class="mt-1" />
             <template v-if="showPeaks">
@@ -769,6 +775,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  forestLoading: {
+    type: Boolean,
+    default: false,
+  },
   chartData: {
     type: Array as PropType<Array<{ label: string; value: number }>>,
     default: () => [],
@@ -882,6 +892,8 @@ const {
   cityOpacity,
   showPlaceBoundaries,
   placeBoundaryOpacity,
+  showForests,
+  forestOpacity,
   // Peaks
   showPeaks,
   peakOpacity,

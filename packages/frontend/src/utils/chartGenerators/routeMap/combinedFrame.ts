@@ -118,6 +118,9 @@ export interface CombinedFrameOptions {
   // Pre-rendered place boundary layer (async, from Overpass API)
   placeBoundaryLayerSvg?: string
 
+  // Pre-rendered forest layer (async, from Overpass API)
+  forestLayerSvg?: string
+
   // Map visual enhancements
   showNorthArrow?: boolean
   showScaleBar?: boolean
@@ -608,6 +611,7 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     riverLayerSvg,
     peakLayerSvg,
     placeBoundaryLayerSvg,
+    forestLayerSvg,
     // Title
     titleOverlay,
     // Stats
@@ -690,11 +694,13 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
 
     // Wrap geo/contour layers in a clipping container — coordinates extend far
     // beyond the viewport since 110m data covers a wide area
+    const forestHtml = forestLayerSvg || ''
     const contourHtml = contourLayerSvg || ''
     const riverHtml = riverLayerSvg || ''
     const peakHtml = peakLayerSvg || ''
     const placeBoundaryHtml = placeBoundaryLayerSvg || ''
-    const allGeoHtml = placeBoundaryHtml + contourHtml + riverHtml + geoLayersHtml + peakHtml
+    // Render order (back to front): forests → place boundaries → contours → rivers → geo (borders/cities) → peaks
+    const allGeoHtml = forestHtml + placeBoundaryHtml + contourHtml + riverHtml + geoLayersHtml + peakHtml
     const geoClipped = allGeoHtml
       ? `<svg x="0" y="0" width="${width}" height="${mapHeight}" overflow="hidden">${allGeoHtml}</svg>`
       : ''
