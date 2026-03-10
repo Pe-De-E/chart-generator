@@ -38,6 +38,7 @@
       :contour-loading="contourLoading"
       :river-loading="riverLoading"
       :peak-loading="peakLoading"
+      :place-boundary-loading="placeBoundaryLoading"
       @update:animation-config="$emit('update:animationConfig', $event)"
       @update:chart-title="$emit('update:chartTitle', $event)"
       @back="$emit('back')"
@@ -154,6 +155,8 @@ export interface RouteMapAnimationConfig {
   cityOpacity: number;
   showPeaks: boolean;
   peakOpacity: number;
+  showPlaceBoundaries: boolean;
+  placeBoundaryOpacity: number;
   // Contour lines
   showContours: boolean;
   contourColor: string;
@@ -244,6 +247,8 @@ export const DEFAULT_ROUTEMAP_ANIMATION_CONFIG: RouteMapAnimationConfig = {
   cityOpacity: 0.50,
   showPeaks: false,
   peakOpacity: 0.70,
+  showPlaceBoundaries: false,
+  placeBoundaryOpacity: 0.50,
   // Contour lines
   showContours: false,
   contourColor: '#8B7355',
@@ -285,6 +290,8 @@ import { calculateRouteBounds, getProjectionParams } from '../../utils/chartGene
 import type { ContourConfig } from '../../utils/chartGenerators/routeMap/contourLines'
 import type { RiverConfig } from '../../utils/chartGenerators/routeMap/riverTiles'
 import { usePeakLayer } from '../../composables/usePeakLayer'
+import { usePlaceBoundaries } from '../../composables/usePlaceBoundaries'
+import type { PlaceBoundaryConfig } from '../../utils/chartGenerators/routeMap/placeBoundaries'
 import type { PeakConfig } from '../../utils/chartGenerators/routeMap/peakLayer'
 
 // Slider progress state
@@ -467,6 +474,23 @@ const { peakSvg, isLoading: peakLoading } = usePeakLayer(
   computed(() => props.routePoints),
 )
 
+// ── Place boundary polygons (async fetch from Overpass API) ──
+const placeBoundaryConfig = computed<PlaceBoundaryConfig | null>(() => {
+  const cfg = props.animationConfig
+  if (!cfg.showPlaceBoundaries) return null
+  return {
+    color: '#ffffff',
+    opacity: cfg.placeBoundaryOpacity,
+  }
+})
+const { placeBoundarySvg, isLoading: placeBoundaryLoading } = usePlaceBoundaries(
+  contourRouteBounds,
+  contourProjParams,
+  placeBoundaryConfig,
+  computed(() => 1080),
+  contourMapHeight,
+)
+
 // Animation phases: Title (optional) → Chart animation → Outro (full image)
 const hasTitleCard = computed(() => !!props.chartTitle.trim())
 const chartDurationMs = computed(() => props.animationConfig.duration * 1000)
@@ -613,6 +637,7 @@ function buildFrameOptions(progress: number, overrides: Partial<CombinedFrameOpt
     // Pre-rendered river layer (async, from OpenFreeMap vector tiles)
     riverLayerSvg: riverSvg.value,
     peakLayerSvg: peakSvg.value,
+    placeBoundaryLayerSvg: placeBoundarySvg.value,
     // Stats overlay
     showStatsOverlay: cfg.showStatsOverlay,
     statsOverlayColor: cfg.statsOverlayColor,

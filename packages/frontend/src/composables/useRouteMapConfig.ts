@@ -185,6 +185,16 @@ export function useRouteMapConfig(
     set: (value: number) => updateConfig({ cityOpacity: value }),
   })
 
+  const showPlaceBoundaries = computed({
+    get: () => getConfig().showPlaceBoundaries ?? false,
+    set: (value: boolean) => updateConfig({ showPlaceBoundaries: value }),
+  })
+
+  const placeBoundaryOpacity = computed({
+    get: () => getConfig().placeBoundaryOpacity ?? 0.50,
+    set: (value: number) => updateConfig({ placeBoundaryOpacity: value }),
+  })
+
   // --- Contour Lines ---
 
   const showContours = computed({
@@ -343,6 +353,8 @@ export function useRouteMapConfig(
     borderOpacity,
     riverOpacity,
     cityOpacity,
+    showPlaceBoundaries,
+    placeBoundaryOpacity,
     // Peaks
     showPeaks,
     peakOpacity,

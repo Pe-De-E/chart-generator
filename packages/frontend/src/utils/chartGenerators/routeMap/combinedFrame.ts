@@ -115,6 +115,9 @@ export interface CombinedFrameOptions {
   // Pre-rendered peak layer (async, from Overpass API)
   peakLayerSvg?: string
 
+  // Pre-rendered place boundary layer (async, from Overpass API)
+  placeBoundaryLayerSvg?: string
+
   // Map visual enhancements
   showNorthArrow?: boolean
   showScaleBar?: boolean
@@ -604,6 +607,7 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     contourLayerSvg,
     riverLayerSvg,
     peakLayerSvg,
+    placeBoundaryLayerSvg,
     // Title
     titleOverlay,
     // Stats
@@ -689,7 +693,8 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     const contourHtml = contourLayerSvg || ''
     const riverHtml = riverLayerSvg || ''
     const peakHtml = peakLayerSvg || ''
-    const allGeoHtml = contourHtml + riverHtml + geoLayersHtml + peakHtml
+    const placeBoundaryHtml = placeBoundaryLayerSvg || ''
+    const allGeoHtml = placeBoundaryHtml + contourHtml + riverHtml + geoLayersHtml + peakHtml
     const geoClipped = allGeoHtml
       ? `<svg x="0" y="0" width="${width}" height="${mapHeight}" overflow="hidden">${allGeoHtml}</svg>`
       : ''
