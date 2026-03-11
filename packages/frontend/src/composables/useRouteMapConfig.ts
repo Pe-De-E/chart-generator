@@ -235,6 +235,23 @@ export function useRouteMapConfig(
     set: (value: number) => updateConfig({ urbanOpacity: value }),
   })
 
+  // --- Privacy ---
+
+  const anonymizeStart = computed({
+    get: () => getConfig().anonymizeStart ?? false,
+    set: (value: boolean) => updateConfig({ anonymizeStart: value }),
+  })
+
+  const anonymizeEnd = computed({
+    get: () => getConfig().anonymizeEnd ?? false,
+    set: (value: boolean) => updateConfig({ anonymizeEnd: value }),
+  })
+
+  const anonymizeRadiusM = computed({
+    get: () => getConfig().anonymizeRadiusM ?? 300,
+    set: (value: number) => updateConfig({ anonymizeRadiusM: value }),
+  })
+
   // --- Contour Lines ---
 
   const showContours = computed({
@@ -403,6 +420,10 @@ export function useRouteMapConfig(
     glacierOpacity,
     showUrban,
     urbanOpacity,
+    // Privacy
+    anonymizeStart,
+    anonymizeEnd,
+    anonymizeRadiusM,
     // Peaks
     showPeaks,
     peakOpacity,

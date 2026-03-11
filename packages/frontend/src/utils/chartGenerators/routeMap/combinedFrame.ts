@@ -37,6 +37,11 @@ export interface CombinedFrameOptions {
   chartData: Array<{ label: string; value: number }>
   progress: number                     // 0-1, drives both map and elevation
 
+  // Privacy — trim route start/end by distance to hide home address
+  anonymizeStart?: boolean
+  anonymizeEnd?: boolean
+  anonymizeRadiusM?: number            // meters to hide (default 300)
+
   // Layout
   width: number                        // SVG width (default 1080)
   height: number                       // SVG height (default 1920)
@@ -632,7 +637,28 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     showNorthArrow = true,
     showScaleBar = true,
     showMapFade = true,
+    // Privacy
+    anonymizeStart = false,
+    anonymizeEnd = false,
+    anonymizeRadiusM = 300,
   } = options
+
+  // ── Privacy: trim route points near start/end ──
+  const visibleRoutePoints = (() => {
+    if (!anonymizeStart && !anonymizeEnd) return routePoints
+    const total = routePoints.length
+    if (total < 2) return routePoints
+    const totalDist = routePoints[total - 1].distance
+    const radiusKm = anonymizeRadiusM / 1000
+    const startIdx = anonymizeStart
+      ? routePoints.findIndex(p => p.distance >= radiusKm)
+      : 0
+    const endIdx = anonymizeEnd
+      ? routePoints.findLastIndex(p => p.distance <= totalDist - radiusKm)
+      : total - 1
+    if (startIdx < 0 || endIdx < 0 || startIdx >= endIdx) return routePoints
+    return routePoints.slice(startIdx, endIdx + 1)
+  })()
 
   // Layout split
   const mapHeight = Math.round(height * mapHeightRatio)
@@ -661,13 +687,13 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
   let mapContent = ''
   let mapDefs = ''
 
-  if (routePoints.length >= 2) {
+  if (visibleRoutePoints.length >= 2) {
     const mapConfig = {
       width,
       height: mapHeight,
       padding: { top: 50, right: 50, bottom: 50, left: 50 },
     }
-    const { mapPoints, bounds: routeBounds, chartArea: mapChartArea } = projectRouteToSvg(routePoints, mapConfig)
+    const { mapPoints, bounds: routeBounds, chartArea: mapChartArea } = projectRouteToSvg(visibleRoutePoints, mapConfig)
 
     // Geographic context layers (borders, rivers, cities)
     const projParams = getProjectionParams(routeBounds, mapConfig)

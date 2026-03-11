@@ -250,6 +250,15 @@
               <label class="text-caption text-medium-emphasis d-block mb-1 mt-1">Deckkraft: {{ Math.round(peakOpacity * 100) }}%</label>
               <v-slider v-model="peakOpacity" :min="0.05" :max="1" :step="0.05" density="compact" hide-details />
             </template>
+            <v-divider class="my-3" />
+            <div class="section-label">Datenschutz</div>
+            <v-checkbox v-model="anonymizeStart" label="Start verbergen" density="compact" hide-details class="mt-1" />
+            <v-checkbox v-model="anonymizeEnd" label="Ziel verbergen" density="compact" hide-details class="mt-1" />
+            <template v-if="anonymizeStart || anonymizeEnd">
+              <label class="text-caption text-medium-emphasis d-block mb-1 mt-2">Radius: {{ anonymizeRadiusM }} m</label>
+              <v-slider v-model="anonymizeRadiusM" :min="100" :max="1000" :step="50" density="compact" hide-details />
+            </template>
+
             <v-divider class="my-2" />
             <v-checkbox v-model="showContours" label="Hoehenlinien" density="compact" hide-details class="mt-1" />
             <v-progress-linear v-if="showContours && contourLoading" indeterminate color="primary" height="2" class="mt-1" />
@@ -925,6 +934,10 @@ const {
   glacierOpacity,
   showUrban,
   urbanOpacity,
+  // Privacy
+  anonymizeStart,
+  anonymizeEnd,
+  anonymizeRadiusM,
   // Peaks
   showPeaks,
   peakOpacity,

@@ -168,6 +168,10 @@ export interface RouteMapAnimationConfig {
   glacierOpacity: number;
   showUrban: boolean;
   urbanOpacity: number;
+  // Privacy
+  anonymizeStart: boolean;
+  anonymizeEnd: boolean;
+  anonymizeRadiusM: number;
   // Contour lines
   showContours: boolean;
   contourColor: string;
@@ -268,6 +272,10 @@ export const DEFAULT_ROUTEMAP_ANIMATION_CONFIG: RouteMapAnimationConfig = {
   glacierOpacity: 0.65,
   showUrban: false,
   urbanOpacity: 0.45,
+  // Privacy
+  anonymizeStart: false,
+  anonymizeEnd: false,
+  anonymizeRadiusM: 300,
   // Contour lines
   showContours: false,
   contourColor: '#8B7355',
@@ -719,6 +727,10 @@ function buildFrameOptions(progress: number, overrides: Partial<CombinedFrameOpt
     forestLayerSvg: forestSvg.value,
     waterLayerSvg: waterSvg.value,
     landCoverLayerSvg: landCoverSvg.value,
+    // Privacy
+    anonymizeStart: cfg.anonymizeStart,
+    anonymizeEnd: cfg.anonymizeEnd,
+    anonymizeRadiusM: cfg.anonymizeRadiusM,
     // Stats overlay
     showStatsOverlay: cfg.showStatsOverlay,
     statsOverlayColor: cfg.statsOverlayColor,
