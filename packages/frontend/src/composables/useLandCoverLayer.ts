@@ -27,12 +27,12 @@ export function useLandCoverLayer(
   watch(
     [routeBounds, projectionParams, config, viewWidth, viewHeight],
     async ([bounds, params, cfg, w, h]) => {
+      const thisGeneration = ++generation
+
       if (!bounds || !params || !cfg) {
         landCoverSvg.value = ''
         return
       }
-
-      const thisGeneration = ++generation
       isLoading.value = true
       error.value = null
 

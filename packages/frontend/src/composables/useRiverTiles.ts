@@ -27,12 +27,12 @@ export function useRiverTiles(
   watch(
     [routeBounds, projectionParams, config, viewWidth, viewHeight],
     async ([bounds, params, cfg, w, h]) => {
+      const thisGeneration = ++generation
+
       if (!bounds || !params || !cfg) {
         riverSvg.value = ''
         return
       }
-
-      const thisGeneration = ++generation
       isLoading.value = true
       error.value = null
 

@@ -27,12 +27,12 @@ export function useContourLines(
   watch(
     [routeBounds, projectionParams, config, viewWidth, viewHeight],
     async ([bounds, params, cfg, w, h]) => {
+      const thisGeneration = ++generation
+
       if (!bounds || !params || !cfg) {
         contourSvg.value = ''
         return
       }
-
-      const thisGeneration = ++generation
       isLoading.value = true
       error.value = null
 

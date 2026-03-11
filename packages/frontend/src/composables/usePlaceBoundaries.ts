@@ -23,12 +23,13 @@ export function usePlaceBoundaries(
   watch(
     [routeBounds, projectionParams, config, viewWidth, viewHeight],
     async ([bounds, params, cfg, w, h]) => {
+      const thisGeneration = ++generation
+
       if (!bounds || !params || !cfg) {
         placeBoundarySvg.value = ''
         return
       }
 
-      const thisGeneration = ++generation
       isLoading.value = true
       error.value = null
 
