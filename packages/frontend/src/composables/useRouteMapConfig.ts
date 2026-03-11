@@ -205,6 +205,16 @@ export function useRouteMapConfig(
     set: (value: number) => updateConfig({ forestOpacity: value }),
   })
 
+  const showWater = computed({
+    get: () => getConfig().showWater ?? false,
+    set: (value: boolean) => updateConfig({ showWater: value }),
+  })
+
+  const waterOpacity = computed({
+    get: () => getConfig().waterOpacity ?? 0.70,
+    set: (value: number) => updateConfig({ waterOpacity: value }),
+  })
+
   // --- Contour Lines ---
 
   const showContours = computed({
@@ -367,6 +377,8 @@ export function useRouteMapConfig(
     placeBoundaryOpacity,
     showForests,
     forestOpacity,
+    showWater,
+    waterOpacity,
     // Peaks
     showPeaks,
     peakOpacity,

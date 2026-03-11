@@ -40,6 +40,7 @@
       :peak-loading="peakLoading"
       :place-boundary-loading="placeBoundaryLoading"
       :forest-loading="forestLoading"
+      :water-loading="waterLoading"
       @update:animation-config="$emit('update:animationConfig', $event)"
       @update:chart-title="$emit('update:chartTitle', $event)"
       @back="$emit('back')"
@@ -160,6 +161,8 @@ export interface RouteMapAnimationConfig {
   placeBoundaryOpacity: number;
   showForests: boolean;
   forestOpacity: number;
+  showWater: boolean;
+  waterOpacity: number;
   // Contour lines
   showContours: boolean;
   contourColor: string;
@@ -254,6 +257,8 @@ export const DEFAULT_ROUTEMAP_ANIMATION_CONFIG: RouteMapAnimationConfig = {
   placeBoundaryOpacity: 0.50,
   showForests: false,
   forestOpacity: 0.60,
+  showWater: false,
+  waterOpacity: 0.70,
   // Contour lines
   showContours: false,
   contourColor: '#8B7355',
@@ -299,6 +304,8 @@ import { usePlaceBoundaries } from '../../composables/usePlaceBoundaries'
 import type { PlaceBoundaryConfig } from '../../utils/chartGenerators/routeMap/placeBoundaries'
 import { useForestLayer } from '../../composables/useForestLayer'
 import type { ForestConfig } from '../../utils/chartGenerators/routeMap/forestLayer'
+import { useWaterLayer } from '../../composables/useWaterLayer'
+import type { WaterConfig } from '../../utils/chartGenerators/routeMap/waterLayer'
 import type { PeakConfig } from '../../utils/chartGenerators/routeMap/peakLayer'
 
 // Slider progress state
@@ -515,6 +522,23 @@ const { forestSvg, isLoading: forestLoading } = useForestLayer(
   contourMapHeight,
 )
 
+// ── Water bodies (async fetch from Overpass API) ──
+const waterConfig = computed<WaterConfig | null>(() => {
+  const cfg = props.animationConfig
+  if (!cfg.showWater) return null
+  return {
+    color: '#4a90d9',
+    opacity: cfg.waterOpacity,
+  }
+})
+const { waterSvg, isLoading: waterLoading } = useWaterLayer(
+  contourRouteBounds,
+  contourProjParams,
+  waterConfig,
+  computed(() => 1080),
+  contourMapHeight,
+)
+
 // Animation phases: Title (optional) → Chart animation → Outro (full image)
 const hasTitleCard = computed(() => !!props.chartTitle.trim())
 const chartDurationMs = computed(() => props.animationConfig.duration * 1000)
@@ -663,6 +687,7 @@ function buildFrameOptions(progress: number, overrides: Partial<CombinedFrameOpt
     peakLayerSvg: peakSvg.value,
     placeBoundaryLayerSvg: placeBoundarySvg.value,
     forestLayerSvg: forestSvg.value,
+    waterLayerSvg: waterSvg.value,
     // Stats overlay
     showStatsOverlay: cfg.showStatsOverlay,
     statsOverlayColor: cfg.statsOverlayColor,
