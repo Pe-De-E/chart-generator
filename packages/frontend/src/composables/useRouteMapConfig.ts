@@ -354,6 +354,18 @@ export function useRouteMapConfig(
 
   // --- Map Visual Enhancements ---
 
+  // --- Roads ---
+
+  const showRoads = computed({
+    get: () => getConfig().showRoads ?? false,
+    set: (value: boolean) => updateConfig({ showRoads: value }),
+  })
+
+  const roadOpacity = computed({
+    get: () => getConfig().roadOpacity ?? 0.30,
+    set: (value: number) => updateConfig({ roadOpacity: value }),
+  })
+
   const showNorthArrow = computed({
     get: () => getConfig().showNorthArrow ?? true,
     set: (value: boolean) => updateConfig({ showNorthArrow: value }),
@@ -439,6 +451,9 @@ export function useRouteMapConfig(
     statsOverlayColor,
     statsX,
     statsY,
+    // Roads
+    showRoads,
+    roadOpacity,
     // Map Visual Enhancements
     showNorthArrow,
     showScaleBar,

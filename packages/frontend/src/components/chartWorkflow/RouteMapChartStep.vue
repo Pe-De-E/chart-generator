@@ -42,6 +42,7 @@
       :forest-loading="forestLoading"
       :water-loading="waterLoading"
       :land-cover-loading="landCoverLoading"
+      :road-loading="roadLoading"
       @update:animation-config="$emit('update:animationConfig', $event)"
       @update:chart-title="$emit('update:chartTitle', $event)"
       @back="$emit('back')"
@@ -186,6 +187,9 @@ export interface RouteMapAnimationConfig {
   statsY: number;   // 0-1 normalized vertical position within map area
   // Annotations — text chips shown at specific progress points
   annotations?: import('../../utils/chartGenerators/elevationChart/types').Annotation[];
+  // Roads
+  showRoads: boolean;
+  roadOpacity: number;
   // Map visual enhancements
   showNorthArrow: boolean;
   showScaleBar: boolean;
@@ -289,6 +293,9 @@ export const DEFAULT_ROUTEMAP_ANIMATION_CONFIG: RouteMapAnimationConfig = {
   statsX: 1.0,
   statsY: 1.0,
   annotations: [],
+  // Roads
+  showRoads: false,
+  roadOpacity: 0.30,
   // Map visual enhancements
   showNorthArrow: true,
   showScaleBar: true,
@@ -326,6 +333,8 @@ import type { WaterConfig } from '../../utils/chartGenerators/routeMap/waterLaye
 import { useLandCoverLayer } from '../../composables/useLandCoverLayer'
 import type { LandCoverConfig } from '../../utils/chartGenerators/routeMap/landCoverLayer'
 import type { PeakConfig } from '../../utils/chartGenerators/routeMap/peakLayer'
+import { useRoadLayer } from '../../composables/useRoadLayer'
+import type { RoadConfig } from '../../utils/chartGenerators/routeMap/roadLayer'
 
 // Slider progress state
 const sliderProgress = ref(0)
@@ -577,6 +586,23 @@ const { landCoverSvg, isLoading: landCoverLoading } = useLandCoverLayer(
   contourMapHeight,
 )
 
+// ── Road layer (async fetch from Overpass API) ──
+const roadConfig = computed<RoadConfig | null>(() => {
+  const cfg = props.animationConfig
+  if (!cfg.showRoads) return null
+  return {
+    color: '#ffffff',
+    opacity: cfg.roadOpacity,
+  }
+})
+const { roadSvg, isLoading: roadLoading } = useRoadLayer(
+  contourRouteBounds,
+  contourProjParams,
+  roadConfig,
+  computed(() => 1080),
+  contourMapHeight,
+)
+
 // Animation phases: Title (optional) → Chart animation → Outro (full image)
 const hasTitleCard = computed(() => !!props.chartTitle.trim())
 const chartDurationMs = computed(() => props.animationConfig.duration * 1000)
@@ -727,6 +753,7 @@ function buildFrameOptions(progress: number, overrides: Partial<CombinedFrameOpt
     forestLayerSvg: forestSvg.value,
     waterLayerSvg: waterSvg.value,
     landCoverLayerSvg: landCoverSvg.value,
+    roadLayerSvg: roadSvg.value,
     // Privacy
     anonymizeStart: cfg.anonymizeStart,
     anonymizeEnd: cfg.anonymizeEnd,
