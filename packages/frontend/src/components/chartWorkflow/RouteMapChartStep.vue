@@ -41,6 +41,7 @@
       :place-boundary-loading="placeBoundaryLoading"
       :forest-loading="forestLoading"
       :water-loading="waterLoading"
+      :land-cover-loading="landCoverLoading"
       @update:animation-config="$emit('update:animationConfig', $event)"
       @update:chart-title="$emit('update:chartTitle', $event)"
       @back="$emit('back')"
@@ -163,6 +164,10 @@ export interface RouteMapAnimationConfig {
   forestOpacity: number;
   showWater: boolean;
   waterOpacity: number;
+  showGlaciers: boolean;
+  glacierOpacity: number;
+  showUrban: boolean;
+  urbanOpacity: number;
   // Contour lines
   showContours: boolean;
   contourColor: string;
@@ -259,6 +264,10 @@ export const DEFAULT_ROUTEMAP_ANIMATION_CONFIG: RouteMapAnimationConfig = {
   forestOpacity: 0.60,
   showWater: false,
   waterOpacity: 0.70,
+  showGlaciers: false,
+  glacierOpacity: 0.65,
+  showUrban: false,
+  urbanOpacity: 0.45,
   // Contour lines
   showContours: false,
   contourColor: '#8B7355',
@@ -306,6 +315,8 @@ import { useForestLayer } from '../../composables/useForestLayer'
 import type { ForestConfig } from '../../utils/chartGenerators/routeMap/forestLayer'
 import { useWaterLayer } from '../../composables/useWaterLayer'
 import type { WaterConfig } from '../../utils/chartGenerators/routeMap/waterLayer'
+import { useLandCoverLayer } from '../../composables/useLandCoverLayer'
+import type { LandCoverConfig } from '../../utils/chartGenerators/routeMap/landCoverLayer'
 import type { PeakConfig } from '../../utils/chartGenerators/routeMap/peakLayer'
 
 // Slider progress state
@@ -539,6 +550,25 @@ const { waterSvg, isLoading: waterLoading } = useWaterLayer(
   contourMapHeight,
 )
 
+// ── Land cover layer: glaciers + urban areas (async, Overpass API) ──
+const landCoverConfig = computed<LandCoverConfig | null>(() => {
+  const cfg = props.animationConfig
+  if (!cfg.showGlaciers && !cfg.showUrban) return null
+  return {
+    showGlaciers: cfg.showGlaciers,
+    glacierOpacity: cfg.glacierOpacity,
+    showUrban: cfg.showUrban,
+    urbanOpacity: cfg.urbanOpacity,
+  }
+})
+const { landCoverSvg, isLoading: landCoverLoading } = useLandCoverLayer(
+  contourRouteBounds,
+  contourProjParams,
+  landCoverConfig,
+  computed(() => 1080),
+  contourMapHeight,
+)
+
 // Animation phases: Title (optional) → Chart animation → Outro (full image)
 const hasTitleCard = computed(() => !!props.chartTitle.trim())
 const chartDurationMs = computed(() => props.animationConfig.duration * 1000)
@@ -688,6 +718,7 @@ function buildFrameOptions(progress: number, overrides: Partial<CombinedFrameOpt
     placeBoundaryLayerSvg: placeBoundarySvg.value,
     forestLayerSvg: forestSvg.value,
     waterLayerSvg: waterSvg.value,
+    landCoverLayerSvg: landCoverSvg.value,
     // Stats overlay
     showStatsOverlay: cfg.showStatsOverlay,
     statsOverlayColor: cfg.statsOverlayColor,

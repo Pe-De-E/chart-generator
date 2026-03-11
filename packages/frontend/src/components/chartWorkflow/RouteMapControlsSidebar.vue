@@ -233,6 +233,17 @@
               <label class="text-caption text-medium-emphasis d-block mb-1 mt-1">Deckkraft: {{ Math.round(waterOpacity * 100) }}%</label>
               <v-slider v-model="waterOpacity" :min="0.05" :max="1" :step="0.05" density="compact" hide-details />
             </template>
+            <v-checkbox v-model="showGlaciers" label="Gletscher" density="compact" hide-details class="mt-1" />
+            <v-checkbox v-model="showUrban" label="Siedlungen" density="compact" hide-details class="mt-1" />
+            <v-progress-linear v-if="(showGlaciers || showUrban) && landCoverLoading" indeterminate color="primary" height="2" class="mt-1" />
+            <template v-if="showGlaciers">
+              <label class="text-caption text-medium-emphasis d-block mb-1 mt-1">Gletscher Deckkraft: {{ Math.round(glacierOpacity * 100) }}%</label>
+              <v-slider v-model="glacierOpacity" :min="0.05" :max="1" :step="0.05" density="compact" hide-details />
+            </template>
+            <template v-if="showUrban">
+              <label class="text-caption text-medium-emphasis d-block mb-1 mt-1">Siedlungen Deckkraft: {{ Math.round(urbanOpacity * 100) }}%</label>
+              <v-slider v-model="urbanOpacity" :min="0.05" :max="1" :step="0.05" density="compact" hide-details />
+            </template>
             <v-checkbox v-model="showPeaks" label="Gipfel" density="compact" hide-details class="mt-1" />
             <v-progress-linear v-if="showPeaks && peakLoading" indeterminate color="primary" height="2" class="mt-1" />
             <template v-if="showPeaks">
@@ -789,6 +800,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  landCoverLoading: {
+    type: Boolean,
+    default: false,
+  },
   chartData: {
     type: Array as PropType<Array<{ label: string; value: number }>>,
     default: () => [],
@@ -906,6 +921,10 @@ const {
   forestOpacity,
   showWater,
   waterOpacity,
+  showGlaciers,
+  glacierOpacity,
+  showUrban,
+  urbanOpacity,
   // Peaks
   showPeaks,
   peakOpacity,

@@ -124,6 +124,9 @@ export interface CombinedFrameOptions {
   // Pre-rendered water body layer (async, from Overpass API)
   waterLayerSvg?: string
 
+  // Pre-rendered land cover layer: glaciers + urban areas (async, from Overpass API)
+  landCoverLayerSvg?: string
+
   // Map visual enhancements
   showNorthArrow?: boolean
   showScaleBar?: boolean
@@ -616,6 +619,7 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     placeBoundaryLayerSvg,
     forestLayerSvg,
     waterLayerSvg,
+    landCoverLayerSvg,
     // Title
     titleOverlay,
     // Stats
@@ -704,8 +708,9 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     const peakHtml = peakLayerSvg || ''
     const placeBoundaryHtml = placeBoundaryLayerSvg || ''
     const waterHtml = waterLayerSvg || ''
-    // Render order (back to front): forests → water → place boundaries → contours → rivers → geo (borders/cities) → peaks
-    const allGeoHtml = forestHtml + waterHtml + placeBoundaryHtml + contourHtml + riverHtml + geoLayersHtml + peakHtml
+    const landCoverHtml = landCoverLayerSvg || ''
+    // Render order (back to front): forests → land cover (glaciers/urban) → water → place boundaries → contours → rivers → geo → peaks
+    const allGeoHtml = forestHtml + landCoverHtml + waterHtml + placeBoundaryHtml + contourHtml + riverHtml + geoLayersHtml + peakHtml
     const geoClipped = allGeoHtml
       ? `<svg x="0" y="0" width="${width}" height="${mapHeight}" overflow="hidden">${allGeoHtml}</svg>`
       : ''

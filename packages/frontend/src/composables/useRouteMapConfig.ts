@@ -215,6 +215,26 @@ export function useRouteMapConfig(
     set: (value: number) => updateConfig({ waterOpacity: value }),
   })
 
+  const showGlaciers = computed({
+    get: () => getConfig().showGlaciers ?? false,
+    set: (value: boolean) => updateConfig({ showGlaciers: value }),
+  })
+
+  const glacierOpacity = computed({
+    get: () => getConfig().glacierOpacity ?? 0.65,
+    set: (value: number) => updateConfig({ glacierOpacity: value }),
+  })
+
+  const showUrban = computed({
+    get: () => getConfig().showUrban ?? false,
+    set: (value: boolean) => updateConfig({ showUrban: value }),
+  })
+
+  const urbanOpacity = computed({
+    get: () => getConfig().urbanOpacity ?? 0.45,
+    set: (value: number) => updateConfig({ urbanOpacity: value }),
+  })
+
   // --- Contour Lines ---
 
   const showContours = computed({
@@ -379,6 +399,10 @@ export function useRouteMapConfig(
     forestOpacity,
     showWater,
     waterOpacity,
+    showGlaciers,
+    glacierOpacity,
+    showUrban,
+    urbanOpacity,
     // Peaks
     showPeaks,
     peakOpacity,
