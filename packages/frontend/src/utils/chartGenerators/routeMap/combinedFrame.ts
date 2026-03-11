@@ -934,20 +934,49 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
   let titleHtml = ''
   if (titleOverlay && titleOverlay.text && titleOverlay.opacity > 0) {
     const fontSize = Math.min(Math.round(width * 0.06), 72)
-    const escapedText = titleOverlay.text
+    const maxWidth = width - 120  // 60px padding each side
+    const avgCharWidth = fontSize * 0.58
+    const charsPerLine = Math.floor(maxWidth / avgCharWidth)
+
+    // Word-wrap: split into lines that fit within maxWidth
+    const words = titleOverlay.text.split(' ')
+    const lines: string[] = []
+    let current = ''
+    for (const word of words) {
+      const test = current ? `${current} ${word}` : word
+      if (test.length > charsPerLine && current) {
+        lines.push(current)
+        current = word
+      } else {
+        current = test
+      }
+    }
+    if (current) lines.push(current)
+
+    const lineHeight = fontSize * 1.25
+    const totalHeight = lines.length * lineHeight
+    const startY = height / 2 - totalHeight / 2 + fontSize * 0.5
+
+    const escape = (s: string) => s
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
+
+    const tspans = lines
+      .map((line, i) =>
+        `<tspan x="${width / 2}" y="${(startY + i * lineHeight).toFixed(1)}">${escape(line)}</tspan>`
+      )
+      .join('')
+
     titleHtml = `
       <text
-        x="${width / 2}" y="${height / 2}"
-        text-anchor="middle" dominant-baseline="central"
+        text-anchor="middle"
         font-size="${fontSize}" font-weight="bold"
         fill="${titleOverlay.color}"
         opacity="${titleOverlay.opacity.toFixed(2)}"
         font-family="system-ui, -apple-system, sans-serif"
-      >${escapedText}</text>
+      >${tspans}</text>
     `
   }
 
