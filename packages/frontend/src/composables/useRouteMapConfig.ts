@@ -282,6 +282,23 @@ export function useRouteMapConfig(
     set: (value: number) => updateConfig({ anonymizeRadiusM: value }),
   })
 
+  // --- Hillshade ---
+
+  const showHillshade = computed({
+    get: () => getConfig().showHillshade ?? false,
+    set: (value: boolean) => updateConfig({ showHillshade: value }),
+  })
+
+  const hillshadeOpacity = computed({
+    get: () => getConfig().hillshadeOpacity ?? 0.35,
+    set: (value: number) => updateConfig({ hillshadeOpacity: value }),
+  })
+
+  const hillshadeStrength = computed({
+    get: () => getConfig().hillshadeStrength ?? 0.03,
+    set: (value: number) => updateConfig({ hillshadeStrength: value }),
+  })
+
   // --- Contour Lines ---
 
   const showContours = computed({
@@ -472,6 +489,10 @@ export function useRouteMapConfig(
     anonymizeStart,
     anonymizeEnd,
     anonymizeRadiusM,
+    // Hillshade
+    showHillshade,
+    hillshadeOpacity,
+    hillshadeStrength,
     // Peaks
     showPeaks,
     peakOpacity,

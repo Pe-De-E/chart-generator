@@ -123,6 +123,9 @@ export interface CombinedFrameOptions {
   // Pre-rendered place boundary layer (async, from Overpass API)
   placeBoundaryLayerSvg?: string
 
+  // Pre-rendered hillshade (async, from terrain tiles)
+  hillshadeLayerSvg?: string
+
   // Pre-rendered forest layer (async, from Overpass API)
   forestLayerSvg?: string
 
@@ -662,6 +665,7 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     riverLayerSvg,
     peakLayerSvg,
     placeBoundaryLayerSvg,
+    hillshadeLayerSvg,
     forestLayerSvg,
     vineyardLayerSvg,
     meadowLayerSvg,
@@ -775,6 +779,7 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
 
     // Wrap geo/contour layers in a clipping container — coordinates extend far
     // beyond the viewport since 110m data covers a wide area
+    const hillshadeHtml = hillshadeLayerSvg || ''
     const forestHtml = forestLayerSvg || ''
     const vineyardHtml = vineyardLayerSvg || ''
     const meadowHtml = meadowLayerSvg || ''
@@ -785,8 +790,8 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     const waterHtml = waterLayerSvg || ''
     const landCoverHtml = landCoverLayerSvg || ''
     const roadHtml = roadLayerSvg || ''
-    // Render order (back to front): forests → vineyards → meadows → land cover (glaciers/urban) → water → place boundaries → contours → roads → rivers → geo → peaks
-    const allGeoHtml = forestHtml + vineyardHtml + meadowHtml + landCoverHtml + waterHtml + placeBoundaryHtml + contourHtml + roadHtml + riverHtml + geoLayersHtml + peakHtml
+    // Render order (back to front): hillshade → forests → vineyards → meadows → land cover → water → place boundaries → contours → roads → rivers → geo → peaks
+    const allGeoHtml = hillshadeHtml + forestHtml + vineyardHtml + meadowHtml + landCoverHtml + waterHtml + placeBoundaryHtml + contourHtml + roadHtml + riverHtml + geoLayersHtml + peakHtml
     const geoClipped = allGeoHtml
       ? `<svg x="0" y="0" width="${width}" height="${mapHeight}" overflow="hidden">${allGeoHtml}</svg>`
       : ''

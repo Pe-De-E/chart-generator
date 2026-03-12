@@ -35,6 +35,7 @@
       :slider-progress="sliderProgress"
       :video-export-supported="videoExport.isSupported.value"
       :video-exporting="videoExport.isExporting.value"
+      :hillshade-loading="hillshadeLoading"
       :contour-loading="contourLoading"
       :river-loading="riverLoading"
       :peak-loading="peakLoading"
@@ -181,6 +182,10 @@ export interface RouteMapAnimationConfig {
   anonymizeStart: boolean;
   anonymizeEnd: boolean;
   anonymizeRadiusM: number;
+  // Hillshade
+  showHillshade: boolean;
+  hillshadeOpacity: number;
+  hillshadeStrength: number;
   // Contour lines
   showContours: boolean;
   contourColor: string;
@@ -294,6 +299,10 @@ export const DEFAULT_ROUTEMAP_ANIMATION_CONFIG: RouteMapAnimationConfig = {
   anonymizeStart: false,
   anonymizeEnd: false,
   anonymizeRadiusM: 300,
+  // Hillshade
+  showHillshade: false,
+  hillshadeOpacity: 0.35,
+  hillshadeStrength: 0.03,
   // Contour lines
   showContours: false,
   contourColor: '#8B7355',
@@ -353,6 +362,8 @@ import { useVineyardLayer } from '../../composables/useVineyardLayer'
 import type { VineyardConfig } from '../../utils/chartGenerators/routeMap/vineyardLayer'
 import { useMeadowLayer } from '../../composables/useMeadowLayer'
 import type { MeadowConfig } from '../../utils/chartGenerators/routeMap/meadowLayer'
+import { useHillshadeLayer } from '../../composables/useHillshadeLayer'
+import type { HillshadeConfig } from '../../utils/chartGenerators/routeMap/hillshadeLayer'
 
 // Slider progress state
 const sliderProgress = ref(0)
@@ -463,6 +474,23 @@ function onStatsDragEnd() {
   document.removeEventListener('mousemove', onStatsDragMove)
   document.removeEventListener('mouseup', onStatsDragEnd)
 }
+
+// ── Hillshade layer (async terrain tile fetch + OffscreenCanvas) ──
+const hillshadeConfig = computed<HillshadeConfig | null>(() => {
+  const cfg = props.animationConfig
+  if (!cfg.showHillshade) return null
+  return {
+    opacity: cfg.hillshadeOpacity,
+    strength: cfg.hillshadeStrength,
+  }
+})
+const { hillshadeSvg, isLoading: hillshadeLoading } = useHillshadeLayer(
+  contourRouteBounds,
+  contourProjParams,
+  hillshadeConfig,
+  computed(() => 1080),
+  contourMapHeight,
+)
 
 // ── Contour lines (async terrain tile fetch + d3-contour) ──
 const contourRouteBounds = computed(() => {
@@ -798,6 +826,8 @@ function buildFrameOptions(progress: number, overrides: Partial<CombinedFrameOpt
       contourMajorInterval: cfg.contourMajorInterval,
       contourShowLabels: cfg.contourShowLabels,
     } : undefined,
+    // Pre-rendered hillshade (async, from terrain tiles)
+    hillshadeLayerSvg: hillshadeSvg.value,
     // Pre-rendered contour lines (async, from terrain tiles)
     contourLayerSvg: contourSvg.value,
     // Pre-rendered river layer (async, from OpenFreeMap vector tiles)

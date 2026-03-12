@@ -278,6 +278,14 @@
             </template>
 
             <v-divider class="my-2" />
+            <v-checkbox v-model="showHillshade" label="Schummerung (Hillshade)" density="compact" hide-details class="mt-1" />
+            <v-progress-linear v-if="showHillshade && hillshadeLoading" indeterminate color="primary" height="2" class="mt-1" />
+            <template v-if="showHillshade">
+              <label class="text-caption text-medium-emphasis d-block mb-1 mt-1">Deckkraft: {{ Math.round(hillshadeOpacity * 100) }}%</label>
+              <v-slider v-model="hillshadeOpacity" :min="0.05" :max="0.80" :step="0.05" density="compact" hide-details />
+              <label class="text-caption text-medium-emphasis d-block mb-1 mt-1">Staerke: {{ hillshadeStrength.toFixed(2) }}</label>
+              <v-slider v-model="hillshadeStrength" :min="0.005" :max="0.10" :step="0.005" density="compact" hide-details />
+            </template>
             <v-checkbox v-model="showContours" label="Hoehenlinien" density="compact" hide-details class="mt-1" />
             <v-progress-linear v-if="showContours && contourLoading" indeterminate color="primary" height="2" class="mt-1" />
             <template v-if="showContours">
@@ -809,6 +817,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  hillshadeLoading: {
+    type: Boolean,
+    default: false,
+  },
   contourLoading: {
     type: Boolean,
     default: false,
@@ -986,6 +998,10 @@ const {
   // Peaks
   showPeaks,
   peakOpacity,
+  // Hillshade
+  showHillshade,
+  hillshadeOpacity,
+  hillshadeStrength,
   // Contour Lines
   showContours,
   contourColor,
