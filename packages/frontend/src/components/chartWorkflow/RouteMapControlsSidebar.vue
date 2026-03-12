@@ -309,10 +309,16 @@
             </template>
             <label class="text-caption text-medium-emphasis d-block mb-1 mt-3">Vorschau-Spur: {{ Math.round(routeTrailOpacity * 100) }}%</label>
             <v-slider v-model="routeTrailOpacity" :min="0" :max="0.5" :step="0.05" density="compact" hide-details thumb-label />
-            <v-checkbox v-model="showElevationColoring" label="Route nach Hoehe einfaerben" density="compact" hide-details color="primary" class="mt-2" />
-            <template v-if="showElevationColoring">
+            <v-checkbox v-model="showElevationColoring" label="Route nach Hoehe einfaerben" density="compact" hide-details color="primary" class="mt-2" :disabled="showSpeedColoring" />
+            <template v-if="showElevationColoring && !showSpeedColoring">
               <label class="text-caption text-medium-emphasis d-block mb-1 mt-2">Intensitaet: {{ elevationColorIntensity }}</label>
               <v-slider v-model="elevationColorIntensity" :min="1" :max="8" :step="1" density="compact" hide-details thumb-label />
+            </template>
+            <v-checkbox v-model="showSpeedColoring" label="Route nach Tempo einfaerben" density="compact" hide-details color="primary" class="mt-1" />
+            <template v-if="showSpeedColoring">
+              <label class="text-caption text-medium-emphasis d-block mb-1 mt-2">Intensitaet: {{ speedColorIntensity }}</label>
+              <v-slider v-model="speedColorIntensity" :min="1" :max="8" :step="1" density="compact" hide-details thumb-label />
+              <div class="text-caption text-medium-emphasis mt-1" style="font-size:10px">Blau = langsam · Gruen = mittel · Rot = schnell<br>Benoetigt Zeitdaten im GPX</div>
             </template>
 
             <v-divider class="my-3" />
@@ -927,6 +933,8 @@ const {
   showElevationColoring,
   elevationColorIntensity,
   showElevationCurveColoring,
+  showSpeedColoring,
+  speedColorIntensity,
   // Geo Context Layers
   showBorders,
   showRivers,

@@ -638,6 +638,7 @@ export class TerrainScene {
 
   private terrainMesh: THREE.Mesh | null = null
   private rawElevGrid: ElevationGrid | null = null  // unblurred — used for river/route surface snapping
+  private sun: THREE.DirectionalLight | null = null  // stored for shadow camera access
   private trailLine: Line2 | null = null
   private revealedLine: Line2 | null = null
   private revealedGlowLine: Line2 | null = null
@@ -680,7 +681,8 @@ export class TerrainScene {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false })
     this.renderer.setSize(width, height, false)
     this.renderer.setPixelRatio(1)
-    this.renderer.shadowMap.enabled = false
+    this.renderer.shadowMap.enabled = true
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
 
     this.scene = new THREE.Scene()
     this.labelScene = new THREE.Scene()
@@ -767,9 +769,22 @@ export class TerrainScene {
     this.scene.add(ambient)
 
     // Strong warm sun from upper-left-front — creates dramatic shadows on ridge faces
-    const sun = new THREE.DirectionalLight(0xfff0d0, 2.2)
-    sun.position.set(-700, 1100, 500)
-    this.scene.add(sun)
+    this.sun = new THREE.DirectionalLight(0xfff0d0, 2.2)
+    this.sun.position.set(-700, 1100, 500)
+
+    // Shadow setup: PCFSoft, 2048px map, covers ±750 world units (full terrain + padding)
+    this.sun.castShadow = true
+    this.sun.shadow.mapSize.set(2048, 2048)
+    this.sun.shadow.camera.near   = 50
+    this.sun.shadow.camera.far    = 3500
+    const hw = TERRAIN_SIZE * 0.75   // ±750 world units
+    this.sun.shadow.camera.left   = -hw
+    this.sun.shadow.camera.right  =  hw
+    this.sun.shadow.camera.top    =  hw
+    this.sun.shadow.camera.bottom = -hw
+    this.sun.shadow.bias          = -0.0015  // prevents shadow acne on sloped terrain
+    this.sun.shadow.normalBias    =  0.05    // reduces peter-panning on steep faces
+    this.scene.add(this.sun)
 
     // Cool blue fill from the right — fakes sky bounce light
     const fill = new THREE.DirectionalLight(0x4488bb, 0.45)
@@ -935,6 +950,58 @@ export class TerrainScene {
     console.log('[Terrain] load() complete, scene objects:', this.scene.children.length)
   }
 
+  /**
+   * Build a tangent-space normal map from the raw (pre-blur) elevation grid.
+   *
+   * The terrain mesh uses a Gaussian-blurred elevation grid so the surface is
+   * smooth. The normal map is derived from the unblurred data, restoring the
+   * high-frequency detail (rock facets, ridges, forest canopy texture) that
+   * the blur removed — without making the mesh itself jaggy.
+   *
+   * Encoding: standard Three.js tangent-space format (R=tangent, G=bitangent,
+   * B=normal). For our terrain (U→east, V→south), this maps directly to
+   * the central-difference gradient of the height field.
+   */
+  private buildNormalMapTexture(grid: ElevationGrid): THREE.DataTexture {
+    const { data, width, height } = grid
+    const pixels = new Uint8Array(width * height * 4)
+
+    // ny controls how "strong" slope variations appear.
+    // 100 ≈ calibrated so a 30° slope produces ~30° normal tilt,
+    // matching the exaggerated mesh geometry at typical terrainExaggeration=2.5.
+    const ny = 100.0
+
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const xl = Math.max(0, x - 1)
+        const xr = Math.min(width - 1, x + 1)
+        const yt = Math.max(0, y - 1)
+        const yb = Math.min(height - 1, y + 1)
+
+        // Central-difference gradient (metres per pixel)
+        const dx = (data[y * width + xr] - data[y * width + xl]) / (xr - xl)
+        const dz = (data[yb * width + x] - data[yt * width + x]) / (yb - yt)
+
+        // Tangent-space normal: tilt away from flat (0,0,1) by the slope
+        const nx = -dx
+        const nz = -dz
+        const len = Math.sqrt(nx * nx + ny * ny + nz * nz)
+
+        const i = (y * width + x) * 4
+        pixels[i]     = Math.round((nx / len * 0.5 + 0.5) * 255)  // R → tangent (east)
+        pixels[i + 1] = Math.round((nz / len * 0.5 + 0.5) * 255)  // G → bitangent (south)
+        pixels[i + 2] = Math.round((ny / len * 0.5 + 0.5) * 255)  // B → normal (up)
+        pixels[i + 3] = 255
+      }
+    }
+
+    const tex = new THREE.DataTexture(pixels, width, height, THREE.RGBAFormat)
+    tex.wrapS = THREE.ClampToEdgeWrapping
+    tex.wrapT = THREE.ClampToEdgeWrapping
+    tex.needsUpdate = true
+    return tex
+  }
+
   private buildTerrainMesh(config: TerrainAnimationConfig, satGrid: SatelliteGrid | null = null): void {
     if (!this.elevGrid || !this.sceneBounds) return
 
@@ -988,14 +1055,24 @@ export class TerrainScene {
 
     geometry.computeVertexNormals()
 
+    // Normal map from raw elevation: re-adds rock-face / ridge detail that the
+    // Gaussian blur removed from the mesh, making the surface read as textured
+    // terrain rather than smooth plastic.
+    const normalMapTex = this.buildNormalMapTexture(this.rawElevGrid ?? this.elevGrid!)
+
     let material: THREE.MeshStandardMaterial
     if (useSatellite) {
       geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2))
+      // computeTangents() requires UVs to be set first — needed for correct
+      // tangent-space normal map orientation.
+      geometry.computeTangents()
       const texture = new THREE.CanvasTexture(satGrid!.canvas as unknown as HTMLCanvasElement)
       texture.colorSpace = THREE.SRGBColorSpace
       material = new THREE.MeshStandardMaterial({
         map: texture,
-        roughness: 0.92,
+        normalMap: normalMapTex,
+        normalScale: new THREE.Vector2(1.2, 1.2),
+        roughness: 0.88,
         metalness: 0.0,
         side: THREE.FrontSide,
       })
@@ -1003,13 +1080,18 @@ export class TerrainScene {
       geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
       material = new THREE.MeshStandardMaterial({
         vertexColors: true,
-        roughness: 0.88,
+        normalMap: normalMapTex,
+        normalScale: new THREE.Vector2(1.2, 1.2),
+        roughness: 0.85,
         metalness: 0.0,
         side: THREE.FrontSide,
       })
     }
 
     this.terrainMesh = new THREE.Mesh(geometry, material)
+    // Realistic mode: terrain casts and receives sun shadows for dramatic valley/peak contrast
+    this.terrainMesh.receiveShadow = true
+    this.terrainMesh.castShadow = true
     this.scene.add(this.terrainMesh)
   }
 

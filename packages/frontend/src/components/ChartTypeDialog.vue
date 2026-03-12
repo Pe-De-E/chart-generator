@@ -126,9 +126,9 @@ function confirmSelection() {
   if (selectedType.value === 'elevation') {
     router.push({ name: 'Elevation' })
   } else if (selectedType.value === 'route-map') {
-    router.push({ name: 'RouteMap' })
+    router.push({ name: 'GPX', query: { mode: 'route-map' } })
   } else if (selectedType.value === 'terrain') {
-    router.push({ name: 'Terrain' })
+    router.push({ name: 'GPX', query: { mode: 'terrain' } })
   }
   closeDialog()
 }

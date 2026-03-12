@@ -150,6 +150,8 @@ export interface RouteMapAnimationConfig {
   showElevationColoring: boolean;
   elevationColorIntensity: number;
   showElevationCurveColoring: boolean;
+  showSpeedColoring: boolean;
+  speedColorIntensity: number;
   // Geo context layers
   showBorders: boolean;
   showRivers: boolean;
@@ -257,6 +259,8 @@ export const DEFAULT_ROUTEMAP_ANIMATION_CONFIG: RouteMapAnimationConfig = {
   showElevationColoring: false,
   elevationColorIntensity: 5,
   showElevationCurveColoring: false,
+  showSpeedColoring: false,
+  speedColorIntensity: 5,
   // Geo context layers
   showBorders: false,
   showRivers: false,
@@ -696,8 +700,10 @@ function buildFrameOptions(progress: number, overrides: Partial<CombinedFrameOpt
       glowIntensity: cfg.routeGlowIntensity,
       trailDash: cfg.routeTrailDash,
       trailOpacity: cfg.routeTrailOpacity,
-      elevationColoring: cfg.showElevationColoring,
+      elevationColoring: cfg.showElevationColoring && !cfg.showSpeedColoring,
       elevationColorIntensity: cfg.elevationColorIntensity,
+      speedColoring: cfg.showSpeedColoring,
+      speedColorIntensity: cfg.speedColorIntensity,
     },
     showMapMarker: cfg.showMapMarker,
     mapMarkerSize: cfg.mapMarkerSize,

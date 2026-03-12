@@ -153,6 +153,16 @@ export function useRouteMapConfig(
     set: (value: boolean) => updateConfig({ showElevationCurveColoring: value }),
   })
 
+  const showSpeedColoring = computed({
+    get: () => getConfig().showSpeedColoring ?? false,
+    set: (value: boolean) => updateConfig({ showSpeedColoring: value }),
+  })
+
+  const speedColorIntensity = computed({
+    get: () => getConfig().speedColorIntensity ?? 5,
+    set: (value: number) => updateConfig({ speedColorIntensity: value }),
+  })
+
   // --- Geo Context Layers ---
 
   const showBorders = computed({
@@ -415,6 +425,8 @@ export function useRouteMapConfig(
     showElevationColoring,
     elevationColorIntensity,
     showElevationCurveColoring,
+    showSpeedColoring,
+    speedColorIntensity,
     // Geo Context Layers
     showBorders,
     showRivers,

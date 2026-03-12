@@ -24,6 +24,10 @@ export interface RouteLineStyle {
   elevationColoring?: boolean
   /** Intensity of elevation coloring (1-8, default 5) */
   elevationColorIntensity?: number
+  /** Color segments by speed (blue=slow, green=medium, red=fast) — requires time data in GPX */
+  speedColoring?: boolean
+  /** Intensity of speed coloring (1-8, default 5) */
+  speedColorIntensity?: number
 }
 
 export const DEFAULT_ROUTE_LINE_STYLE: RouteLineStyle = {
@@ -79,6 +83,63 @@ export function elevationToColor(normalizedElev: number, intensity: number): str
   const sat = 50 + (intensity / 8) * 40  // 50-90%
   const lightness = 45 + (1 - intensity / 8) * 15  // 45-60%
   return `hsl(${hue.toFixed(0)}, ${sat.toFixed(0)}%, ${lightness.toFixed(0)}%)`
+}
+
+/**
+ * Compute raw speed (km/h) for each segment from MapPoint time + distance.
+ * Returns an empty array if no time data is available.
+ */
+function computeSegmentSpeeds(points: MapPoint[]): number[] {
+  if (points.length < 2) return []
+
+  const speeds: number[] = []
+  let lastValidSpeed = 0
+
+  for (let i = 0; i < points.length - 1; i++) {
+    const p1 = points[i]
+    const p2 = points[i + 1]
+
+    if (p1.time !== undefined && p2.time !== undefined) {
+      const timeDiffMs = p2.time - p1.time
+      if (timeDiffMs > 500) {
+        // Only compute speed if time gap is > 0.5 s (avoids divide-by-zero / GPS duplicates)
+        const distDiffKm = Math.max(0, p2.distance - p1.distance)
+        lastValidSpeed = (distDiffKm / timeDiffMs) * 3_600_000
+      }
+      speeds.push(Math.max(0, lastValidSpeed))
+    } else {
+      speeds.push(0)
+    }
+  }
+
+  return speeds
+}
+
+/**
+ * Smooth an array of values with a centered moving average.
+ */
+function movingAverage(values: number[], window: number): number[] {
+  const half = Math.floor(window / 2)
+  return values.map((_, i) => {
+    const start = Math.max(0, i - half)
+    const end = Math.min(values.length, i + half + 1)
+    const slice = values.slice(start, end)
+    return slice.reduce((a, b) => a + b, 0) / slice.length
+  })
+}
+
+/**
+ * Normalize an array of values to [0, 1] using percentile clamping
+ * to prevent outliers from collapsing the color range.
+ */
+function normalizePercentile(values: number[], pLow = 5, pHigh = 95): number[] {
+  if (values.length === 0) return []
+  const sorted = [...values].sort((a, b) => a - b)
+  const low = sorted[Math.floor((sorted.length - 1) * pLow / 100)]
+  const high = sorted[Math.floor((sorted.length - 1) * pHigh / 100)]
+  const range = high - low
+  if (range === 0) return values.map(() => 0.5)
+  return values.map(v => Math.max(0, Math.min(1, (v - low) / range)))
 }
 
 /**
@@ -150,6 +211,56 @@ function partialPolyline(points: MapPoint[], progress: number): string {
 }
 
 /**
+ * Get the exact interpolated tip coordinate at the current progress.
+ */
+function getLineTip(points: MapPoint[], progress: number): { x: number; y: number } | null {
+  if (points.length === 0 || progress <= 0) return null
+
+  const exactIndex = progress * (points.length - 1)
+  const lastFullIndex = Math.floor(exactIndex)
+  const fraction = exactIndex - lastFullIndex
+
+  if (fraction === 0 || lastFullIndex + 1 >= points.length) {
+    const p = points[Math.min(lastFullIndex, points.length - 1)]
+    return { x: p.x, y: p.y }
+  }
+
+  const a = points[lastFullIndex]
+  const b = points[lastFullIndex + 1]
+  return {
+    x: a.x + (b.x - a.x) * fraction,
+    y: a.y + (b.y - a.y) * fraction,
+  }
+}
+
+/**
+ * Generate a "drawing tip" sparkle at the leading edge of the drawn line.
+ * This gives the visual impression of a pen/marker actively drawing the route.
+ *
+ * Renders three layers:
+ *  1. Outer soft halo  — wide, very transparent (glow bleed)
+ *  2. Mid ring         — medium, semi-transparent
+ *  3. Inner bright dot — tight, fully opaque (the "pen point")
+ */
+function generateDrawTip(
+  tipX: number,
+  tipY: number,
+  lineWidth: number,
+  glowColor: string,
+  hasGlow: boolean,
+): string {
+  const core = lineWidth * 1.1
+  const mid  = lineWidth * 2.2
+  const halo = lineWidth * 4.5
+  const filterAttr = hasGlow ? ' filter="url(#route-glow)"' : ''
+  return [
+    `<circle cx="${tipX.toFixed(1)}" cy="${tipY.toFixed(1)}" r="${halo.toFixed(1)}" fill="${glowColor}" opacity="0.12"${filterAttr}/>`,
+    `<circle cx="${tipX.toFixed(1)}" cy="${tipY.toFixed(1)}" r="${mid.toFixed(1)}"  fill="${glowColor}" opacity="0.30"/>`,
+    `<circle cx="${tipX.toFixed(1)}" cy="${tipY.toFixed(1)}" r="${core.toFixed(1)}" fill="${glowColor}" opacity="0.95"/>`,
+  ].join('\n')
+}
+
+/**
  * Get the last visible point index for the given progress.
  */
 function getLastRevealedIndex(points: MapPoint[], progress: number): number {
@@ -159,7 +270,8 @@ function getLastRevealedIndex(points: MapPoint[], progress: number): number {
 }
 
 /**
- * Generate elevation-colored route segments as individual <line> elements.
+ * Generate colored route segments as individual <line> elements.
+ * Supports both elevation coloring and speed coloring (speed takes precedence).
  */
 function generateColoredSegments(
   points: MapPoint[],
@@ -170,29 +282,51 @@ function generateColoredSegments(
   const lastIndex = getLastRevealedIndex(points, progress)
   if (lastIndex < 0) return ''
 
-  // Calculate elevation range
-  const elevations = points.map(p => p.elevation)
-  const minElev = Math.min(...elevations)
-  const maxElev = Math.max(...elevations)
-  const range = maxElev - minElev
+  // ── Determine normalized color value per segment ──────────────────────────
+  let normalizedValues: number[]
 
-  const intensity = style.elevationColorIntensity ?? 5
-  const segments: string[] = []
+  if (style.speedColoring) {
+    const rawSpeeds = computeSegmentSpeeds(points)
+    const hasTimeData = rawSpeeds.some(s => s > 0)
+    if (hasTimeData) {
+      const smoothed = movingAverage(rawSpeeds, 5)
+      normalizedValues = normalizePercentile(smoothed)
+    } else {
+      // No time data — fall back to elevation coloring
+      const elevs = points.map(p => p.elevation)
+      const minElev = Math.min(...elevs)
+      const range = Math.max(...elevs) - minElev
+      normalizedValues = points.slice(0, -1).map((p, i) => {
+        const avg = (p.elevation + points[i + 1].elevation) / 2
+        return range > 0 ? (avg - minElev) / range : 0.5
+      })
+    }
+  } else {
+    // Elevation coloring
+    const elevs = points.map(p => p.elevation)
+    const minElev = Math.min(...elevs)
+    const range = Math.max(...elevs) - minElev
+    normalizedValues = points.slice(0, -1).map((p, i) => {
+      const avg = (p.elevation + points[i + 1].elevation) / 2
+      return range > 0 ? (avg - minElev) / range : 0.5
+    })
+  }
+
+  const intensity = style.speedColoring
+    ? (style.speedColorIntensity ?? 5)
+    : (style.elevationColorIntensity ?? 5)
   const strokeWidth = isGlow ? style.width + 4 : style.width
   const opacity = isGlow ? 0.3 : style.opacity
+  const segments: string[] = []
 
   for (let i = 0; i < lastIndex && i < points.length - 1; i++) {
     const p1 = points[i]
     const p2 = points[i + 1]
-    const avgElev = (p1.elevation + p2.elevation) / 2
-    const normalizedElev = range > 0 ? (avgElev - minElev) / range : 0.5
-    const color = elevationToColor(normalizedElev, intensity)
-
-    segments.push(`
-      <line x1="${p1.x.toFixed(1)}" y1="${p1.y.toFixed(1)}" x2="${p2.x.toFixed(1)}" y2="${p2.y.toFixed(1)}"
-            stroke="${color}" stroke-width="${strokeWidth}" stroke-opacity="${opacity}"
-            stroke-linecap="round"/>
-    `)
+    const color = elevationToColor(normalizedValues[i] ?? 0.5, intensity)
+    segments.push(
+      `<line x1="${p1.x.toFixed(1)}" y1="${p1.y.toFixed(1)}" x2="${p2.x.toFixed(1)}" y2="${p2.y.toFixed(1)}"` +
+      ` stroke="${color}" stroke-width="${strokeWidth}" stroke-opacity="${opacity}" stroke-linecap="round"/>`
+    )
   }
 
   // Handle fractional last segment
@@ -203,15 +337,11 @@ function generateColoredSegments(
     const p2 = points[lastIndex + 1]
     const endX = p1.x + (p2.x - p1.x) * fraction
     const endY = p1.y + (p2.y - p1.y) * fraction
-    const avgElev = (p1.elevation + p2.elevation) / 2
-    const normalizedElev = range > 0 ? (avgElev - minElev) / range : 0.5
-    const color = elevationToColor(normalizedElev, intensity)
-
-    segments.push(`
-      <line x1="${p1.x.toFixed(1)}" y1="${p1.y.toFixed(1)}" x2="${endX.toFixed(1)}" y2="${endY.toFixed(1)}"
-            stroke="${color}" stroke-width="${strokeWidth}" stroke-opacity="${opacity}"
-            stroke-linecap="round"/>
-    `)
+    const color = elevationToColor(normalizedValues[lastIndex] ?? 0.5, intensity)
+    segments.push(
+      `<line x1="${p1.x.toFixed(1)}" y1="${p1.y.toFixed(1)}" x2="${endX.toFixed(1)}" y2="${endY.toFixed(1)}"` +
+      ` stroke="${color}" stroke-width="${strokeWidth}" stroke-opacity="${opacity}" stroke-linecap="round"/>`
+    )
   }
 
   return segments.join('\n')
@@ -255,8 +385,8 @@ export function generateRouteLine(
   }
 
   // Revealed portion of the route
-  if (style.elevationColoring) {
-    // Elevation-colored: individual <line> segments per point pair
+  if (style.elevationColoring || style.speedColoring) {
+    // Colored segments (elevation or speed): individual <line> elements per point pair
     const filterAttr = style.glow ? ' filter="url(#route-glow)"' : ''
 
     if (style.glow) {
@@ -289,6 +419,14 @@ export function generateRouteLine(
           stroke-linecap="round"
         />
       `)
+    }
+  }
+
+  // Drawing tip — bright "pen point" at the leading edge (only while animating)
+  if (progress > 0 && progress < 1) {
+    const tip = getLineTip(points, progress)
+    if (tip) {
+      elements.push(generateDrawTip(tip.x, tip.y, style.width, style.glowColor, style.glow))
     }
   }
 

@@ -10,23 +10,23 @@ Legende: 🟢 1 Tag · 🟡 2–3 Tage · 🔴 Stretch (Ende Woche) · ✅ Erled
 
 ## ✅ Heute umgesetzt (außerhalb der Liste)
 
-- **Flüsse verbessert** — Glow-Effekt (Doppelstrich), variable Strichstärke nach Typ, Streams ergänzt
-- **Wälder** (`natural=wood`, `landuse=forest`) — grüne Flächen, Mindestflächen-Filter
-- **Ortsgrenzen** (`place=city|town|village`) — gestrichelte Polygon-Umrisse
+- ~~**Flüsse verbessert** — Glow-Effekt (Doppelstrich), variable Strichstärke nach Typ, Streams ergänzt~~
+- ~~**Wälder** (`natural=wood`, `landuse=forest`) — grüne Flächen, Mindestflächen-Filter~~
+- ~~**Ortsgrenzen** (`place=city|town|village`) — gestrichelte Polygon-Umrisse~~
 
 ---
 
 ## 🗺️ Karte & Geo-Layer
 
-1. ✅ **Wasserflächen** (Seen, Teiche) — `natural=water` aus Overpass, blau gefüllt
-2. ✅ **Gletscher** — `natural=glacier`, hellblau/weiß, perfekt für Alpenrouten
+1. ✅ ~~**Wasserflächen** (Seen, Teiche) — `natural=water` aus Overpass, blau gefüllt~~
+2. ✅ ~~**Gletscher** — `natural=glacier`, hellblau/weiß, perfekt für Alpenrouten~~
 3. 🟢 **Weinberge / Obstgärten** — `landuse=vineyard|orchard`, eigene Farbe
 4. 🟢 **Wiesen / Felder** — `landuse=meadow|farmland`, dezentes Gelbgrün
-5. ✅ **Bebauung / Siedlungsflächen** — `landuse=residential|commercial`, graubeige
+5. ✅ ~~**Bebauung / Siedlungsflächen** — `landuse=residential|commercial`, graubeige~~
 6. 🟡 **Farbschema für Landnutzung** — alle Flächen als kohärentes Paket (wie Topo-Karte)
 7. 🟡 **Schummerung** (Hillshade) — aus AWS Terrarium Höhendaten eine Schattenebene berechnen
 8. 🟡 **Topografischer Kartenstil** — vordefiniertes Preset das alle Geo-Layer zusammen aktiviert
-9. ✅ **Straßen** — Hauptstraßen/Autobahnen aus Overpass, sehr dezent, nur als Orientierung
+9. ✅ ~~**Straßen** — Hauptstraßen/Autobahnen aus Overpass, sehr dezent, nur als Orientierung~~
 10. 🔴 **Satellitenbild als Hintergrund** — optionale Kachel-Ebene hinter allem (schon Proxy vorhanden)
 
 ---
@@ -35,7 +35,7 @@ Legende: 🟢 1 Tag · 🟡 2–3 Tage · 🔴 Stretch (Ende Woche) · ✅ Erled
 
 11. 🟢 **Farbthemen / Presets** — 5–8 vorgefertigte Farbschemata (Dark, Light, Topo, Neon, Vintage)
 12. 🟢 **Routenfarbe nach Herzfrequenz** — wenn GPX HR-Daten hat, Farbe = HR-Zone
-13. 🟢 **Routenfarbe nach Tempo** — langsam = kalt, schnell = warm
+13. ✅ ~~**Routenfarbe nach Tempo** — langsam = kalt, schnell = warm~~
 14. 🟢 **Routenfarbe nach Steigung** — grün = flach, rot = steil (schon teilweise vorhanden)
 15. 🟢 **Strichstärke der Route** konfigurierbar — dünne elegante Linie vs. fette Sportlinie
 16. 🟢 **Gestrichelte Route** — Dash-Pattern wählbar (Punkte, Striche, custom)
@@ -84,7 +84,7 @@ Legende: 🟢 1 Tag · 🟡 2–3 Tage · 🔴 Stretch (Ende Woche) · ✅ Erled
 44. 🟢 **Wetter-Overlay** — manuell eingebbar (Temperatur, Bedingungen)
 45. 🟢 **Logo/Wasserzeichen** — eigenes Bild hochladen als Overlay
 46. 🟡 **Strava-Segment-Namen** als Annotations einblenden
-47. 🟢 **Kilometermarker** konfigurierbar — alle 5km, 10km, etc.
+47. ✅ ~~**Kilometermarker** konfigurierbar — alle 5km, 10km, etc.~~
 48. 🟢 **Startzeit einblenden** — "Gestartet: 07:42 Uhr"
 49. 🟡 **Teammate-Tracking** — mehrere Routen gleichzeitig animiert (z.B. Gruppenausfahrt)
 50. 🟢 **Fortschrittsbalken** unten — subtiler Balken der mit Animation mitläuft
@@ -111,7 +111,7 @@ Legende: 🟢 1 Tag · 🟡 2–3 Tage · 🔴 Stretch (Ende Woche) · ✅ Erled
 61. 🟢 **One-Click Demo** — Beispiel-Route vorgeladen, sofort spielen ohne Upload
 62. 🟢 **Preset-Gallery** — 6 fertige Styles zum Anklicken, sofort sieht man das Ergebnis
 63. 🟡 **Tour durch Features** — interaktiver Tooltip-Guide beim ersten Besuch
-64. 🟢 **Undo/Redo** für Konfigurationsänderungen
+64. 🟢 **Undo/Redo** für Konfigurationsänderationen
 65. 🟢 **Config als JSON exportieren/importieren** — Settings zwischen Projekten teilen
 66. 🟡 **Vorschau-Thumbnails** für Farbthemen statt nur Text-Dropdown
 67. 🟢 **Keyboard Shortcuts** — Leertaste = Play/Pause, Pfeile = vor/zurück scrubben
@@ -124,7 +124,7 @@ Legende: 🟢 1 Tag · 🟡 2–3 Tage · 🔴 Stretch (Ende Woche) · ✅ Erled
 ## 🔒 Datenschutz & Kontrolle (Relive: Daten gehen auf deren Server)
 
 71. 🟢 **"Alle Daten bleiben lokal"** — prominent kommunizieren, kein Upload der GPX-Daten
-72. ✅ **Route unscharf machen** — Start/Ziel automatisch anonymisieren (±500m)
+72. ✅ ~~**Route unscharf machen** — Start/Ziel automatisch anonymisieren (±500m)~~
 73. 🟢 **Bereich ausblenden** — User zieht Rechteck auf Karte, dieser Bereich wird nicht animiert
 74. 🟡 **Offline-Modus** — gecachte Tiles, App läuft auch ohne Internet
 75. 🟢 **DSGVO-Banner prominent** — "Kein Account nötig, keine Daten gespeichert"
@@ -148,8 +148,8 @@ Legende: 🟢 1 Tag · 🟡 2–3 Tage · 🔴 Stretch (Ende Woche) · ✅ Erled
 
 ## 💡 Kleine Quick-Wins die großen Eindruck machen
 
-86. 🟢 **Puls-Animation am Marker** — der Punkt "atmet" während er sich bewegt
-87. 🟢 **Route erscheint mit Zeichnen-Effekt** — Linie wird sichtbar gezeichnet (schon vorhanden, polieren)
+86. ✅ ~~**Puls-Animation am Marker** — der Punkt "atmet" während er sich bewegt~~
+87. ✅ ~~**Route erscheint mit Zeichnen-Effekt** — Linie wird sichtbar gezeichnet (schon vorhanden, polieren)~~
 88. 🟢 **Schatten unter Route-Linie** — dezenter Drop-Shadow für Tiefe
 89. 🟢 **Kartenrand-Vignette** — dunkler Rand-Gradient für kinematischen Look
 90. 🟢 **Start-Marker = grün, Ziel-Marker = rot** — klar unterscheidbar

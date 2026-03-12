@@ -498,6 +498,37 @@ function generateStatsOverlay(
 }
 
 /**
+ * Remove near-duplicate consecutive points to smooth animation through GPS pauses.
+ *
+ * GPS devices keep recording during pauses, creating many clustered points at the
+ * same location. With index-based progress mapping, each cluster consumes equal
+ * animation time — making the drawn line appear frozen ("abgehakt") for those frames.
+ *
+ * This function keeps only points that are at least `minStepKm` apart, so the
+ * animation speed is proportional to actual distance traveled.
+ *
+ * Threshold: max(5m, 0.1% of route length) — preserves route detail for short
+ * routes while aggressively filtering pauses on long routes.
+ */
+function deduplicateRouteForAnimation<T extends { distance: number }>(points: T[]): T[] {
+  if (points.length < 2) return points
+
+  const totalDist = points[points.length - 1].distance
+  if (totalDist <= 0) return points
+
+  const minStep = Math.max(0.005, totalDist * 0.001)
+
+  const result: T[] = [points[0]]
+  for (let i = 1; i < points.length - 1; i++) {
+    if (points[i].distance - result[result.length - 1].distance >= minStep) {
+      result.push(points[i])
+    }
+  }
+  result.push(points[points.length - 1]) // always keep last point
+  return result
+}
+
+/**
  * Generate a north arrow indicator for the top-right corner of the map.
  */
 function generateNorthArrow(width: number, color: string): string {
@@ -705,21 +736,25 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
       ? generateGeoLayers(routeBounds, projParams, geoLayers, width, mapHeight, mapPoints)
       : ''
 
+    // Deduplicate for animation — removes GPS pause clusters so the drawing
+    // speed is proportional to distance traveled, not GPS point count.
+    const animPoints = deduplicateRouteForAnimation(mapPoints)
+
     const camera = calculateMapCameraViewport(
       effectiveProgress, mapCameraMode, mapCameraConfig,
-      mapPoints, mapChartArea, width, mapHeight,
+      animPoints, mapChartArea, width, mapHeight,
     )
 
-    const routeLine = generateRouteLine(mapPoints, effectiveProgress, routeStyle, width, mapHeight)
+    const routeLine = generateRouteLine(animPoints, effectiveProgress, routeStyle, width, mapHeight)
     const marker = showMapMarker
-      ? generateRouteMarker(mapPoints, effectiveProgress, mapMarkerSize, mapMarkerColor, routeStyle.color, showDirection, showMarkerPulse)
+      ? generateRouteMarker(animPoints, effectiveProgress, mapMarkerSize, mapMarkerColor, routeStyle.color, showDirection, showMarkerPulse)
       : ''
 
     const distLabels = showDistanceMarkers
-      ? generateMapDistanceMarkers(mapPoints, distanceMarkerInterval, mapMarkerColor, 14)
+      ? generateMapDistanceMarkers(animPoints, distanceMarkerInterval, mapMarkerColor, 14)
       : ''
     const startEnd = showStartEndLabels
-      ? generateMapStartEndLabels(mapPoints, mapMarkerColor, 14)
+      ? generateMapStartEndLabels(animPoints, mapMarkerColor, 14)
       : ''
 
     const fadeDef = showMapFade ? `
@@ -766,7 +801,7 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     if (mapCameraMode === 'chase') {
       // Background route (faint, full) — not affected by chase zoom
       const bgRoute = generateRouteLine(
-        mapPoints, 1,
+        animPoints, 1,
         { ...routeStyle, opacity: 0.15, width: routeStyle.width * 0.5, glow: false, trailOpacity: 0, trailDash: undefined },
         width, mapHeight,
       )
