@@ -21,7 +21,7 @@ Legende: 🟢 1 Tag · 🟡 2–3 Tage · 🔴 Stretch (Ende Woche) · ✅ Erled
 1. ✅ ~~**Wasserflächen** (Seen, Teiche) — `natural=water` aus Overpass, blau gefüllt~~
 2. ✅ ~~**Gletscher** — `natural=glacier`, hellblau/weiß, perfekt für Alpenrouten~~
 3. ✅ ~~**Weinberge / Obstgärten** — `landuse=vineyard|orchard`, eigene Farbe~~
-4. 🟢 **Wiesen / Felder** — `landuse=meadow|farmland`, dezentes Gelbgrün
+4. ✅ ~~**Wiesen / Felder** — `landuse=meadow|farmland`, dezentes Gelbgrün~~
 5. ✅ ~~**Bebauung / Siedlungsflächen** — `landuse=residential|commercial`, graubeige~~
 6. 🟡 **Farbschema für Landnutzung** — alle Flächen als kohärentes Paket (wie Topo-Karte)
 7. 🟡 **Schummerung** (Hillshade) — aus AWS Terrarium Höhendaten eine Schattenebene berechnen
