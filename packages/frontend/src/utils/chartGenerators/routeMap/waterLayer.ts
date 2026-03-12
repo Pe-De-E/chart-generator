@@ -7,9 +7,10 @@
  */
 
 import type { RouteBounds, ProjectionParams } from './projection'
-import { projectGeoCoord, smoothPathD, type Point2D } from './geoFeatures'
-
-// ── Types ────────────────────────────────────────────────────────────────────
+import {
+  generateOverpassPolygonLayer,
+  type PolygonLayerStyle,
+} from './overpassPolygonLayer'
 
 export interface WaterConfig {
   color: string
@@ -21,126 +22,23 @@ export const DEFAULT_WATER_CONFIG: WaterConfig = {
   opacity: 0.70,
 }
 
-interface OverpassMember {
-  type: string
-  ref: number
-  role: string
-  geometry?: Array<{ lat: number; lon: number }>
+const WATER_FILTERS = [
+  'way[natural=water]',
+  'way[landuse=reservoir]',
+  'relation[natural=water]',
+  'relation[landuse=reservoir]',
+]
+
+const WATER_STYLE: PolygonLayerStyle = {
+  fillOpacity: 0.55,
+  strokeWidth: 1,
+  strokeOpacity: 0.70,
+  minAreaPx: 200,
+  maxPolygons: 200,
+  viewportMargin: 300,
 }
 
-interface OverpassElement {
-  type: 'way' | 'relation' | 'node'
-  id: number
-  tags?: Record<string, string>
-  geometry?: Array<{ lat: number; lon: number }>
-  members?: OverpassMember[]
-}
-
-// ── Overpass API ──────────────────────────────────────────────────────────────
-
-const OVERPASS_URL = '/overpass/interpreter'
-
-async function fetchWaterBodies(bounds: RouteBounds): Promise<OverpassElement[]> {
-  const { minLat, maxLon, maxLat, minLon } = bounds
-
-  const query =
-    `[out:json][bbox:${minLat.toFixed(5)},${minLon.toFixed(5)},${maxLat.toFixed(5)},${maxLon.toFixed(5)}][timeout:30];\n` +
-    `(\n` +
-    `  way[natural=water];\n` +
-    `  way[landuse=reservoir];\n` +
-    `  relation[natural=water];\n` +
-    `  relation[landuse=reservoir];\n` +
-    `);\n` +
-    `out geom;`
-
-  const response = await fetch(OVERPASS_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: `data=${encodeURIComponent(query)}`,
-  })
-
-  if (!response.ok) throw new Error(`Overpass water fetch failed: ${response.status}`)
-
-  const data = await response.json()
-  return (data.elements || []) as OverpassElement[]
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function polygonArea(points: Point2D[]): number {
-  let area = 0
-  const n = points.length
-  for (let i = 0; i < n; i++) {
-    const j = (i + 1) % n
-    area += points[i].x * points[j].y
-    area -= points[j].x * points[i].y
-  }
-  return Math.abs(area) / 2
-}
-
-function extractRings(el: OverpassElement): Array<Array<{ lat: number; lon: number }>> {
-  if (el.type === 'way' && el.geometry && el.geometry.length >= 3) {
-    return [el.geometry]
-  }
-  if (el.type === 'relation' && el.members) {
-    return el.members
-      .filter(m => m.role === 'outer' && m.geometry && m.geometry.length >= 3)
-      .map(m => m.geometry!)
-  }
-  return []
-}
-
-// ── SVG Rendering ─────────────────────────────────────────────────────────────
-
-const MIN_AREA_PX = 200
-const MAX_WATER_BODIES = 200
-
-function renderWaterSvg(
-  elements: OverpassElement[],
-  projParams: ProjectionParams,
-  config: WaterConfig,
-  viewWidth: number,
-  viewHeight: number,
-): string {
-  const polygons: string[] = []
-  let count = 0
-
-  for (const el of elements) {
-    if (count >= MAX_WATER_BODIES) break
-
-    const rings = extractRings(el)
-    for (const ring of rings) {
-      const projected = ring.map(pt => projectGeoCoord(pt.lon, pt.lat, projParams))
-
-      const avgX = projected.reduce((s, p) => s + p.x, 0) / projected.length
-      const avgY = projected.reduce((s, p) => s + p.y, 0) / projected.length
-      const margin = 300
-      if (avgX < -margin || avgX > viewWidth + margin || avgY < -margin || avgY > viewHeight + margin) continue
-
-      if (polygonArea(projected) < MIN_AREA_PX) continue
-
-      const d = smoothPathD(projected)
-      if (!d) continue
-
-      polygons.push(
-        `<path d="${d} Z" fill="${config.color}" fill-opacity="0.55" stroke="${config.color}" stroke-width="1" stroke-opacity="0.70"/>`
-      )
-      count++
-    }
-  }
-
-  if (polygons.length === 0) return ''
-  return `<g opacity="${config.opacity.toFixed(2)}">${polygons.join('\n')}</g>`
-}
-
-// ── Cache & Export ────────────────────────────────────────────────────────────
-
-const waterSvgCache = new Map<string, string>()
-
-function buildCacheKey(bounds: RouteBounds, config: WaterConfig, vw: number, vh: number): string {
-  return `${bounds.minLat.toFixed(4)},${bounds.maxLat.toFixed(4)},` +
-    `${bounds.minLon.toFixed(4)},${bounds.maxLon.toFixed(4)},${config.color},${vw},${vh}`
-}
+const waterCache = new Map<string, string>()
 
 export async function generateWaterLayer(
   routeBounds: RouteBounds,
@@ -149,24 +47,9 @@ export async function generateWaterLayer(
   viewWidth = 1080,
   viewHeight = 1152,
 ): Promise<string> {
-  const cacheKey = buildCacheKey(routeBounds, config, viewWidth, viewHeight)
-  const cached = waterSvgCache.get(cacheKey)
-  if (cached !== undefined) {
-    return cached.replace(/opacity="[\d.]+"/, `opacity="${config.opacity.toFixed(2)}"`)
-  }
-
-  const paddedBounds: RouteBounds = {
-    minLat: routeBounds.minLat - 0.05,
-    maxLat: routeBounds.maxLat + 0.05,
-    minLon: routeBounds.minLon - 0.05,
-    maxLon: routeBounds.maxLon + 0.05,
-    centerLat: routeBounds.centerLat,
-    centerLon: routeBounds.centerLon,
-  }
-
-  const elements = await fetchWaterBodies(paddedBounds)
-  const svg = renderWaterSvg(elements, projectionParams, config, viewWidth, viewHeight)
-
-  waterSvgCache.set(cacheKey, svg)
-  return svg
+  return generateOverpassPolygonLayer(
+    WATER_FILTERS, waterCache,
+    routeBounds, projectionParams, config, WATER_STYLE,
+    viewWidth, viewHeight,
+  )
 }

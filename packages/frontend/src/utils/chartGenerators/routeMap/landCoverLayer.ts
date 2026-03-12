@@ -10,7 +10,13 @@
  */
 
 import type { RouteBounds, ProjectionParams } from './projection'
-import { projectGeoCoord, smoothPathD, type Point2D } from './geoFeatures'
+import { projectGeoCoord, smoothPathD } from './geoFeatures'
+import {
+  type OverpassElement,
+  extractRings,
+  polygonArea,
+  fetchOverpassElements,
+} from './overpassPolygonLayer'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -30,74 +36,16 @@ export const DEFAULT_LAND_COVER_CONFIG: LandCoverConfig = {
 
 type LandCoverType = 'glacier' | 'urban'
 
-interface OverpassMember {
-  type: string
-  ref: number
-  role: string
-  geometry?: Array<{ lat: number; lon: number }>
-}
-
-interface OverpassElement {
-  type: 'way' | 'relation' | 'node'
-  id: number
-  tags?: Record<string, string>
-  geometry?: Array<{ lat: number; lon: number }>
-  members?: OverpassMember[]
-}
-
 // ── Overpass API ──────────────────────────────────────────────────────────────
 
-const OVERPASS_URL = '/overpass/interpreter'
-
-async function fetchLandCover(bounds: RouteBounds): Promise<OverpassElement[]> {
-  const { minLat, maxLon, maxLat, minLon } = bounds
-
-  const query =
-    `[out:json][bbox:${minLat.toFixed(5)},${minLon.toFixed(5)},${maxLat.toFixed(5)},${maxLon.toFixed(5)}][timeout:30];\n` +
-    `(\n` +
-    `  way[natural=glacier];\n` +
-    `  relation[natural=glacier];\n` +
-    `  way[landuse~"^(residential|commercial|industrial|retail)$"];\n` +
-    `  relation[landuse~"^(residential|commercial|industrial|retail)$"];\n` +
-    `);\n` +
-    `out geom;`
-
-  const response = await fetch(OVERPASS_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: `data=${encodeURIComponent(query)}`,
-  })
-
-  if (!response.ok) throw new Error(`Overpass land cover fetch failed: ${response.status}`)
-
-  const data = await response.json()
-  return (data.elements || []) as OverpassElement[]
-}
+const LAND_COVER_FILTERS = [
+  'way[natural=glacier]',
+  'relation[natural=glacier]',
+  'way[landuse~"^(residential|commercial|industrial|retail)$"]',
+  'relation[landuse~"^(residential|commercial|industrial|retail)$"]',
+]
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function polygonArea(points: Point2D[]): number {
-  let area = 0
-  const n = points.length
-  for (let i = 0; i < n; i++) {
-    const j = (i + 1) % n
-    area += points[i].x * points[j].y
-    area -= points[j].x * points[i].y
-  }
-  return Math.abs(area) / 2
-}
-
-function extractRings(el: OverpassElement): Array<Array<{ lat: number; lon: number }>> {
-  if (el.type === 'way' && el.geometry && el.geometry.length >= 3) {
-    return [el.geometry]
-  }
-  if (el.type === 'relation' && el.members) {
-    return el.members
-      .filter(m => m.role === 'outer' && m.geometry && m.geometry.length >= 3)
-      .map(m => m.geometry!)
-  }
-  return []
-}
 
 function classifyElement(el: OverpassElement): LandCoverType | null {
   const natural = el.tags?.natural
@@ -202,7 +150,7 @@ export async function generateLandCoverLayer(
       centerLat: routeBounds.centerLat,
       centerLon: routeBounds.centerLon,
     }
-    elements = await fetchLandCover(paddedBounds)
+    elements = await fetchOverpassElements(LAND_COVER_FILTERS, paddedBounds)
     landCoverCache.set(cacheKey, elements)
   }
 
