@@ -227,6 +227,12 @@
               <label class="text-caption text-medium-emphasis d-block mb-1 mt-1">Deckkraft: {{ Math.round(forestOpacity * 100) }}%</label>
               <v-slider v-model="forestOpacity" :min="0.05" :max="1" :step="0.05" density="compact" hide-details />
             </template>
+            <v-checkbox v-model="showVineyards" label="Weinberge & Obstgaerten" density="compact" hide-details class="mt-1" />
+            <v-progress-linear v-if="showVineyards && vineyardLoading" indeterminate color="primary" height="2" class="mt-1" />
+            <template v-if="showVineyards">
+              <label class="text-caption text-medium-emphasis d-block mb-1 mt-1">Deckkraft: {{ Math.round(vineyardOpacity * 100) }}%</label>
+              <v-slider v-model="vineyardOpacity" :min="0.05" :max="1" :step="0.05" density="compact" hide-details />
+            </template>
             <v-checkbox v-model="showWater" label="Seen & Gewaesser" density="compact" hide-details class="mt-1" />
             <v-progress-linear v-if="showWater && waterLoading" indeterminate color="primary" height="2" class="mt-1" />
             <template v-if="showWater">
@@ -817,6 +823,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  vineyardLoading: {
+    type: Boolean,
+    default: false,
+  },
   waterLoading: {
     type: Boolean,
     default: false,
@@ -946,6 +956,8 @@ const {
   placeBoundaryOpacity,
   showForests,
   forestOpacity,
+  showVineyards,
+  vineyardOpacity,
   showWater,
   waterOpacity,
   showGlaciers,

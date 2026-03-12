@@ -40,6 +40,7 @@
       :peak-loading="peakLoading"
       :place-boundary-loading="placeBoundaryLoading"
       :forest-loading="forestLoading"
+      :vineyard-loading="vineyardLoading"
       :water-loading="waterLoading"
       :land-cover-loading="landCoverLoading"
       :road-loading="roadLoading"
@@ -171,6 +172,8 @@ export interface RouteMapAnimationConfig {
   glacierOpacity: number;
   showUrban: boolean;
   urbanOpacity: number;
+  showVineyards: boolean;
+  vineyardOpacity: number;
   // Privacy
   anonymizeStart: boolean;
   anonymizeEnd: boolean;
@@ -280,6 +283,8 @@ export const DEFAULT_ROUTEMAP_ANIMATION_CONFIG: RouteMapAnimationConfig = {
   glacierOpacity: 0.65,
   showUrban: false,
   urbanOpacity: 0.45,
+  showVineyards: false,
+  vineyardOpacity: 0.55,
   // Privacy
   anonymizeStart: false,
   anonymizeEnd: false,
@@ -339,6 +344,8 @@ import type { LandCoverConfig } from '../../utils/chartGenerators/routeMap/landC
 import type { PeakConfig } from '../../utils/chartGenerators/routeMap/peakLayer'
 import { useRoadLayer } from '../../composables/useRoadLayer'
 import type { RoadConfig } from '../../utils/chartGenerators/routeMap/roadLayer'
+import { useVineyardLayer } from '../../composables/useVineyardLayer'
+import type { VineyardConfig } from '../../utils/chartGenerators/routeMap/vineyardLayer'
 
 // Slider progress state
 const sliderProgress = ref(0)
@@ -590,6 +597,23 @@ const { landCoverSvg, isLoading: landCoverLoading } = useLandCoverLayer(
   contourMapHeight,
 )
 
+// ── Vineyard & orchard layer (async fetch from Overpass API) ──
+const vineyardConfig = computed<VineyardConfig | null>(() => {
+  const cfg = props.animationConfig
+  if (!cfg.showVineyards) return null
+  return {
+    color: '#c8a04a',
+    opacity: cfg.vineyardOpacity,
+  }
+})
+const { vineyardSvg, isLoading: vineyardLoading } = useVineyardLayer(
+  contourRouteBounds,
+  contourProjParams,
+  vineyardConfig,
+  computed(() => 1080),
+  contourMapHeight,
+)
+
 // ── Road layer (async fetch from Overpass API) ──
 const roadConfig = computed<RoadConfig | null>(() => {
   const cfg = props.animationConfig
@@ -757,6 +781,7 @@ function buildFrameOptions(progress: number, overrides: Partial<CombinedFrameOpt
     peakLayerSvg: peakSvg.value,
     placeBoundaryLayerSvg: placeBoundarySvg.value,
     forestLayerSvg: forestSvg.value,
+    vineyardLayerSvg: vineyardSvg.value,
     waterLayerSvg: waterSvg.value,
     landCoverLayerSvg: landCoverSvg.value,
     roadLayerSvg: roadSvg.value,

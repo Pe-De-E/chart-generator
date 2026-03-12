@@ -245,6 +245,16 @@ export function useRouteMapConfig(
     set: (value: number) => updateConfig({ urbanOpacity: value }),
   })
 
+  const showVineyards = computed({
+    get: () => getConfig().showVineyards ?? false,
+    set: (value: boolean) => updateConfig({ showVineyards: value }),
+  })
+
+  const vineyardOpacity = computed({
+    get: () => getConfig().vineyardOpacity ?? 0.55,
+    set: (value: number) => updateConfig({ vineyardOpacity: value }),
+  })
+
   // --- Privacy ---
 
   const anonymizeStart = computed({
@@ -444,6 +454,8 @@ export function useRouteMapConfig(
     glacierOpacity,
     showUrban,
     urbanOpacity,
+    showVineyards,
+    vineyardOpacity,
     // Privacy
     anonymizeStart,
     anonymizeEnd,

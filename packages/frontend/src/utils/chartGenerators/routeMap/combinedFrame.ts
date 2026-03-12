@@ -126,6 +126,9 @@ export interface CombinedFrameOptions {
   // Pre-rendered forest layer (async, from Overpass API)
   forestLayerSvg?: string
 
+  // Pre-rendered vineyard & orchard layer (async, from Overpass API)
+  vineyardLayerSvg?: string
+
   // Pre-rendered water body layer (async, from Overpass API)
   waterLayerSvg?: string
 
@@ -657,6 +660,7 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     peakLayerSvg,
     placeBoundaryLayerSvg,
     forestLayerSvg,
+    vineyardLayerSvg,
     waterLayerSvg,
     landCoverLayerSvg,
     roadLayerSvg,
@@ -768,6 +772,7 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     // Wrap geo/contour layers in a clipping container — coordinates extend far
     // beyond the viewport since 110m data covers a wide area
     const forestHtml = forestLayerSvg || ''
+    const vineyardHtml = vineyardLayerSvg || ''
     const contourHtml = contourLayerSvg || ''
     const riverHtml = riverLayerSvg || ''
     const peakHtml = peakLayerSvg || ''
@@ -775,8 +780,8 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     const waterHtml = waterLayerSvg || ''
     const landCoverHtml = landCoverLayerSvg || ''
     const roadHtml = roadLayerSvg || ''
-    // Render order (back to front): forests → land cover (glaciers/urban) → water → place boundaries → contours → roads → rivers → geo → peaks
-    const allGeoHtml = forestHtml + landCoverHtml + waterHtml + placeBoundaryHtml + contourHtml + roadHtml + riverHtml + geoLayersHtml + peakHtml
+    // Render order (back to front): forests → vineyards → land cover (glaciers/urban) → water → place boundaries → contours → roads → rivers → geo → peaks
+    const allGeoHtml = forestHtml + vineyardHtml + landCoverHtml + waterHtml + placeBoundaryHtml + contourHtml + roadHtml + riverHtml + geoLayersHtml + peakHtml
     const geoClipped = allGeoHtml
       ? `<svg x="0" y="0" width="${width}" height="${mapHeight}" overflow="hidden">${allGeoHtml}</svg>`
       : ''
