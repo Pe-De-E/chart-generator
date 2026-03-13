@@ -1,5 +1,5 @@
 <template>
-  <div class="gpx-generator-layout">
+  <v-layout class="gpx-generator-layout">
     <StepNavigation
       v-model:current-step="currentStep"
       v-model:collapsed="stepNavCollapsed"
@@ -170,11 +170,11 @@
         </v-window-item>
       </v-window>
     </div>
-  </div>
+  </v-layout>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import StepNavigation from './StepNavigation.vue'
 import RouteMapChartStep, {
@@ -385,6 +385,18 @@ onMounted(async () => {
     await loadChartData(chartId)
   }
 })
+
+// When the user navigates from an existing chart (/gpx?id=x) to creating a
+// new one (/gpx?mode=route-map), the component is NOT remounted by Vue Router.
+// Detect this and reset to the upload step.
+watch(
+  () => route.query.id,
+  (newId, oldId) => {
+    if (oldId && !newId) {
+      resetWizard()
+    }
+  },
+)
 
 async function loadChartData(chartId: string) {
   try {
