@@ -1,5 +1,5 @@
 <template>
-  <v-layout class="gpx-generator-layout">
+  <div class="gpx-generator-layout">
     <StepNavigation
       v-model:current-step="currentStep"
       v-model:collapsed="stepNavCollapsed"
@@ -7,7 +7,7 @@
       :step-validations="stepValidations"
     />
 
-    <v-main class="gpx-generator-content">
+    <div class="gpx-generator-content" :class="{ 'nav-collapsed': stepNavCollapsed }">
       <v-window v-model="currentStep">
         <!-- Step 1: Upload GPX -->
         <v-window-item :value="1" eager>
@@ -44,7 +44,7 @@
                   ></v-data-table>
                 </v-card-text>
                 <v-card-text>
-                  <v-alert type="info" variant="tonal" density="compact">
+                  <v-alert key="info" type="info" variant="tonal" density="compact">
                     <div class="d-flex align-center justify-space-between flex-wrap ga-2">
                       <span>{{ tableItems.length }} Punkte geladen</span>
                       <div v-if="gpxStats" class="text-caption d-flex ga-3">
@@ -57,6 +57,7 @@
 
                   <v-alert
                     v-if="routePoints.length > 0"
+                    key="route-points"
                     type="success"
                     variant="tonal"
                     density="compact"
@@ -68,6 +69,7 @@
 
                   <v-alert
                     v-if="downsamplingInfo"
+                    key="downsampling"
                     type="success"
                     variant="tonal"
                     density="compact"
@@ -169,8 +171,8 @@
           </div>
         </v-window-item>
       </v-window>
-    </v-main>
-  </v-layout>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -451,6 +453,32 @@ onUnmounted(() => window.removeEventListener('chart:new', resetWizard))
 </script>
 
 <style scoped>
+.gpx-generator-layout {
+  position: relative;
+  height: calc(100vh - 48px);
+  margin: -24px;
+  overflow: hidden;
+}
+
+.gpx-generator-content {
+  margin-left: 280px;
+  height: 100%;
+  padding: 16px;
+  background: rgb(var(--v-theme-background));
+  overflow: hidden;
+  transition: margin-left 0.2s ease;
+}
+
+.gpx-generator-content.nav-collapsed {
+  margin-left: 72px;
+}
+
+.gpx-generator-content :deep(.v-window),
+.gpx-generator-content :deep(.v-window__container),
+.gpx-generator-content :deep(.v-window-item) {
+  height: 100%;
+}
+
 .gpx-generator-content :deep(.v-card) {
   border-radius: var(--radius-lg, 16px);
   box-shadow: var(--shadow-sm, 0 2px 8px rgba(45, 42, 38, 0.06));
@@ -462,7 +490,7 @@ onUnmounted(() => window.removeEventListener('chart:new', resetWizard))
 
 .visualization-wrapper {
   position: relative;
-  height: calc(100vh - 100px);
+  height: 100%;
 }
 
 .mode-toggle-container {
