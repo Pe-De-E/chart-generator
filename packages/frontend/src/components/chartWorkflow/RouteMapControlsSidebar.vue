@@ -199,6 +199,13 @@
 
             <v-divider class="my-3" />
             <div class="section-label">Geo-Layer</div>
+            <v-btn
+              block variant="tonal" color="teal" prepend-icon="mdi-map-legend"
+              size="small" class="mb-3"
+              @click="applyTopoPreset"
+            >
+              Topo-Stil aktivieren
+            </v-btn>
             <v-checkbox v-model="showBorders" label="Laendergrenzen" density="compact" hide-details />
             <template v-if="showBorders">
               <label class="text-caption text-medium-emphasis d-block mb-1 mt-1">Deckkraft: {{ Math.round(borderOpacity * 100) }}%</label>
@@ -1023,6 +1030,40 @@ const {
   () => props.animationConfig,
   updateAnimationConfig,
 )
+
+// --- Topo Preset ---
+
+function applyTopoPreset() {
+  updateAnimationConfig({
+    showBorders: true,
+    borderOpacity: 0.35,
+    showRivers: true,
+    riverOpacity: 0.40,
+    showCities: true,
+    cityOpacity: 0.60,
+    showForests: true,
+    forestOpacity: 0.55,
+    showWater: true,
+    waterOpacity: 0.70,
+    showGlaciers: true,
+    glacierOpacity: 0.65,
+    showUrban: true,
+    urbanOpacity: 0.40,
+    showMeadows: true,
+    meadowOpacity: 0.45,
+    showRoads: true,
+    roadOpacity: 0.25,
+    showPeaks: true,
+    peakOpacity: 0.70,
+    showHillshade: true,
+    hillshadeOpacity: 0.35,
+    hillshadeStrength: 0.03,
+    showContours: true,
+    contourOpacity: 0.25,
+    contourInterval: 100,
+    contourShowLabels: false,
+  })
+}
 
 // --- Annotation helpers ---
 
