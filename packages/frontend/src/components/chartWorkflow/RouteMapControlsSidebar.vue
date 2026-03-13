@@ -206,6 +206,27 @@
             >
               Topo-Stil aktivieren
             </v-btn>
+
+            <div class="section-label mt-1">Farbschema</div>
+            <div class="d-flex ga-1 flex-wrap mb-3">
+              <v-chip
+                v-for="scheme in colorSchemes"
+                :key="scheme.id"
+                size="small"
+                :variant="activeColorScheme === scheme.id ? 'flat' : 'tonal'"
+                :color="activeColorScheme === scheme.id ? 'primary' : undefined"
+                class="scheme-chip"
+                @click="applyLandUseColorScheme(scheme.id)"
+              >
+                <div class="d-flex ga-1 mr-1">
+                  <div class="scheme-dot" :style="{ background: scheme.colors.forest }" />
+                  <div class="scheme-dot" :style="{ background: scheme.colors.water }" />
+                  <div class="scheme-dot" :style="{ background: scheme.colors.meadow }" />
+                </div>
+                {{ scheme.label }}
+              </v-chip>
+            </div>
+
             <v-checkbox v-model="showBorders" label="Laendergrenzen" density="compact" hide-details />
             <template v-if="showBorders">
               <label class="text-caption text-medium-emphasis d-block mb-1 mt-1">Deckkraft: {{ Math.round(borderOpacity * 100) }}%</label>
@@ -1031,6 +1052,65 @@ const {
   updateAnimationConfig,
 )
 
+// --- Land Use Color Schemes ---
+
+interface LandUseColors {
+  forest: string
+  water: string
+  meadow: string
+  vineyard: string
+  glacier: string
+  urban: string
+}
+
+const colorSchemes: { id: string; label: string; colors: LandUseColors }[] = [
+  {
+    id: 'topo',
+    label: 'Topo',
+    colors: { forest: '#5a9950', water: '#7ab8d9', meadow: '#c8db8c', vineyard: '#d4a855', glacier: '#cce8f4', urban: '#d4c0a8' },
+  },
+  {
+    id: 'pastel',
+    label: 'Pastell',
+    colors: { forest: '#a8d8a0', water: '#a8d0e8', meadow: '#dde8a8', vineyard: '#e8c888', glacier: '#e0f0f8', urban: '#e8dfd0' },
+  },
+  {
+    id: 'dark',
+    label: 'Dunkel',
+    colors: { forest: '#2a4a1e', water: '#1a3a5a', meadow: '#3e4e18', vineyard: '#5a3e12', glacier: '#2a5a78', urban: '#2e2820' },
+  },
+  {
+    id: 'neon',
+    label: 'Neon',
+    colors: { forest: '#00c853', water: '#00b0ff', meadow: '#c6ff00', vineyard: '#ff9100', glacier: '#40c4ff', urban: '#546e7a' },
+  },
+]
+
+const activeColorScheme = computed(() => {
+  const cfg = props.animationConfig
+  return colorSchemes.find(s =>
+    s.colors.forest === (cfg.forestColor ?? '#4a8c3f') &&
+    s.colors.water === (cfg.waterColor ?? '#4a90d9') &&
+    s.colors.meadow === (cfg.meadowColor ?? '#b5c97a') &&
+    s.colors.vineyard === (cfg.vineyardColor ?? '#c8a04a') &&
+    s.colors.glacier === (cfg.glacierColor ?? '#cce8f4') &&
+    s.colors.urban === (cfg.urbanColor ?? '#c8b8a2')
+  )?.id ?? null
+})
+
+function applyLandUseColorScheme(schemeId: string) {
+  const scheme = colorSchemes.find(s => s.id === schemeId)
+  if (!scheme) return
+  updateAnimationConfig({
+    forestColor: scheme.colors.forest,
+    waterColor: scheme.colors.water,
+    meadowColor: scheme.colors.meadow,
+    vineyardColor: scheme.colors.vineyard,
+    glacierColor: scheme.colors.glacier,
+    urbanColor: scheme.colors.urban,
+  })
+}
+
 // --- Topo Preset ---
 
 function applyTopoPreset() {
@@ -1330,6 +1410,18 @@ const imagePositionOptions = [
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
+}
+
+.scheme-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  flex-shrink: 0;
+}
+
+.scheme-chip {
+  cursor: pointer;
 }
 
 .color-swatch {

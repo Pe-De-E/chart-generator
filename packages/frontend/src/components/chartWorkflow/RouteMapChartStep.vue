@@ -168,16 +168,22 @@ export interface RouteMapAnimationConfig {
   placeBoundaryOpacity: number;
   showForests: boolean;
   forestOpacity: number;
+  forestColor?: string;
   showWater: boolean;
   waterOpacity: number;
+  waterColor?: string;
   showGlaciers: boolean;
   glacierOpacity: number;
+  glacierColor?: string;
   showUrban: boolean;
   urbanOpacity: number;
+  urbanColor?: string;
   showVineyards: boolean;
   vineyardOpacity: number;
+  vineyardColor?: string;
   showMeadows: boolean;
   meadowOpacity: number;
+  meadowColor?: string;
   // Privacy
   anonymizeStart: boolean;
   anonymizeEnd: boolean;
@@ -584,7 +590,7 @@ const forestConfig = computed<ForestConfig | null>(() => {
   const cfg = props.animationConfig
   if (!cfg.showForests) return null
   return {
-    color: '#4a8c3f',
+    color: cfg.forestColor ?? '#4a8c3f',
     opacity: cfg.forestOpacity,
   }
 })
@@ -601,7 +607,7 @@ const waterConfig = computed<WaterConfig | null>(() => {
   const cfg = props.animationConfig
   if (!cfg.showWater) return null
   return {
-    color: '#4a90d9',
+    color: cfg.waterColor ?? '#4a90d9',
     opacity: cfg.waterOpacity,
   }
 })
@@ -620,8 +626,10 @@ const landCoverConfig = computed<LandCoverConfig | null>(() => {
   return {
     showGlaciers: cfg.showGlaciers,
     glacierOpacity: cfg.glacierOpacity,
+    glacierColor: cfg.glacierColor,
     showUrban: cfg.showUrban,
     urbanOpacity: cfg.urbanOpacity,
+    urbanColor: cfg.urbanColor,
   }
 })
 const { landCoverSvg, isLoading: landCoverLoading } = useLandCoverLayer(
@@ -637,7 +645,7 @@ const vineyardConfig = computed<VineyardConfig | null>(() => {
   const cfg = props.animationConfig
   if (!cfg.showVineyards) return null
   return {
-    color: '#c8a04a',
+    color: cfg.vineyardColor ?? '#c8a04a',
     opacity: cfg.vineyardOpacity,
   }
 })
@@ -654,7 +662,7 @@ const meadowConfig = computed<MeadowConfig | null>(() => {
   const cfg = props.animationConfig
   if (!cfg.showMeadows) return null
   return {
-    color: '#b5c97a',
+    color: cfg.meadowColor ?? '#b5c97a',
     opacity: cfg.meadowOpacity,
   }
 })

@@ -23,8 +23,10 @@ import {
 export interface LandCoverConfig {
   showGlaciers: boolean
   glacierOpacity: number
+  glacierColor?: string
   showUrban: boolean
   urbanOpacity: number
+  urbanColor?: string
 }
 
 export const DEFAULT_LAND_COVER_CONFIG: LandCoverConfig = {
@@ -95,12 +97,14 @@ function renderLandCoverSvg(
       if (!d) continue
 
       if (type === 'glacier') {
+        const gc = config.glacierColor ?? GLACIER_COLOR
         glacierPaths.push(
-          `<path d="${d} Z" fill="${GLACIER_COLOR}" fill-opacity="0.70" stroke="${GLACIER_COLOR}" stroke-width="1" stroke-opacity="0.50"/>`
+          `<path d="${d} Z" fill="${gc}" fill-opacity="0.70" stroke="${gc}" stroke-width="1" stroke-opacity="0.50"/>`
         )
       } else {
+        const uc = config.urbanColor ?? URBAN_COLOR
         urbanPaths.push(
-          `<path d="${d} Z" fill="${URBAN_COLOR}" fill-opacity="0.45" stroke="${URBAN_COLOR}" stroke-width="0.5" stroke-opacity="0.30"/>`
+          `<path d="${d} Z" fill="${uc}" fill-opacity="0.45" stroke="${uc}" stroke-width="0.5" stroke-opacity="0.30"/>`
         )
       }
       count++

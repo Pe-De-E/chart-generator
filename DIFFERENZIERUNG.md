@@ -23,7 +23,7 @@ Legende: 🟢 1 Tag · 🟡 2–3 Tage · 🔴 Stretch (Ende Woche) · ✅ Erled
 3. ✅ ~~**Weinberge / Obstgärten** — `landuse=vineyard|orchard`, eigene Farbe~~
 4. ✅ ~~**Wiesen / Felder** — `landuse=meadow|farmland`, dezentes Gelbgrün~~
 5. ✅ ~~**Bebauung / Siedlungsflächen** — `landuse=residential|commercial`, graubeige~~
-6. 🟡 **Farbschema für Landnutzung** — alle Flächen als kohärentes Paket (wie Topo-Karte)
+6. ✅ ~~**Farbschema für Landnutzung** — alle Flächen als kohärentes Paket (wie Topo-Karte)~~
 7. ✅ ~~**Schummerung** (Hillshade) — aus AWS Terrarium Höhendaten eine Schattenebene berechnen~~
 8. ✅ ~~**Topografischer Kartenstil** — vordefiniertes Preset das alle Geo-Layer zusammen aktiviert~~
 9. ✅ ~~**Straßen** — Hauptstraßen/Autobahnen aus Overpass, sehr dezent, nur als Orientierung~~
