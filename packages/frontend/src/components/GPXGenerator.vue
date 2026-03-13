@@ -7,7 +7,7 @@
       :step-validations="stepValidations"
     />
 
-    <div class="gpx-generator-content" :class="{ 'nav-collapsed': stepNavCollapsed }">
+    <v-main class="gpx-generator-content">
       <v-window v-model="currentStep">
         <!-- Step 1: Upload GPX -->
         <v-window-item :value="1" eager>
@@ -169,7 +169,7 @@
           </div>
         </v-window-item>
       </v-window>
-    </div>
+    </v-main>
   </v-layout>
 </template>
 
@@ -451,32 +451,6 @@ onUnmounted(() => window.removeEventListener('chart:new', resetWizard))
 </script>
 
 <style scoped>
-.gpx-generator-layout {
-  position: relative;
-  height: calc(100vh - 48px);
-  margin: -24px;
-  overflow: hidden;
-}
-
-.gpx-generator-content {
-  margin-left: 280px;
-  height: 100%;
-  padding: 16px;
-  background: rgb(var(--v-theme-background));
-  overflow: hidden;
-  transition: margin-left 0.2s ease;
-}
-
-.gpx-generator-content.nav-collapsed {
-  margin-left: 72px;
-}
-
-.gpx-generator-content :deep(.v-window),
-.gpx-generator-content :deep(.v-window__container),
-.gpx-generator-content :deep(.v-window-item) {
-  height: 100%;
-}
-
 .gpx-generator-content :deep(.v-card) {
   border-radius: var(--radius-lg, 16px);
   box-shadow: var(--shadow-sm, 0 2px 8px rgba(45, 42, 38, 0.06));
@@ -488,7 +462,7 @@ onUnmounted(() => window.removeEventListener('chart:new', resetWizard))
 
 .visualization-wrapper {
   position: relative;
-  height: 100%;
+  height: calc(100vh - 100px);
 }
 
 .mode-toggle-container {

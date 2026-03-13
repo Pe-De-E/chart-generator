@@ -123,6 +123,8 @@ function closeDialog() {
 }
 
 function confirmSelection() {
+  // Dispatch so same-route generators (GPX, Elevation) reset their wizard
+  window.dispatchEvent(new CustomEvent('chart:new'))
   if (selectedType.value === 'elevation') {
     router.push({ name: 'Elevation' })
   } else if (selectedType.value === 'route-map') {
