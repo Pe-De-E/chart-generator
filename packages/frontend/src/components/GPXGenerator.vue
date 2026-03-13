@@ -123,7 +123,7 @@
         </v-window-item>
 
         <!-- Step 2: Visualization -->
-        <v-window-item :value="2">
+        <v-window-item :value="2" eager>
           <div class="visualization-wrapper">
             <!-- Mode Toggle -->
             <div class="mode-toggle-container">
@@ -146,7 +146,7 @@
             </div>
 
             <RouteMapChartStep
-              v-if="visualizationMode === 'route-map'"
+              v-if="currentStep === 2 && visualizationMode === 'route-map'"
               v-model:chart-title="chartTitle"
               v-model:animation-config="routeMapConfig"
               :route-points="routePoints"
@@ -157,7 +157,7 @@
             />
 
             <TerrainChartStep
-              v-if="visualizationMode === 'terrain'"
+              v-if="currentStep === 2 && visualizationMode === 'terrain'"
               v-model:chart-title="chartTitle"
               v-model:animation-config="terrainConfig"
               :route-points="routePoints"
