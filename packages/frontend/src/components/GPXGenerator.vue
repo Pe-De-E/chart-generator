@@ -1,5 +1,5 @@
 <template>
-  <v-layout class="gpx-generator-layout">
+  <div class="gpx-generator-layout">
     <StepNavigation
       v-model:current-step="currentStep"
       v-model:collapsed="stepNavCollapsed"
@@ -7,7 +7,7 @@
       :step-validations="stepValidations"
     />
 
-    <v-main class="gpx-generator-content">
+    <div class="gpx-generator-content" :class="{ 'nav-collapsed': stepNavCollapsed }">
       <v-window v-model="currentStep">
         <!-- Step 1: Upload GPX -->
         <v-window-item :value="1" eager>
@@ -125,9 +125,8 @@
         </v-window-item>
 
         <!-- Step 2: Visualization -->
-        <v-window-item :value="2">
+        <v-window-item :value="2" eager>
           <div class="visualization-wrapper">
-            <!-- Mode Toggle -->
             <div class="mode-toggle-container">
               <v-btn-toggle
                 v-model="visualizationMode"
@@ -146,9 +145,8 @@
                 </v-btn>
               </v-btn-toggle>
             </div>
-
             <RouteMapChartStep
-              v-if="currentStep === 2 && visualizationMode === 'route-map'"
+              v-if="visualizationMode === 'route-map'"
               v-model:chart-title="chartTitle"
               v-model:animation-config="routeMapConfig"
               :route-points="routePoints"
@@ -157,9 +155,8 @@
               @back="currentStep = 1"
               @save="saveChart"
             />
-
             <TerrainChartStep
-              v-if="currentStep === 2 && visualizationMode === 'terrain'"
+              v-if="visualizationMode === 'terrain'"
               v-model:chart-title="chartTitle"
               v-model:animation-config="terrainConfig"
               :route-points="routePoints"
@@ -171,8 +168,8 @@
           </div>
         </v-window-item>
       </v-window>
-    </v-main>
-  </v-layout>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -454,18 +451,27 @@ onUnmounted(() => window.removeEventListener('chart:new', resetWizard))
 
 <style scoped>
 .gpx-generator-layout {
-  height: 100vh;
+  position: relative;
+  height: calc(100vh - 48px);
+  margin: -24px;
   overflow: hidden;
 }
 
 .gpx-generator-content {
+  margin-left: 280px;
   height: 100%;
+  background: rgb(var(--v-theme-background));
   overflow: hidden;
+  transition: margin-left 0.2s ease;
 }
 
-:deep(.v-window),
-:deep(.v-window__container),
-:deep(.v-window-item) {
+.gpx-generator-content.nav-collapsed {
+  margin-left: 72px;
+}
+
+.gpx-generator-content :deep(.v-window),
+.gpx-generator-content :deep(.v-window__container),
+.gpx-generator-content :deep(.v-window-item) {
   height: 100%;
 }
 

@@ -481,6 +481,20 @@ function onStatsDragEnd() {
   document.removeEventListener('mouseup', onStatsDragEnd)
 }
 
+// ── Contour lines (async terrain tile fetch + d3-contour) ──
+const contourRouteBounds = computed(() => {
+  if (props.routePoints.length < 2) return null
+  return calculateRouteBounds(props.routePoints)
+})
+const contourMapHeight = computed(() => Math.round(1920 * props.animationConfig.mapHeightRatio))
+const contourProjParams = computed(() => {
+  if (!contourRouteBounds.value) return null
+  return getProjectionParams(contourRouteBounds.value, {
+    width: 1080, height: contourMapHeight.value,
+    padding: { top: 50, right: 50, bottom: 50, left: 50 },
+  })
+})
+
 // ── Hillshade layer (async terrain tile fetch + OffscreenCanvas) ──
 const hillshadeConfig = computed<HillshadeConfig | null>(() => {
   const cfg = props.animationConfig
@@ -497,20 +511,6 @@ const { hillshadeSvg, isLoading: hillshadeLoading } = useHillshadeLayer(
   computed(() => 1080),
   contourMapHeight,
 )
-
-// ── Contour lines (async terrain tile fetch + d3-contour) ──
-const contourRouteBounds = computed(() => {
-  if (props.routePoints.length < 2) return null
-  return calculateRouteBounds(props.routePoints)
-})
-const contourMapHeight = computed(() => Math.round(1920 * props.animationConfig.mapHeightRatio))
-const contourProjParams = computed(() => {
-  if (!contourRouteBounds.value) return null
-  return getProjectionParams(contourRouteBounds.value, {
-    width: 1080, height: contourMapHeight.value,
-    padding: { top: 50, right: 50, bottom: 50, left: 50 },
-  })
-})
 const contourConfig = computed<ContourConfig | null>(() => {
   const cfg = props.animationConfig
   if (!cfg.showContours) return null
