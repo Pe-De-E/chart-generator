@@ -1,7 +1,6 @@
 <template>
   <v-navigation-drawer
     permanent
-    absolute
     :rail="isCollapsed"
     :width="280"
     rail-width="72"
