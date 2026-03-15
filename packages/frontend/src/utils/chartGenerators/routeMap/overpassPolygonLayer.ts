@@ -49,11 +49,29 @@ export interface PolygonLayerStyle {
 
 const OVERPASS_URL = '/overpass/interpreter'
 
+/**
+ * Module-level elements cache keyed by filters + bounds.
+ * Shared across all layers so that color-only changes never re-fetch.
+ */
+const elementsCache = new Map<string, OverpassElement[]>()
+
+function buildElementsCacheKey(filters: string[], bounds: RouteBounds): string {
+  return (
+    `${filters.join('|')},` +
+    `${bounds.minLat.toFixed(4)},${bounds.maxLat.toFixed(4)},` +
+    `${bounds.minLon.toFixed(4)},${bounds.maxLon.toFixed(4)}`
+  )
+}
+
 /** POST a single Overpass query for the given filters within bbox. */
 export async function fetchOverpassElements(
   filters: string[],
   bounds: RouteBounds,
 ): Promise<OverpassElement[]> {
+  const cacheKey = buildElementsCacheKey(filters, bounds)
+  const cached = elementsCache.get(cacheKey)
+  if (cached) return cached
+
   const { minLat, maxLon, maxLat, minLon } = bounds
   const bbox = `${minLat.toFixed(5)},${minLon.toFixed(5)},${maxLat.toFixed(5)},${maxLon.toFixed(5)}`
   const query =
@@ -69,7 +87,9 @@ export async function fetchOverpassElements(
 
   if (!response.ok) throw new Error(`Overpass fetch failed: ${response.status}`)
   const data = await response.json()
-  return (data.elements || []) as OverpassElement[]
+  const elements = (data.elements || []) as OverpassElement[]
+  elementsCache.set(cacheKey, elements)
+  return elements
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

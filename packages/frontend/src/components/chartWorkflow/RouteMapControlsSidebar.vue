@@ -1077,7 +1077,7 @@ const colorSchemes: { id: string; label: string; colors: LandUseColors }[] = [
   {
     id: 'dark',
     label: 'Dunkel',
-    colors: { forest: '#2a4a1e', water: '#1a3a5a', meadow: '#3e4e18', vineyard: '#5a3e12', glacier: '#2a5a78', urban: '#2e2820' },
+    colors: { forest: '#2a5220', water: '#1a4870', meadow: '#4a5c1e', vineyard: '#6b4a1a', glacier: '#3a7898', urban: '#604832' },
   },
   {
     id: 'neon',
