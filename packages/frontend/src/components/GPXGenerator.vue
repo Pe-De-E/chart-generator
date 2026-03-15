@@ -127,24 +127,6 @@
         <!-- Step 2: Visualization -->
         <v-window-item :value="2" eager>
           <div class="visualization-wrapper">
-            <div class="mode-toggle-container">
-              <v-btn-toggle
-                v-model="visualizationMode"
-                mandatory
-                density="compact"
-                variant="outlined"
-                divided
-              >
-                <v-btn value="route-map" size="small">
-                  <v-icon start size="small">mdi-map-marker-path</v-icon>
-                  2D Routenkarte
-                </v-btn>
-                <v-btn value="terrain" size="small">
-                  <v-icon start size="small">mdi-mountain</v-icon>
-                  3D Gelände
-                </v-btn>
-              </v-btn-toggle>
-            </div>
             <RouteMapChartStep
               v-if="visualizationMode === 'route-map'"
               v-model:chart-title="chartTitle"
@@ -482,13 +464,5 @@ onUnmounted(() => window.removeEventListener('chart:new', resetWizard))
 .visualization-wrapper {
   position: relative;
   height: 100%;
-}
-
-.mode-toggle-container {
-  position: absolute;
-  top: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 10;
 }
 </style>

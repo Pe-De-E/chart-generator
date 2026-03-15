@@ -171,12 +171,13 @@ export async function generateRiverLayer(
     return cached.replace(/opacity="[\d.]+"/, `opacity="${config.opacity.toFixed(2)}"`)
   }
 
-  // Pad bounds slightly so rivers extend fully to the viewport edges
+  // Pad bounds so rivers extend fully to the viewport edges.
+  // 0.3° ≈ 25 km — enough for rivers that don't flow directly away from the route.
   const paddedBounds: RouteBounds = {
-    minLat: routeBounds.minLat - 0.05,
-    maxLat: routeBounds.maxLat + 0.05,
-    minLon: routeBounds.minLon - 0.05,
-    maxLon: routeBounds.maxLon + 0.05,
+    minLat: routeBounds.minLat - 0.3,
+    maxLat: routeBounds.maxLat + 0.3,
+    minLon: routeBounds.minLon - 0.3,
+    maxLon: routeBounds.maxLon + 0.3,
     centerLat: routeBounds.centerLat,
     centerLon: routeBounds.centerLon,
   }

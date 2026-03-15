@@ -834,20 +834,18 @@ function buildFrameOptions(progress: number, overrides: Partial<CombinedFrameOpt
       contourMajorInterval: cfg.contourMajorInterval,
       contourShowLabels: cfg.contourShowLabels,
     } : undefined,
-    // Pre-rendered hillshade (async, from terrain tiles)
-    hillshadeLayerSvg: hillshadeSvg.value,
-    // Pre-rendered contour lines (async, from terrain tiles)
-    contourLayerSvg: contourSvg.value,
-    // Pre-rendered river layer (async, from OpenFreeMap vector tiles)
-    riverLayerSvg: riverSvg.value,
-    peakLayerSvg: peakSvg.value,
+    // Pre-rendered geo layers (fetched on demand; null config = disabled = empty SVG)
+    hillshadeLayerSvg:     hillshadeSvg.value,
+    contourLayerSvg:       contourSvg.value,
+    riverLayerSvg:         riverSvg.value,
+    peakLayerSvg:          peakSvg.value,
     placeBoundaryLayerSvg: placeBoundarySvg.value,
-    forestLayerSvg: forestSvg.value,
-    vineyardLayerSvg: vineyardSvg.value,
-    meadowLayerSvg: meadowSvg.value,
-    waterLayerSvg: waterSvg.value,
-    landCoverLayerSvg: landCoverSvg.value,
-    roadLayerSvg: roadSvg.value,
+    forestLayerSvg:        forestSvg.value,
+    vineyardLayerSvg:      vineyardSvg.value,
+    meadowLayerSvg:        meadowSvg.value,
+    waterLayerSvg:         waterSvg.value,
+    landCoverLayerSvg:     landCoverSvg.value,
+    roadLayerSvg:          roadSvg.value,
     // Privacy
     anonymizeStart: cfg.anonymizeStart,
     anonymizeEnd: cfg.anonymizeEnd,

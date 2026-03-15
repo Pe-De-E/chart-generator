@@ -119,13 +119,13 @@ export function polygonArea(points: Point2D[]): number {
   return Math.abs(area) / 2
 }
 
-/** Pad bounds outward by 0.05° to include polygons that straddle the edge. */
+/** Pad bounds outward by 0.3° (~25 km) so layers extend fully to viewport edges. */
 function padBounds(bounds: RouteBounds): RouteBounds {
   return {
-    minLat: bounds.minLat - 0.05,
-    maxLat: bounds.maxLat + 0.05,
-    minLon: bounds.minLon - 0.05,
-    maxLon: bounds.maxLon + 0.05,
+    minLat: bounds.minLat - 0.3,
+    maxLat: bounds.maxLat + 0.3,
+    minLon: bounds.minLon - 0.3,
+    maxLon: bounds.maxLon + 0.3,
     centerLat: bounds.centerLat,
     centerLon: bounds.centerLon,
   }

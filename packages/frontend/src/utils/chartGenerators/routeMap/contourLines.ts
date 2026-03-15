@@ -222,10 +222,10 @@ export async function generateContourLines(
 
   // Pad bounds slightly to ensure contours extend to viewport edges
   const paddedBounds: RouteBounds = {
-    minLat: routeBounds.minLat - 0.05,
-    maxLat: routeBounds.maxLat + 0.05,
-    minLon: routeBounds.minLon - 0.05,
-    maxLon: routeBounds.maxLon + 0.05,
+    minLat: routeBounds.minLat - 0.3,
+    maxLat: routeBounds.maxLat + 0.3,
+    minLon: routeBounds.minLon - 0.3,
+    maxLon: routeBounds.maxLon + 0.3,
     centerLat: routeBounds.centerLat,
     centerLon: routeBounds.centerLon,
   }
