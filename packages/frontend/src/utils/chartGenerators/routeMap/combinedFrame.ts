@@ -199,11 +199,101 @@ function generateMapDistanceMarkers(
   intervalKm: number,
   color: string,
   fontSize: number,
+  svgWidth: number,
+  svgHeight: number,
 ): string {
   if (points.length < 2 || intervalKm <= 0) return ''
 
   const totalDist = points[points.length - 1].distance
   const markers: string[] = []
+
+  // Pre-compute label dimensions
+  const charWidth = fontSize * 0.6
+  const padX = fontSize * 0.5
+  const padY = fontSize * 0.35
+  const labelH = fontSize + padY * 2
+  const rx = fontSize * 0.35
+
+  // Track placed label bounding boxes and leader lines for collision detection
+  const placedBoxes: Array<{ x: number; y: number; w: number; h: number }> = []
+  const placedLeaders: Array<{ x1: number; y1: number; x2: number; y2: number }> = []
+  const margin = fontSize * 0.5
+
+  function segsCross(
+    p1x: number, p1y: number, p2x: number, p2y: number,
+    q1x: number, q1y: number, q2x: number, q2y: number,
+  ): boolean {
+    const cross = (ax: number, ay: number, bx: number, by: number, qx: number, qy: number) =>
+      (bx - ax) * (qy - ay) - (by - ay) * (qx - ax)
+    const d1 = cross(q1x, q1y, q2x, q2y, p1x, p1y)
+    const d2 = cross(q1x, q1y, q2x, q2y, p2x, p2y)
+    const d3 = cross(p1x, p1y, p2x, p2y, q1x, q1y)
+    const d4 = cross(p1x, p1y, p2x, p2y, q2x, q2y)
+    return d1 * d2 < 0 && d3 * d4 < 0
+  }
+
+  function segmentIntersectsRect(
+    ax: number, ay: number, bx: number, by: number,
+    lx: number, ly: number, lw: number, lh: number,
+  ): boolean {
+    const x0 = lx - margin, y0 = ly - margin
+    const x1 = lx + lw + margin, y1 = ly + lh + margin
+    if (ax >= x0 && ax <= x1 && ay >= y0 && ay <= y1) return true
+    if (bx >= x0 && bx <= x1 && by >= y0 && by <= y1) return true
+    return (
+      segsCross(ax, ay, bx, by, x0, y0, x1, y0) ||
+      segsCross(ax, ay, bx, by, x1, y0, x1, y1) ||
+      segsCross(ax, ay, bx, by, x1, y1, x0, y1) ||
+      segsCross(ax, ay, bx, by, x0, y1, x0, y0)
+    )
+  }
+
+  function routeIntersectsRect(lx: number, ly: number, lw: number, lh: number): boolean {
+    for (let j = 0; j < points.length - 1; j++) {
+      if (segmentIntersectsRect(points[j].x, points[j].y, points[j+1].x, points[j+1].y, lx, ly, lw, lh))
+        return true
+    }
+    return false
+  }
+
+  /** Check if leader line (anchorX,anchorY)→(cx,cy) crosses any route segment.
+   *  Skips segments adjacent to the anchor index to avoid false positives. */
+  function leaderIntersectsRoute(
+    anchorX: number, anchorY: number, cx: number, cy: number, anchorIdx: number,
+  ): boolean {
+    for (let j = 0; j < points.length - 1; j++) {
+      if (j === anchorIdx - 1 || j === anchorIdx) continue  // adjacent segments
+      if (segsCross(anchorX, anchorY, cx, cy, points[j].x, points[j].y, points[j+1].x, points[j+1].y))
+        return true
+    }
+    return false
+  }
+
+  function overlapsAny(
+    lx: number, ly: number, lw: number, lh: number,
+    anchorX: number, anchorY: number, cx: number, cy: number, anchorIdx: number,
+  ): boolean {
+    if (lx < 0 || ly < 0 || lx + lw > svgWidth || ly + lh > svgHeight) return true
+    if (routeIntersectsRect(lx, ly, lw, lh)) return true
+    if (leaderIntersectsRoute(anchorX, anchorY, cx, cy, anchorIdx)) return true
+    // Label box vs already-placed leader lines
+    if (placedLeaders.some(l => segmentIntersectsRect(l.x1, l.y1, l.x2, l.y2, lx, ly, lw, lh)))
+      return true
+    // New leader line vs already-placed label boxes
+    if (placedBoxes.some(b => segmentIntersectsRect(anchorX, anchorY, cx, cy, b.x, b.y, b.w, b.h)))
+      return true
+    // New leader line vs already-placed leader lines
+    if (placedLeaders.some(l => segsCross(anchorX, anchorY, cx, cy, l.x1, l.y1, l.x2, l.y2)))
+      return true
+    // Label box vs other label boxes
+    return placedBoxes.some(
+      b =>
+        lx < b.x + b.w + margin &&
+        lx + lw > b.x - margin &&
+        ly < b.y + b.h + margin &&
+        ly + lh > b.y - margin,
+    )
+  }
 
   for (let km = intervalKm; km < totalDist; km += intervalKm) {
     let i = 0
@@ -216,10 +306,63 @@ function generateMapDistanceMarkers(
     const x = a.x + (b.x - a.x) * t
     const y = a.y + (b.y - a.y) * t
 
+    // Unit normal perpendicular to route tangent
+    const dx = b.x - a.x
+    const dy = b.y - a.y
+    const segLen = Math.sqrt(dx * dx + dy * dy) || 1
+    let nx = -dy / segLen
+    let ny = dx / segLen
+    if (ny > 0) { nx = -nx; ny = -ny }  // prefer upward side
+
+    const label = `${km} km`
+    const labelW = label.length * charWidth + padX * 2
+
+    // Build candidate angles: start with perpendicular normals, then sweep all 16 directions
+    const baseAngle = Math.atan2(ny, nx)
+    const candidateAngles: number[] = []
+    // First: perpendicular sides (preferred — shortest leader)
+    candidateAngles.push(baseAngle, baseAngle + Math.PI)
+    // Then: all 16 directions in order of angular distance from preferred normal
+    for (let deg = 22.5; deg < 180; deg += 22.5) {
+      const rad = deg * (Math.PI / 180)
+      candidateAngles.push(baseAngle + rad, baseAngle - rad)
+    }
+
+    let finalCx = x
+    let finalCy = y
+    let placed = false
+
+    outer: for (let step = 3; step <= 12; step++) {
+      const offsetDist = fontSize * step
+      for (const angle of candidateAngles) {
+        const cx = x + Math.cos(angle) * offsetDist
+        const cy = y + Math.sin(angle) * offsetDist
+        const lx = cx - labelW / 2
+        const ly = cy - labelH / 2
+        if (!overlapsAny(lx, ly, labelW, labelH, x, y, cx, cy, i)) {
+          finalCx = cx
+          finalCy = cy
+          placedBoxes.push({ x: lx, y: ly, w: labelW, h: labelH })
+          placedLeaders.push({ x1: x, y1: y, x2: cx, y2: cy })
+          placed = true
+          break outer
+        }
+      }
+    }
+
+    if (!placed) continue  // skip only if truly no valid position exists
+
+    const labelX = finalCx - labelW / 2
+    const labelY = finalCy - labelH / 2
+
     markers.push(`
-      <circle cx="${x}" cy="${y}" r="3" fill="${color}" opacity="0.6"/>
-      <text x="${x}" y="${y - 8}" fill="${color}" font-size="${fontSize}" font-family="sans-serif"
-            text-anchor="middle" opacity="0.6">${km} km</text>
+      <circle cx="${x}" cy="${y}" r="${fontSize * 0.32}" fill="${color}" opacity="0.9"/>
+      <line x1="${x}" y1="${y}" x2="${finalCx}" y2="${finalCy}"
+            stroke="${color}" stroke-width="2" opacity="0.55"/>
+      <rect x="${labelX}" y="${labelY}" width="${labelW}" height="${labelH}" rx="${rx}"
+            fill="rgba(0,0,0,0.70)" stroke="${color}" stroke-width="1.5" opacity="0.95"/>
+      <text x="${finalCx}" y="${labelY + labelH - padY}" fill="${color}" font-size="${fontSize}"
+            font-family="sans-serif" text-anchor="middle" opacity="1">${label}</text>
     `)
   }
 
@@ -763,7 +906,7 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
       : ''
 
     const distLabels = showDistanceMarkers
-      ? generateMapDistanceMarkers(animPoints, distanceMarkerInterval, mapMarkerColor, 14)
+      ? generateMapDistanceMarkers(animPoints, distanceMarkerInterval, mapMarkerColor, 28, width, mapHeight)
       : ''
     const startEnd = showStartEndLabels
       ? generateMapStartEndLabels(animPoints, mapMarkerColor, 14)
