@@ -23,9 +23,10 @@ export const DEFAULT_WATER_CONFIG: WaterConfig = {
 }
 
 const WATER_FILTERS = [
-  'way[natural=water]',
+  // Require explicit water sub-type — filters out mis-tagged administrative/other relations
+  'way[natural=water][water~"^(lake|pond|reservoir|lagoon|oxbow|basin|canal)$"]',
   'way[landuse=reservoir]',
-  'relation[natural=water]',
+  'relation[natural=water][water~"^(lake|pond|reservoir|lagoon|oxbow|basin|canal)$"]',
   'relation[landuse=reservoir]',
 ]
 
@@ -35,8 +36,8 @@ const WATER_STYLE: PolygonLayerStyle = {
   strokeOpacity: 0.70,
   minAreaPx: 200,
   maxPolygons: 200,
-  viewportMargin: 300,
-  fetchPaddingDeg: 0.05,  // small padding — avoids fetching large distant water bodies
+  viewportMargin: 0,     // only render lakes whose centroid is inside the visible map area
+  fetchPaddingDeg: 0.05,
 }
 
 const waterCache = new Map<string, string>()
