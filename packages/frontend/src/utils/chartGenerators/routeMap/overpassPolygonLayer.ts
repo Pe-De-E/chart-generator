@@ -43,6 +43,9 @@ export interface PolygonLayerStyle {
   viewportMargin?: number
   /** If set, skip elements that don't have this tag key (e.g. 'place'). */
   requireTag?: string
+  /** Degrees of padding added to route bounds when fetching (default 0.3 ≈ 25 km).
+   *  Use a smaller value for water to avoid fetching large distant water bodies. */
+  fetchPaddingDeg?: number
 }
 
 // ── Fetch ─────────────────────────────────────────────────────────────────────
@@ -143,17 +146,6 @@ export function polygonArea(points: Point2D[]): number {
   return Math.abs(area) / 2
 }
 
-/** Pad bounds outward by 0.3° (~25 km) so layers extend fully to viewport edges. */
-function padBounds(bounds: RouteBounds): RouteBounds {
-  return {
-    minLat: bounds.minLat - 0.3,
-    maxLat: bounds.maxLat + 0.3,
-    minLon: bounds.minLon - 0.3,
-    maxLon: bounds.maxLon + 0.3,
-    centerLat: bounds.centerLat,
-    centerLon: bounds.centerLon,
-  }
-}
 
 /** Bump to bust all polygon SVG caches (e.g. after renderPolygons changes). */
 const POLYGON_CACHE_VERSION = 2
@@ -295,7 +287,13 @@ export async function generateOverpassPolygonLayer(
     return cached.replace(/opacity="[\d.]+"/, `opacity="${config.opacity.toFixed(2)}"`)
   }
 
-  const elements = await fetchOverpassElements(filters, padBounds(bounds))
+  const pad = style.fetchPaddingDeg ?? 0.3
+  const paddedBounds: RouteBounds = {
+    minLat: bounds.minLat - pad, maxLat: bounds.maxLat + pad,
+    minLon: bounds.minLon - pad, maxLon: bounds.maxLon + pad,
+    centerLat: bounds.centerLat, centerLon: bounds.centerLon,
+  }
+  const elements = await fetchOverpassElements(filters, paddedBounds)
   const svg = renderPolygons(elements, projParams, config, style, viewWidth, viewHeight)
 
   cache.set(cacheKey, svg)

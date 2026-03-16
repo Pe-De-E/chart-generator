@@ -36,6 +36,7 @@ const WATER_STYLE: PolygonLayerStyle = {
   minAreaPx: 200,
   maxPolygons: 200,
   viewportMargin: 300,
+  fetchPaddingDeg: 0.05,  // small padding — avoids fetching large distant water bodies
 }
 
 const waterCache = new Map<string, string>()
