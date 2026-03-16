@@ -48,6 +48,7 @@ export interface PolygonLayerStyle {
 // ── Fetch ─────────────────────────────────────────────────────────────────────
 
 const OVERPASS_URL = '/overpass/interpreter'
+const ELEMENTS_SESSION_PREFIX = 'overpass-elements-v1:'
 
 /**
  * Module-level elements cache keyed by filters + bounds.
@@ -63,14 +64,36 @@ function buildElementsCacheKey(filters: string[], bounds: RouteBounds): string {
   )
 }
 
+function getSessionElements(key: string): OverpassElement[] | null {
+  try {
+    const raw = sessionStorage.getItem(ELEMENTS_SESSION_PREFIX + key)
+    return raw ? (JSON.parse(raw) as OverpassElement[]) : null
+  } catch { return null }
+}
+
+function setSessionElements(key: string, elements: OverpassElement[]): void {
+  try {
+    sessionStorage.setItem(ELEMENTS_SESSION_PREFIX + key, JSON.stringify(elements))
+  } catch { /* quota exceeded or unavailable */ }
+}
+
 /** POST a single Overpass query for the given filters within bbox. */
 export async function fetchOverpassElements(
   filters: string[],
   bounds: RouteBounds,
 ): Promise<OverpassElement[]> {
   const cacheKey = buildElementsCacheKey(filters, bounds)
-  const cached = elementsCache.get(cacheKey)
-  if (cached) return cached
+
+  // 1. In-memory (fastest)
+  const inMemory = elementsCache.get(cacheKey)
+  if (inMemory) return inMemory
+
+  // 2. sessionStorage (survives page reloads — avoids re-fetching on every HMR reload)
+  const sessionHit = getSessionElements(cacheKey)
+  if (sessionHit) {
+    elementsCache.set(cacheKey, sessionHit)
+    return sessionHit
+  }
 
   const { minLat, maxLon, maxLat, minLon } = bounds
   const bbox = `${minLat.toFixed(5)},${minLon.toFixed(5)},${maxLat.toFixed(5)},${maxLon.toFixed(5)}`
@@ -89,6 +112,7 @@ export async function fetchOverpassElements(
   const data = await response.json()
   const elements = (data.elements || []) as OverpassElement[]
   elementsCache.set(cacheKey, elements)
+  setSessionElements(cacheKey, elements)
   return elements
 }
 
@@ -131,6 +155,9 @@ function padBounds(bounds: RouteBounds): RouteBounds {
   }
 }
 
+/** Bump to bust all polygon SVG caches (e.g. after renderPolygons changes). */
+const POLYGON_CACHE_VERSION = 2
+
 /**
  * Cache key that excludes opacity so we can cache the SVG once and swap
  * the opacity attribute on cache hits without re-fetching.
@@ -142,6 +169,7 @@ export function buildPolygonCacheKey(
   vh: number,
 ): string {
   return (
+    `v${POLYGON_CACHE_VERSION},` +
     `${bounds.minLat.toFixed(4)},${bounds.maxLat.toFixed(4)},` +
     `${bounds.minLon.toFixed(4)},${bounds.maxLon.toFixed(4)},${color},${vw},${vh}`
   )
@@ -177,9 +205,26 @@ function renderPolygons(
     if (count >= maxPolygons) break
     if (requireTag && !el.tags?.[requireTag]) continue
 
-    const rings = extractRings(el)
-    for (const ring of rings) {
-      const projected = ring.map(pt => projectGeoCoord(pt.lon, pt.lat, projParams))
+    // Build list of { outer, holes } groups.
+    // For ways: single outer, no holes.
+    // For relations: each outer member gets all inner members as holes (evenodd fill rule punches them out).
+    type RingGroup = { outer: Array<{ lat: number; lon: number }>; holes: Array<Array<{ lat: number; lon: number }>> }
+    const groups: RingGroup[] = []
+
+    if (el.type === 'way' && el.geometry && el.geometry.length >= 3) {
+      groups.push({ outer: el.geometry, holes: [] })
+    } else if (el.type === 'relation' && el.members) {
+      const outerMembers = el.members.filter(m => m.role === 'outer' && m.geometry && m.geometry.length >= 3)
+      const innerMembers = el.members.filter(m => m.role === 'inner' && m.geometry && m.geometry.length >= 3)
+      const holes = innerMembers.map(m => m.geometry!)
+      for (const om of outerMembers) {
+        groups.push({ outer: om.geometry!, holes })
+      }
+    }
+
+    for (const { outer, holes } of groups) {
+      if (count >= maxPolygons) break
+      const projected = outer.map(pt => projectGeoCoord(pt.lon, pt.lat, projParams))
 
       // Skip if centroid is far outside viewport
       const avgX = projected.reduce((s, p) => s + p.x, 0) / projected.length
@@ -191,11 +236,20 @@ function renderPolygons(
 
       if (minAreaPx > 0 && polygonArea(projected) < minAreaPx) continue
 
-      const d = smoothPathD(projected)
-      if (!d) continue
+      const outerD = smoothPathD(projected)
+      if (!outerD) continue
 
+      // Build compound path: outer ring + hole rings (evenodd rule punches holes)
+      let pathD = outerD + ' Z'
+      for (const hole of holes) {
+        const holeProjected = hole.map(pt => projectGeoCoord(pt.lon, pt.lat, projParams))
+        const holeD = smoothPathD(holeProjected)
+        if (holeD) pathD += ' ' + holeD + ' Z'
+      }
+
+      const fillRule = holes.length > 0 ? ' fill-rule="evenodd"' : ''
       let attrs =
-        `d="${d} Z" fill="${config.color}" fill-opacity="${fillOpacity}" ` +
+        `d="${pathD}" fill="${config.color}" fill-opacity="${fillOpacity}"${fillRule} ` +
         `stroke="${config.color}" stroke-width="${strokeWidth}" stroke-opacity="${strokeOpacity}"`
       if (strokeDasharray) attrs += ` stroke-dasharray="${strokeDasharray}"`
       if (strokeLinecap)   attrs += ` stroke-linecap="${strokeLinecap}"`

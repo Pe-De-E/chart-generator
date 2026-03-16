@@ -790,10 +790,44 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     const waterHtml = waterLayerSvg || ''
     const landCoverHtml = landCoverLayerSvg || ''
     const roadHtml = roadLayerSvg || ''
-    // Render order (back to front): hillshade → forests → vineyards → meadows → land cover → water → place boundaries → contours → roads → rivers → geo → peaks
-    const allGeoHtml = hillshadeHtml + forestHtml + vineyardHtml + meadowHtml + landCoverHtml + waterHtml + placeBoundaryHtml + contourHtml + roadHtml + riverHtml + geoLayersHtml + peakHtml
+
+    // Build an SVG mask from water polygon paths so vegetation layers never
+    // render inside lake/reservoir areas (OSM forest polygons often extend into
+    // water bodies — the mask cuts them out geometrically).
+    const vegetationMaskDef = waterHtml ? (() => {
+      // Extract every <path d="..." fill-rule="..."> from the water SVG
+      const maskPaths: string[] = []
+      const pathRe = /<path\s[^>]*>/g
+      const dRe = /\bd="([^"]+)"/
+      const frRe = /\bfill-rule="([^"]+)"/
+      let m: RegExpExecArray | null
+      while ((m = pathRe.exec(waterHtml)) !== null) {
+        const d = m[0].match(dRe)?.[1]
+        if (!d) continue
+        const fr = m[0].match(frRe)?.[1]
+        const frAttr = fr ? ` fill-rule="${fr}"` : ''
+        maskPaths.push(`<path d="${d}"${frAttr} fill="black"/>`)
+      }
+      if (maskPaths.length === 0) return ''
+      return (
+        `<mask id="veg-exclude-water">` +
+        `<rect x="0" y="0" width="${width}" height="${mapHeight}" fill="white"/>` +
+        maskPaths.join('') +
+        `</mask>`
+      )
+    })() : ''
+
+    // Wrap vegetation layers in mask (water areas become invisible in these layers)
+    const vegHtml = forestHtml + vineyardHtml + meadowHtml + landCoverHtml
+    const maskedVegHtml = vegetationMaskDef
+      ? `<g mask="url(#veg-exclude-water)">${vegHtml}</g>`
+      : vegHtml
+
+    // Render order (back to front): hillshade → vegetation (masked by water) → water → place boundaries → contours → roads → rivers → geo → peaks
+    const allGeoHtml = hillshadeHtml + maskedVegHtml + waterHtml + placeBoundaryHtml + contourHtml + roadHtml + riverHtml + geoLayersHtml + peakHtml
+    const geoDefs = vegetationMaskDef ? `<defs>${vegetationMaskDef}</defs>` : ''
     const geoClipped = allGeoHtml
-      ? `<svg x="0" y="0" width="${width}" height="${mapHeight}" overflow="hidden">${allGeoHtml}</svg>`
+      ? `<svg x="0" y="0" width="${width}" height="${mapHeight}" overflow="hidden">${geoDefs}${allGeoHtml}</svg>`
       : ''
 
     // These overlays are always in screen-space (unaffected by chase zoom)

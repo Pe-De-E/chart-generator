@@ -145,10 +145,19 @@ function renderRiverSvg(
 // ── Cache & Export ────────────────────────────────────────────────────────────
 
 const riverSvgCache = new Map<string, string>()
+const RIVER_SESSION_PREFIX = 'river-svg-v1:'
 
 function buildCacheKey(bounds: RouteBounds, config: RiverConfig, vw: number, vh: number): string {
   return `${bounds.minLat.toFixed(4)},${bounds.maxLat.toFixed(4)},${bounds.minLon.toFixed(4)},${bounds.maxLon.toFixed(4)},` +
     `${config.color},${config.showLabels},${vw},${vh}`
+}
+
+function getSessionCached(key: string): string | null {
+  try { return sessionStorage.getItem(RIVER_SESSION_PREFIX + key) } catch { return null }
+}
+
+function setSessionCached(key: string, svg: string): void {
+  try { sessionStorage.setItem(RIVER_SESSION_PREFIX + key, svg) } catch { /* quota/unavailable */ }
 }
 
 /**
@@ -166,9 +175,18 @@ export async function generateRiverLayer(
   viewHeight = 1152,
 ): Promise<string> {
   const cacheKey = buildCacheKey(routeBounds, config, viewWidth, viewHeight)
-  const cached = riverSvgCache.get(cacheKey)
-  if (cached !== undefined) {
-    return cached.replace(/opacity="[\d.]+"/, `opacity="${config.opacity.toFixed(2)}"`)
+
+  // 1. In-memory cache (fastest, same module lifetime)
+  const inMemory = riverSvgCache.get(cacheKey)
+  if (inMemory !== undefined) {
+    return inMemory.replace(/opacity="[\d.]+"/, `opacity="${config.opacity.toFixed(2)}"`)
+  }
+
+  // 2. sessionStorage cache (survives page reloads within same browser session)
+  const sessionHit = getSessionCached(cacheKey)
+  if (sessionHit) {
+    riverSvgCache.set(cacheKey, sessionHit)
+    return sessionHit.replace(/opacity="[\d.]+"/, `opacity="${config.opacity.toFixed(2)}"`)
   }
 
   // Pad bounds so rivers extend fully to the viewport edges.
@@ -186,5 +204,6 @@ export async function generateRiverLayer(
   const svg = renderRiverSvg(elements, projectionParams, config, viewWidth, viewHeight)
 
   riverSvgCache.set(cacheKey, svg)
+  setSessionCached(cacheKey, svg)
   return svg
 }
