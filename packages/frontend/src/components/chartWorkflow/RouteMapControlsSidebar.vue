@@ -178,7 +178,7 @@
             <div class="section-label">Kartendetails</div>
             <v-checkbox v-model="showNorthArrow" label="Nordpfeil" density="compact" hide-details color="primary" />
             <v-checkbox v-model="showScaleBar" label="Maßstabsleiste" density="compact" hide-details color="primary" class="mt-1" />
-            <v-checkbox v-if="showElevationChart" v-model="showMapFade" label="Übergang Karte → Profil" density="compact" hide-details color="primary" class="mt-1" />
+            <v-checkbox v-model="showMapFade" label="Verblassen unten" density="compact" hide-details color="primary" class="mt-1" />
 
             <v-divider class="my-3" />
             <div class="section-label">Kamera</div>
