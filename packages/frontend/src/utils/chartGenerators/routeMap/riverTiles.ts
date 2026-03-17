@@ -151,6 +151,16 @@ function renderRiverSvg(
       `stroke="rgba(0,0,0,0.65)" stroke-width="7" stroke-linejoin="round" paint-order="stroke" ` +
       `transform="${rotate}" data-river-name="${name}" style="cursor:pointer">${name}</text>`
     )
+
+    // Wide invisible hit area along the full river — makes the whole river line clickable
+    const hitD = smoothPathD(pts)
+    if (hitD) {
+      labels.push(
+        `<path d="${hitD}" fill="none" stroke="transparent" stroke-width="30" ` +
+        `stroke-linecap="round" pointer-events="stroke" ` +
+        `data-river-name="${name}" style="cursor:pointer"/>`
+      )
+    }
   }
 
   _lastDetectedNames = detectedNames
