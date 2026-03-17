@@ -156,26 +156,29 @@
         <div v-show="activeTab === 0">
           <div class="tab-panel">
             <div class="section-label">Layout</div>
-            <div class="height-control">
-              <v-slider v-model="mapHeightRatio" :min="0.3" :max="0.8" :step="0.05" hide-details thumb-label color="primary" />
-              <span class="text-caption">{{ Math.round(mapHeightRatio * 100) }}%</span>
-            </div>
-            <v-checkbox v-model="showDivider" label="Trennlinie anzeigen" density="compact" hide-details color="primary" class="mt-1" />
-            <v-menu v-if="showDivider" :close-on-content-click="false">
-              <template v-slot:activator="{ props: menuProps }">
-                <v-btn v-bind="menuProps" variant="outlined" block size="small" class="mt-1">
-                  <div class="color-swatch mr-2" :style="{ backgroundColor: dividerColor }"></div>
-                  Trennlinienfarbe
-                </v-btn>
-              </template>
-              <v-color-picker v-model="dividerColor" mode="hexa" hide-inputs />
-            </v-menu>
+            <v-checkbox v-model="showElevationChart" label="Höhenprofil anzeigen" density="compact" hide-details color="primary" />
+            <template v-if="showElevationChart">
+              <div class="height-control mt-1">
+                <v-slider v-model="mapHeightRatio" :min="0.3" :max="0.8" :step="0.05" hide-details thumb-label color="primary" />
+                <span class="text-caption">{{ Math.round(mapHeightRatio * 100) }}%</span>
+              </div>
+              <v-checkbox v-model="showDivider" label="Trennlinie anzeigen" density="compact" hide-details color="primary" class="mt-1" />
+              <v-menu v-if="showDivider" :close-on-content-click="false">
+                <template v-slot:activator="{ props: menuProps }">
+                  <v-btn v-bind="menuProps" variant="outlined" block size="small" class="mt-1">
+                    <div class="color-swatch mr-2" :style="{ backgroundColor: dividerColor }"></div>
+                    Trennlinienfarbe
+                  </v-btn>
+                </template>
+                <v-color-picker v-model="dividerColor" mode="hexa" hide-inputs />
+              </v-menu>
+            </template>
 
             <v-divider class="my-3" />
             <div class="section-label">Kartendetails</div>
             <v-checkbox v-model="showNorthArrow" label="Nordpfeil" density="compact" hide-details color="primary" />
             <v-checkbox v-model="showScaleBar" label="Maßstabsleiste" density="compact" hide-details color="primary" class="mt-1" />
-            <v-checkbox v-model="showMapFade" label="Übergang Karte → Profil" density="compact" hide-details color="primary" class="mt-1" />
+            <v-checkbox v-if="showElevationChart" v-model="showMapFade" label="Übergang Karte → Profil" density="compact" hide-details color="primary" class="mt-1" />
 
             <v-divider class="my-3" />
             <div class="section-label">Kamera</div>
@@ -987,6 +990,7 @@ const {
   showDistanceMarkers,
   distanceMarkerInterval,
   showStartEndLabels,
+  showElevationChart,
   mapHeightRatio,
   showDivider,
   dividerColor,

@@ -121,6 +121,11 @@ export function useRouteMapConfig(
 
   // --- Layout ---
 
+  const showElevationChart = computed({
+    get: () => getConfig().showElevationChart ?? true,
+    set: (value: boolean) => updateConfig({ showElevationChart: value }),
+  })
+
   const mapHeightRatio = computed({
     get: () => getConfig().mapHeightRatio ?? 0.6,
     set: (value: number) => updateConfig({ mapHeightRatio: value }),
@@ -455,6 +460,7 @@ export function useRouteMapConfig(
     distanceMarkerInterval,
     showStartEndLabels,
     // Layout
+    showElevationChart,
     mapHeightRatio,
     showDivider,
     dividerColor,

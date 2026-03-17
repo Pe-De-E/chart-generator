@@ -46,6 +46,7 @@ export interface CombinedFrameOptions {
   width: number                        // SVG width (default 1080)
   height: number                       // SVG height (default 1920)
   mapHeightRatio: number               // 0.4-0.8, default 0.6
+  showElevationChart: boolean          // show/hide elevation curve section
 
   // Background (shared for entire frame)
   backgroundColor: string
@@ -168,6 +169,7 @@ export const DEFAULT_COMBINED_FRAME_OPTIONS: Partial<CombinedFrameOptions> = {
   width: 1080,
   height: 1920,
   mapHeightRatio: 0.6,
+  showElevationChart: true,
   backgroundColor: '#1a1a2e',
   backgroundType: 'solid',
   mapCameraMode: 'overview',
@@ -794,6 +796,8 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     animationMode = 'uniform',
     timeArray,
     gradientSensitivity = 3,
+    // Elevation visibility
+    showElevationChart = true,
     // Divider
     showDivider = false,
     dividerColor = '#ffffff33',
@@ -850,8 +854,8 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     return routePoints.slice(startIdx, endIdx + 1)
   })()
 
-  // Layout split
-  const mapHeight = Math.round(height * mapHeightRatio)
+  // Layout split — if elevation is hidden, map takes full height
+  const mapHeight = showElevationChart ? Math.round(height * mapHeightRatio) : height
   const elevHeight = height - mapHeight
 
   // Remap progress based on animation mode
@@ -1024,7 +1028,7 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
   let elevContent = ''
   let elevDefs = ''
 
-  if (chartData.length > 0) {
+  if (showElevationChart && chartData.length > 0) {
     const leftPadding = showElevationLabels ? 70 : 0
     const bottomPadding = showDistanceLabels ? 60 : 0
 
@@ -1115,7 +1119,7 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
   }
 
   // ── Divider ──
-  const dividerHtml = showDivider
+  const dividerHtml = showDivider && showElevationChart
     ? `<line x1="0" y1="${mapHeight}" x2="${width}" y2="${mapHeight}"
             stroke="${dividerColor}" stroke-width="${dividerWidth}"/>`
     : ''
