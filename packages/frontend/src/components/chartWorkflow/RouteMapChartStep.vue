@@ -586,9 +586,10 @@ const { placeBoundarySvg, isLoading: placeBoundaryLoading } = usePlaceBoundaries
 )
 
 // ── Forest layer (async fetch from Overpass API) ──
-const forestConfig = computed<ForestConfig | null>(() => {
+// Always compute (never null) so the SVG is ready when the user enables the toggle.
+// Visibility is controlled in buildFrameOptions via cfg.showForests.
+const forestConfig = computed<ForestConfig>(() => {
   const cfg = props.animationConfig
-  if (!cfg.showForests) return null
   return {
     color: cfg.forestColor ?? '#4a8c3f',
     opacity: cfg.forestOpacity,
@@ -842,7 +843,7 @@ function buildFrameOptions(progress: number, overrides: Partial<CombinedFrameOpt
     riverLayerSvg:         riverSvg.value,
     peakLayerSvg:          peakSvg.value,
     placeBoundaryLayerSvg: placeBoundarySvg.value,
-    forestLayerSvg:        forestSvg.value,
+    forestLayerSvg:        cfg.showForests ? forestSvg.value : '',
     vineyardLayerSvg:      vineyardSvg.value,
     meadowLayerSvg:        meadowSvg.value,
     waterLayerSvg:         waterSvg.value,
