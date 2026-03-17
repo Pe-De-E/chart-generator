@@ -240,18 +240,9 @@
             <template v-if="showRivers">
               <label class="text-caption text-medium-emphasis d-block mb-1 mt-1">Deckkraft: {{ Math.round(riverOpacity * 100) }}%</label>
               <v-slider v-model="riverOpacity" :min="0.05" :max="1" :step="0.05" density="compact" hide-details />
-              <template v-if="detectedRiverNames.length > 0">
-                <div class="text-caption text-medium-emphasis mt-2 mb-1">Beschriftungsposition</div>
-                <div v-for="name in detectedRiverNames" :key="name" class="mb-1">
-                  <label class="text-caption d-block">{{ name }}</label>
-                  <v-slider
-                    :model-value="riverLabelOffsets[name] ?? 0.5"
-                    @update:model-value="setRiverLabelOffset(name, $event)"
-                    :min="0" :max="1" :step="0.01"
-                    density="compact" hide-details color="primary"
-                  />
-                </div>
-              </template>
+              <div v-if="detectedRiverNames.length > 0" class="text-caption text-medium-emphasis mt-2" style="line-height:1.4">
+                <v-icon size="12" class="mr-1">mdi-cursor-pointer</v-icon>Auf Flussnamen klicken zum Neupositionieren
+              </div>
             </template>
             <v-checkbox v-model="showCities" label="Staedte" density="compact" hide-details class="mt-1" />
             <template v-if="showCities">
@@ -1024,8 +1015,6 @@ const {
   showCities,
   borderOpacity,
   riverOpacity,
-  riverLabelOffsets,
-  setRiverLabelOffset,
   cityOpacity,
   showPlaceBoundaries,
   placeBoundaryOpacity,

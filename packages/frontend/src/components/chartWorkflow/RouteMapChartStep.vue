@@ -9,6 +9,7 @@
             <div
               class="silhouette-chart"
               v-html="animationSvg"
+              @click="onPreviewClick"
             ></div>
             <div
               v-if="animationConfig.showStatsOverlay"
@@ -354,6 +355,7 @@ import { useRiverTiles } from '../../composables/useRiverTiles'
 import { calculateRouteBounds, getProjectionParams } from '../../utils/chartGenerators/routeMap/projection'
 import type { ContourConfig } from '../../utils/chartGenerators/routeMap/contourLines'
 import type { RiverConfig } from '../../utils/chartGenerators/routeMap/riverTiles'
+import { getLastRiverLabelCandidates } from '../../utils/chartGenerators/routeMap/riverTiles'
 import { usePeakLayer } from '../../composables/usePeakLayer'
 import { usePlaceBoundaries } from '../../composables/usePlaceBoundaries'
 import type { PlaceBoundaryConfig } from '../../utils/chartGenerators/routeMap/placeBoundaries'
@@ -481,6 +483,25 @@ function onStatsDragEnd() {
   isDragging.value = false
   document.removeEventListener('mousemove', onStatsDragMove)
   document.removeEventListener('mouseup', onStatsDragEnd)
+}
+
+// ── River label click cycling ──
+function onPreviewClick(e: MouseEvent) {
+  const target = e.target as SVGElement | null
+  const name = target?.getAttribute?.('data-river-name')
+  if (!name) return
+
+  const candidates = getLastRiverLabelCandidates()[name]
+  if (!candidates || candidates.length < 2) return
+
+  const offsets = props.animationConfig.riverLabelOffsets ?? {}
+  const currentT = offsets[name] ?? candidates[0]
+  const currentIdx = candidates.findIndex(t => Math.abs(t - currentT) < 0.01)
+  const nextIdx = ((currentIdx < 0 ? 0 : currentIdx) + 1) % candidates.length
+  emit('update:animationConfig', {
+    ...props.animationConfig,
+    riverLabelOffsets: { ...offsets, [name]: candidates[nextIdx] },
+  })
 }
 
 // ── Contour lines (async terrain tile fetch + d3-contour) ──
