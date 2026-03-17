@@ -240,6 +240,18 @@
             <template v-if="showRivers">
               <label class="text-caption text-medium-emphasis d-block mb-1 mt-1">Deckkraft: {{ Math.round(riverOpacity * 100) }}%</label>
               <v-slider v-model="riverOpacity" :min="0.05" :max="1" :step="0.05" density="compact" hide-details />
+              <template v-if="detectedRiverNames.length > 0">
+                <div class="text-caption text-medium-emphasis mt-2 mb-1">Beschriftungsposition</div>
+                <div v-for="name in detectedRiverNames" :key="name" class="mb-1">
+                  <label class="text-caption d-block">{{ name }}</label>
+                  <v-slider
+                    :model-value="riverLabelOffsets[name] ?? 0.5"
+                    @update:model-value="setRiverLabelOffset(name, $event)"
+                    :min="0" :max="1" :step="0.01"
+                    density="compact" hide-details color="primary"
+                  />
+                </div>
+              </template>
             </template>
             <v-checkbox v-model="showCities" label="Staedte" density="compact" hide-details class="mt-1" />
             <template v-if="showCities">
@@ -863,6 +875,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  detectedRiverNames: {
+    type: Array as () => string[],
+    default: () => [],
+  },
   peakLoading: {
     type: Boolean,
     default: false,
@@ -1008,6 +1024,8 @@ const {
   showCities,
   borderOpacity,
   riverOpacity,
+  riverLabelOffsets,
+  setRiverLabelOffset,
   cityOpacity,
   showPlaceBoundaries,
   placeBoundaryOpacity,

@@ -195,6 +195,15 @@ export function useRouteMapConfig(
     set: (value: number) => updateConfig({ riverOpacity: value }),
   })
 
+  const riverLabelOffsets = computed({
+    get: () => getConfig().riverLabelOffsets ?? {} as Record<string, number>,
+    set: (value: Record<string, number>) => updateConfig({ riverLabelOffsets: value }),
+  })
+
+  function setRiverLabelOffset(name: string, t: number) {
+    updateConfig({ riverLabelOffsets: { ...riverLabelOffsets.value, [name]: t } })
+  }
+
   const cityOpacity = computed({
     get: () => getConfig().cityOpacity ?? 0.50,
     set: (value: number) => updateConfig({ cityOpacity: value }),
@@ -473,6 +482,8 @@ export function useRouteMapConfig(
     // Geo Context Layers
     showBorders,
     showRivers,
+    riverLabelOffsets,
+    setRiverLabelOffset,
     showCities,
     borderOpacity,
     riverOpacity,

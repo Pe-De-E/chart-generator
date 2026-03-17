@@ -24,6 +24,7 @@ export interface RiverConfig {
   color: string
   opacity: number
   showLabels: boolean
+  riverLabelOffsets?: Record<string, number>  // river name → 0–1 position along river
 }
 
 export const DEFAULT_RIVER_CONFIG: RiverConfig = {
@@ -122,20 +123,31 @@ function renderRiverSvg(
   const labels: string[] = []
   const MIN_LABEL_LENGTH_PX = 80
   const RIVER_FONT_SIZE = 38
+  const detectedNames: string[] = []
+
   for (const [name, { len, pts }] of longestByName) {
     const approxTextWidth = name.length * RIVER_FONT_SIZE * 0.55
     if (len < MIN_LABEL_LENGTH_PX || len < approxTextWidth * 1.3) continue
 
-    const mid = midpointOnPolyline(pts)
+    const t = config.riverLabelOffsets?.[name] ?? 0.5
+    const mid = midpointOnPolyline(pts, t)
     if (mid.x < 0 || mid.x > viewWidth || mid.y < 0 || mid.y > viewHeight) continue
 
+    detectedNames.push(name)
+    const tx = mid.x.toFixed(1)
+    const ty = (mid.y - 20).toFixed(1)
+    const rotate = `rotate(${mid.angle.toFixed(1)} ${tx} ${ty})`
+    const baseAttrs = `x="${tx}" y="${ty}" font-size="${RIVER_FONT_SIZE}" font-family="system-ui, sans-serif" font-style="italic" text-anchor="middle"`
+
+    // Halo: render stroke behind fill using paint-order
     labels.push(
-      `<text x="${mid.x.toFixed(1)}" y="${(mid.y - 20).toFixed(1)}" ` +
-      `fill="${config.color}" font-size="${RIVER_FONT_SIZE}" font-family="system-ui, sans-serif" ` +
-      `font-style="italic" text-anchor="middle" ` +
-      `transform="rotate(${mid.angle.toFixed(1)} ${mid.x.toFixed(1)} ${(mid.y - 20).toFixed(1)})">${name}</text>`
+      `<text ${baseAttrs} fill="${config.color}" ` +
+      `stroke="rgba(0,0,0,0.65)" stroke-width="7" stroke-linejoin="round" paint-order="stroke" ` +
+      `transform="${rotate}">${name}</text>`
     )
   }
+
+  _lastDetectedNames = detectedNames
 
   const glowGroup = `<g>${glows.join('\n')}</g>`
   const lineGroup = `<g>${lines.join('\n')}</g>`
@@ -145,7 +157,12 @@ function renderRiverSvg(
 // ── Cache & Export ────────────────────────────────────────────────────────────
 
 const riverSvgCache = new Map<string, string>()
+const riverNameCache = new Map<string, string[]>()   // cacheKey → detected river names
 const RIVER_SESSION_PREFIX = 'river-svg-v1:'
+
+// Last detected names — updated on every render or cache hit, read by useRiverTiles
+let _lastDetectedNames: string[] = []
+export function getLastDetectedRiverNames(): string[] { return _lastDetectedNames }
 
 function buildCacheKey(bounds: RouteBounds, config: RiverConfig, vw: number, vh: number): string {
   return `${bounds.minLat.toFixed(4)},${bounds.maxLat.toFixed(4)},${bounds.minLon.toFixed(4)},${bounds.maxLon.toFixed(4)},` +
@@ -179,6 +196,7 @@ export async function generateRiverLayer(
   // 1. In-memory cache (fastest, same module lifetime)
   const inMemory = riverSvgCache.get(cacheKey)
   if (inMemory !== undefined) {
+    _lastDetectedNames = riverNameCache.get(cacheKey) ?? []
     return inMemory.replace(/opacity="[\d.]+"/, `opacity="${config.opacity.toFixed(2)}"`)
   }
 
@@ -186,6 +204,7 @@ export async function generateRiverLayer(
   const sessionHit = getSessionCached(cacheKey)
   if (sessionHit) {
     riverSvgCache.set(cacheKey, sessionHit)
+    _lastDetectedNames = riverNameCache.get(cacheKey) ?? []
     return sessionHit.replace(/opacity="[\d.]+"/, `opacity="${config.opacity.toFixed(2)}"`)
   }
 
@@ -204,6 +223,7 @@ export async function generateRiverLayer(
   const svg = renderRiverSvg(elements, projectionParams, config, viewWidth, viewHeight)
 
   riverSvgCache.set(cacheKey, svg)
+  riverNameCache.set(cacheKey, _lastDetectedNames)
   setSessionCached(cacheKey, svg)
   return svg
 }

@@ -427,19 +427,19 @@ export function polylineLength(pts: Point2D[]): number {
 /**
  * Find the point and tangent angle at the midpoint of a polyline (by arc length).
  */
-export function midpointOnPolyline(pts: Point2D[]): { x: number; y: number; angle: number } {
+export function midpointOnPolyline(pts: Point2D[], t = 0.5): { x: number; y: number; angle: number } {
   const totalLen = polylineLength(pts)
-  const halfLen = totalLen / 2
+  const targetLen = totalLen * Math.max(0, Math.min(1, t))
   let accum = 0
   for (let i = 1; i < pts.length; i++) {
     const dx = pts[i].x - pts[i - 1].x
     const dy = pts[i].y - pts[i - 1].y
     const segLen = Math.sqrt(dx * dx + dy * dy)
-    if (accum + segLen >= halfLen) {
+    if (accum + segLen >= targetLen) {
       // Interpolate within this segment
-      const t = segLen > 0 ? (halfLen - accum) / segLen : 0
-      const x = pts[i - 1].x + dx * t
-      const y = pts[i - 1].y + dy * t
+      const s = segLen > 0 ? (targetLen - accum) / segLen : 0
+      const x = pts[i - 1].x + dx * s
+      const y = pts[i - 1].y + dy * s
       let angle = Math.atan2(dy, dx) * (180 / Math.PI)
       // Keep text readable: flip if upside-down, clamp to ±60°
       if (angle > 90) angle -= 180

@@ -38,6 +38,7 @@
       :hillshade-loading="hillshadeLoading"
       :contour-loading="contourLoading"
       :river-loading="riverLoading"
+      :detected-river-names="detectedRiverNames"
       :peak-loading="peakLoading"
       :place-boundary-loading="placeBoundaryLoading"
       :forest-loading="forestLoading"
@@ -161,6 +162,7 @@ export interface RouteMapAnimationConfig {
   showCities: boolean;
   borderOpacity: number;
   riverOpacity: number;
+  riverLabelOffsets?: Record<string, number>;
   cityOpacity: number;
   showPeaks: boolean;
   peakOpacity: number;
@@ -540,9 +542,10 @@ const riverConfig = computed<RiverConfig | null>(() => {
     color: '#4a90d9',
     opacity: cfg.riverOpacity,
     showLabels: true,
+    riverLabelOffsets: cfg.riverLabelOffsets,
   }
 })
-const { riverSvg, isLoading: riverLoading } = useRiverTiles(
+const { riverSvg, detectedNames: detectedRiverNames, isLoading: riverLoading } = useRiverTiles(
   contourRouteBounds,
   contourProjParams,
   riverConfig,
