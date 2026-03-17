@@ -813,6 +813,8 @@ function buildFrameOptions(progress: number, overrides: Partial<CombinedFrameOpt
     animationMode: cfg.animationMode,
     timeArray: props.timeArray,
     gradientSensitivity: cfg.gradientSensitivity,
+    // Elevation visibility
+    showElevationChart: cfg.showElevationChart ?? true,
     // Divider
     showDivider: cfg.showDivider,
     dividerColor: cfg.dividerColor,
