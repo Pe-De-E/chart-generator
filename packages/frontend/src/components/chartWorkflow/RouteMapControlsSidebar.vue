@@ -253,7 +253,10 @@
               <v-slider v-model="placeBoundaryOpacity" :min="0.05" :max="1" :step="0.05" density="compact" hide-details />
             </template>
             <v-checkbox v-model="showForests" label="Waelder" density="compact" hide-details class="mt-1" />
-            <v-progress-linear v-if="showForests && forestLoading" indeterminate color="primary" height="2" class="mt-1" />
+            <div v-if="showForests && forestLoading" class="d-flex align-center gap-2 mt-1 text-caption text-medium-emphasis">
+              <v-progress-circular indeterminate size="14" width="2" color="primary" class="mr-1" />
+              Wälder werden geladen…
+            </div>
             <template v-if="showForests">
               <label class="text-caption text-medium-emphasis d-block mb-1 mt-1">Deckkraft: {{ Math.round(forestOpacity * 100) }}%</label>
               <v-slider v-model="forestOpacity" :min="0.05" :max="1" :step="0.05" density="compact" hide-details />
