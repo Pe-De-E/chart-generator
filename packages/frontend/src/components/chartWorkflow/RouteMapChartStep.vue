@@ -966,6 +966,10 @@ function buildFrameOptions(progress: number, overrides: Partial<CombinedFrameOpt
     kmLabelOffsets: cfg.kmLabelOffsets,
     // Annotation chip drag positions
     annotationPositions: cfg.annotationPositions,
+    // Live preview always shows all enabled annotations regardless of progress,
+    // so every chip is visible and draggable from the first frame.
+    // Export renderFrame overrides this to false for the progressive reveal.
+    showAllAnnotations: true,
     // Overrides
     ...overrides,
   }
@@ -1074,6 +1078,7 @@ async function startVideoExport(settings: ExportSettings) {
           showMapMarker: false,
           showElevationLabels: false,
           showDistanceLabels: false,
+          showAllAnnotations: false,
         }))
       }
 
@@ -1088,6 +1093,7 @@ async function startVideoExport(settings: ExportSettings) {
 
         return generateCombinedFrame(buildFrameOptions(chartProgress, {
           sceneOpacity: hasTitle ? fadeIn : undefined,
+          showAllAnnotations: false,
         }))
       }
 
@@ -1098,6 +1104,7 @@ async function startVideoExport(settings: ExportSettings) {
         showElevationMarker: false,
         showMapMarker: false,
         sceneOpacity: fadeIn,
+        showAllAnnotations: false,
       }))
     },
   })
