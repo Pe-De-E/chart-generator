@@ -924,6 +924,20 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     patternColor, patternOpacity, imageOptions,
   )
 
+  // Accent color for Momente annotation chips — distinct from km labels (white)
+  const ANNOT_COLOR = '#ffd166'
+
+  // Pre-compute the currently active annotation so the map section can find
+  // its corresponding route position before building mapInnerContent.
+  const activeAnnotation = annotations.length > 0
+    ? annotations
+        .filter(a => a.enabled && effectiveProgress >= a.progress)
+        .sort((a, b) => b.progress - a.progress)[0]
+    : undefined
+
+  // SVG position of the annotation's route point (filled in by map section)
+  let annotationAnchorPos: { x: number; y: number } | null = null
+
   // ── Map Section (top) ──
   let mapContent = ''
   let mapDefs = ''
@@ -945,6 +959,21 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     // Deduplicate for animation — removes GPS pause clusters so the drawing
     // speed is proportional to distance traveled, not GPS point count.
     const animPoints = deduplicateRouteForAnimation(mapPoints)
+
+    // Find the SVG position on the route for the active annotation (overview only —
+    // in chase mode the camera-space coordinates can't be mixed with screen-space chip coords)
+    if (activeAnnotation && mapCameraMode === 'overview' && animPoints.length >= 2) {
+      const totalDist = animPoints[animPoints.length - 1].distance
+      if (totalDist > 0) {
+        const targetDist = activeAnnotation.progress * totalDist
+        let ai = 0
+        while (ai < animPoints.length - 1 && animPoints[ai + 1].distance < targetDist) ai++
+        const pa = animPoints[Math.min(ai, animPoints.length - 2)]
+        const pb = animPoints[Math.min(ai + 1, animPoints.length - 1)]
+        const at = pa.distance !== pb.distance ? (targetDist - pa.distance) / (pb.distance - pa.distance) : 0
+        annotationAnchorPos = { x: pa.x + (pb.x - pa.x) * at, y: pa.y + (pb.y - pa.y) * at }
+      }
+    }
 
     const camera = calculateMapCameraViewport(
       effectiveProgress, mapCameraMode, mapCameraConfig,
@@ -1033,11 +1062,17 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     const scaleBarHtml = showScaleBar ? generateScaleBar(routeBounds, width, mapHeight, mapMarkerColor) : ''
     const mapOverlays = `${fadeOverlay}${northArrowHtml}${scaleBarHtml}`
 
+    const annotDot = annotationAnchorPos
+      ? `<circle cx="${annotationAnchorPos.x.toFixed(1)}" cy="${annotationAnchorPos.y.toFixed(1)}"
+                r="8" fill="${ANNOT_COLOR}" stroke="rgba(0,0,0,0.55)" stroke-width="2" opacity="0.9"/>`
+      : ''
+
     const mapInnerContent = `
       ${geoClipped}
       ${routeLine.elements}
       ${distLabels}
       ${startEnd}
+      ${annotDot}
       ${marker}
     `
 
@@ -1181,46 +1216,49 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
   // ── Annotations ──
   _lastAnnotationChipPositions = {}
   let annotationsHtml = ''
-  if (annotations.length > 0) {
-    // Find the most recently activated annotation
-    const active = annotations
-      .filter(a => a.enabled && effectiveProgress >= a.progress)
-      .sort((a, b) => b.progress - a.progress)[0]
+  if (activeAnnotation) {
+    const active = activeAnnotation
+    const fadeOpacity = Math.min(1, (effectiveProgress - active.progress) / 0.03)
+    const escaped = active.text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+    const annotFontSize = 36
+    const annotChipH = 58
+    const annotChipWidth = Math.max(280, escaped.length * 20 + 60)
+    const customPos = options.annotationPositions?.[active.id]
+    const chipX = customPos?.x ?? width / 2
+    const chipY = customPos?.y ?? (mapHeight - 100)
+    _lastAnnotationChipPositions[active.id] = { x: chipX, y: chipY }
 
-    if (active) {
-      const fadeOpacity = Math.min(1, (effectiveProgress - active.progress) / 0.03)
-      const escaped = active.text
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-      const chipWidth = Math.max(200, escaped.length * 14 + 40)
-      const chipH = 34
-      const customPos = options.annotationPositions?.[active.id]
-      const chipX = customPos?.x ?? width / 2
-      const chipY = customPos?.y ?? (mapHeight - 80)
-      _lastAnnotationChipPositions[active.id] = { x: chipX, y: chipY }
-      annotationsHtml = `
-        <g opacity="${fadeOpacity}">
-          <rect x="${chipX - chipWidth / 2}" y="${chipY - chipH / 2}"
-                width="${chipWidth}" height="${chipH}"
-                rx="17" ry="17"
-                fill="rgba(0,0,0,0.72)"
-                stroke="rgba(255,255,255,0.28)" stroke-width="1.5"
-                data-annotation-id="${active.id}" style="cursor:grab"/>
-          <text x="${chipX}" y="${chipY + 3}"
-                text-anchor="middle" dominant-baseline="middle"
-                font-size="26" font-weight="600"
-                font-family="system-ui, -apple-system, sans-serif"
-                fill="#ffffff"
-                data-annotation-id="${active.id}" style="cursor:grab">${escaped}</text>
-          <rect x="${chipX - chipWidth / 2 - 10}" y="${chipY - chipH / 2 - 10}"
-                width="${chipWidth + 20}" height="${chipH + 20}"
-                fill="transparent" pointer-events="all"
-                data-annotation-id="${active.id}" style="cursor:grab"/>
-        </g>
-      `
-    }
+    const leaderLine = annotationAnchorPos ? `
+      <line x1="${annotationAnchorPos.x.toFixed(1)}" y1="${annotationAnchorPos.y.toFixed(1)}"
+            x2="${chipX}" y2="${chipY}"
+            stroke="${ANNOT_COLOR}" stroke-width="2" stroke-dasharray="6 5" opacity="0.7"
+            pointer-events="none"/>` : ''
+
+    annotationsHtml = `
+      <g opacity="${fadeOpacity}">
+        ${leaderLine}
+        <rect x="${chipX - annotChipWidth / 2}" y="${chipY - annotChipH / 2}"
+              width="${annotChipWidth}" height="${annotChipH}"
+              rx="${annotChipH / 2}" ry="${annotChipH / 2}"
+              fill="rgba(0,0,0,0.80)"
+              stroke="${ANNOT_COLOR}" stroke-width="2.5"
+              data-annotation-id="${active.id}" style="cursor:grab"/>
+        <text x="${chipX}" y="${chipY}"
+              text-anchor="middle" dominant-baseline="middle"
+              font-size="${annotFontSize}" font-weight="600"
+              font-family="system-ui, -apple-system, sans-serif"
+              fill="#ffffff"
+              data-annotation-id="${active.id}" style="cursor:grab">${escaped}</text>
+        <rect x="${chipX - annotChipWidth / 2 - 12}" y="${chipY - annotChipH / 2 - 12}"
+              width="${annotChipWidth + 24}" height="${annotChipH + 24}"
+              fill="transparent" pointer-events="all"
+              data-annotation-id="${active.id}" style="cursor:grab"/>
+      </g>
+    `
   }
 
   // ── Title Overlay ──
