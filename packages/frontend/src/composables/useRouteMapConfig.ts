@@ -213,6 +213,15 @@ export function useRouteMapConfig(
     updateConfig({ kmLabelOffsets: { ...kmLabelOffsets.value, [km]: offset } })
   }
 
+  const annotationPositions = computed({
+    get: () => getConfig().annotationPositions ?? {} as Record<string, { x: number; y: number }>,
+    set: (value: Record<string, { x: number; y: number }>) => updateConfig({ annotationPositions: value }),
+  })
+
+  function setAnnotationPosition(id: string, pos: { x: number; y: number }) {
+    updateConfig({ annotationPositions: { ...annotationPositions.value, [id]: pos } })
+  }
+
   const cityOpacity = computed({
     get: () => getConfig().cityOpacity ?? 0.50,
     set: (value: number) => updateConfig({ cityOpacity: value }),
@@ -495,6 +504,8 @@ export function useRouteMapConfig(
     setRiverLabelOffset,
     kmLabelOffsets,
     setKmLabelOffset,
+    annotationPositions,
+    setAnnotationPosition,
     showCities,
     borderOpacity,
     riverOpacity,

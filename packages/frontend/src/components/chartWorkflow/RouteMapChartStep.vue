@@ -219,6 +219,8 @@ export interface RouteMapAnimationConfig {
   showMapFade: boolean;
   // Per-km label drag offsets (dx/dy in SVG coords from route anchor)
   kmLabelOffsets?: Record<number, { dx: number; dy: number }>;
+  // Per-annotation chip positions (absolute SVG x/y for chip center)
+  annotationPositions?: Record<string, { x: number; y: number }>;
 }
 
 export const DEFAULT_ROUTEMAP_ANIMATION_CONFIG: RouteMapAnimationConfig = {
@@ -346,7 +348,7 @@ import type { AnimationOptions } from '@chart-generator/shared'
 import { DEFAULT_ANIMATION_OPTIONS } from '@chart-generator/shared'
 import { useChartAnimation, type PlaybackSpeed } from '../../composables/useChartAnimation'
 import { useVideoExport } from '../../composables/useVideoExport'
-import { generateCombinedFrame, getLastKmAnchorPositions } from '../../utils/chartGenerators/routeMap/combinedFrame'
+import { generateCombinedFrame, getLastKmAnchorPositions, getLastAnnotationChipPositions } from '../../utils/chartGenerators/routeMap/combinedFrame'
 import type { CombinedFrameOptions } from '../../utils/chartGenerators/routeMap/combinedFrame'
 import { getTitleCardOpacity, TITLE_CARD_DURATION_MS, OUTRO_DURATION_MS } from '../../utils/titleCardGenerator'
 import ExportSettingsDialog from './ExportSettingsDialog.vue'
@@ -491,38 +493,72 @@ function onStatsDragEnd() {
 // ── Km label drag ──
 function onPreviewMousedown(e: MouseEvent) {
   const target = e.target as SVGElement | null
-  const kmStr = target?.getAttribute?.('data-km-value')
-  if (!kmStr) return
-
-  const km = Number(kmStr)
-  const anchor = getLastKmAnchorPositions()[km]
-  if (!anchor || !previewRef.value) return
+  if (!previewRef.value) return
 
   const rect = previewRef.value.getBoundingClientRect()
   const scale = rect.width / 1080
 
-  let hasMoved = false
-  const startClientX = e.clientX
-  const startClientY = e.clientY
+  // --- Km label ---
+  const kmStr = target?.getAttribute?.('data-km-value')
+  if (kmStr) {
+    const km = Number(kmStr)
+    const anchor = getLastKmAnchorPositions()[km]
+    if (!anchor) return
 
-  const onMove = (ev: MouseEvent) => {
-    // Skip tiny movements to distinguish click from drag
-    if (!hasMoved && Math.abs(ev.clientX - startClientX) < 3 && Math.abs(ev.clientY - startClientY) < 3) return
-    hasMoved = true
-    const dx = (ev.clientX - rect.left) / scale - anchor.x
-    const dy = (ev.clientY - rect.top) / scale - anchor.y
-    emit('update:animationConfig', {
-      ...props.animationConfig,
-      kmLabelOffsets: { ...props.animationConfig.kmLabelOffsets, [km]: { dx, dy } },
-    })
+    let hasMoved = false
+    const startClientX = e.clientX
+    const startClientY = e.clientY
+
+    const onMove = (ev: MouseEvent) => {
+      if (!hasMoved && Math.abs(ev.clientX - startClientX) < 3 && Math.abs(ev.clientY - startClientY) < 3) return
+      hasMoved = true
+      const dx = (ev.clientX - rect.left) / scale - anchor.x
+      const dy = (ev.clientY - rect.top) / scale - anchor.y
+      emit('update:animationConfig', {
+        ...props.animationConfig,
+        kmLabelOffsets: { ...props.animationConfig.kmLabelOffsets, [km]: { dx, dy } },
+      })
+    }
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+    e.preventDefault()
+    return
   }
-  const onUp = () => {
-    document.removeEventListener('mousemove', onMove)
-    document.removeEventListener('mouseup', onUp)
+
+  // --- Annotation chip ---
+  const annotationId = target?.getAttribute?.('data-annotation-id')
+  if (annotationId) {
+    const chipPos = getLastAnnotationChipPositions()[annotationId]
+    if (!chipPos) return
+
+    const startClientX = e.clientX
+    const startClientY = e.clientY
+    const startChipX = chipPos.x
+    const startChipY = chipPos.y
+    let hasMoved = false
+
+    const onMove = (ev: MouseEvent) => {
+      if (!hasMoved && Math.abs(ev.clientX - startClientX) < 3 && Math.abs(ev.clientY - startClientY) < 3) return
+      hasMoved = true
+      const newX = startChipX + (ev.clientX - startClientX) / scale
+      const newY = startChipY + (ev.clientY - startClientY) / scale
+      emit('update:animationConfig', {
+        ...props.animationConfig,
+        annotationPositions: { ...props.animationConfig.annotationPositions, [annotationId]: { x: newX, y: newY } },
+      })
+    }
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+    e.preventDefault()
   }
-  document.addEventListener('mousemove', onMove)
-  document.addEventListener('mouseup', onUp)
-  e.preventDefault()
 }
 
 // ── River label click cycling ──
@@ -928,6 +964,8 @@ function buildFrameOptions(progress: number, overrides: Partial<CombinedFrameOpt
     showMapFade: cfg.showMapFade ?? true,
     // Km label drag offsets
     kmLabelOffsets: cfg.kmLabelOffsets,
+    // Annotation chip drag positions
+    annotationPositions: cfg.annotationPositions,
     // Overrides
     ...overrides,
   }

@@ -166,6 +166,9 @@ export interface CombinedFrameOptions {
 
   // Per-km label offsets (dx/dy in SVG coords from the route anchor point)
   kmLabelOffsets?: Record<number, { dx: number; dy: number }>
+
+  // Per-annotation chip positions (absolute SVG x/y for the chip center)
+  annotationPositions?: Record<string, { x: number; y: number }>
 }
 
 export const DEFAULT_COMBINED_FRAME_OPTIONS: Partial<CombinedFrameOptions> = {
@@ -202,6 +205,14 @@ let _lastKmAnchorPositions: Record<number, { x: number; y: number }> = {}
 /** Returns anchor positions (the route dots) for each km label from the last frame render. */
 export function getLastKmAnchorPositions(): Record<number, { x: number; y: number }> {
   return _lastKmAnchorPositions
+}
+
+/** Stores the rendered chip center (x, y) for each annotation id after the last render. */
+let _lastAnnotationChipPositions: Record<string, { x: number; y: number }> = {}
+
+/** Returns chip center positions for rendered annotations from the last frame render. */
+export function getLastAnnotationChipPositions(): Record<string, { x: number; y: number }> {
+  return _lastAnnotationChipPositions
 }
 
 /**
@@ -1168,6 +1179,7 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
   }
 
   // ── Annotations ──
+  _lastAnnotationChipPositions = {}
   let annotationsHtml = ''
   if (annotations.length > 0) {
     // Find the most recently activated annotation
@@ -1183,20 +1195,29 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
       const chipWidth = Math.max(200, escaped.length * 14 + 40)
-      const chipX = width / 2
-      const chipY = mapHeight - 80  // near bottom of map section
+      const chipH = 34
+      const customPos = options.annotationPositions?.[active.id]
+      const chipX = customPos?.x ?? width / 2
+      const chipY = customPos?.y ?? (mapHeight - 80)
+      _lastAnnotationChipPositions[active.id] = { x: chipX, y: chipY }
       annotationsHtml = `
         <g opacity="${fadeOpacity}">
-          <rect x="${chipX - chipWidth / 2}" y="${chipY - 22}"
-                width="${chipWidth}" height="34"
+          <rect x="${chipX - chipWidth / 2}" y="${chipY - chipH / 2}"
+                width="${chipWidth}" height="${chipH}"
                 rx="17" ry="17"
                 fill="rgba(0,0,0,0.72)"
-                stroke="rgba(255,255,255,0.28)" stroke-width="1.5"/>
+                stroke="rgba(255,255,255,0.28)" stroke-width="1.5"
+                data-annotation-id="${active.id}" style="cursor:grab"/>
           <text x="${chipX}" y="${chipY + 3}"
                 text-anchor="middle" dominant-baseline="middle"
                 font-size="26" font-weight="600"
                 font-family="system-ui, -apple-system, sans-serif"
-                fill="#ffffff">${escaped}</text>
+                fill="#ffffff"
+                data-annotation-id="${active.id}" style="cursor:grab">${escaped}</text>
+          <rect x="${chipX - chipWidth / 2 - 10}" y="${chipY - chipH / 2 - 10}"
+                width="${chipWidth + 20}" height="${chipH + 20}"
+                fill="transparent" pointer-events="all"
+                data-annotation-id="${active.id}" style="cursor:grab"/>
         </g>
       `
     }

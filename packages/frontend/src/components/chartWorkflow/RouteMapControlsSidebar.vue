@@ -660,7 +660,10 @@
               Momente erkennen
             </v-btn>
 
-            <div v-if="annotations && annotations.length > 0" class="annotation-list mt-3">
+            <div v-if="annotations && annotations.length > 0" class="text-caption text-medium-emphasis mt-2 mb-1">
+              <v-icon size="12" class="mr-1">mdi-cursor-move</v-icon>Momente-Chip im Preview ziehen zum Neupositionieren
+            </div>
+            <div v-if="annotations && annotations.length > 0" class="annotation-list mt-1">
               <div v-for="annotation in annotations" :key="annotation.id" class="annotation-item">
                 <v-checkbox
                   :model-value="annotation.enabled"
