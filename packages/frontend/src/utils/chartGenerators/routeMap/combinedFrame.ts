@@ -163,6 +163,9 @@ export interface CombinedFrameOptions {
   statsX?: number   // 0-1, normalized horizontal position (0=left, 1=right)
   statsY?: number   // 0-1, normalized vertical position within map area (0=top, 1=bottom)
   annotations?: Annotation[]   // Text chips shown at specific progress points
+
+  // Per-km label offsets (dx/dy in SVG coords from the route anchor point)
+  kmLabelOffsets?: Record<number, { dx: number; dy: number }>
 }
 
 export const DEFAULT_COMBINED_FRAME_OPTIONS: Partial<CombinedFrameOptions> = {
@@ -193,6 +196,14 @@ export const DEFAULT_COMBINED_FRAME_OPTIONS: Partial<CombinedFrameOptions> = {
   showMapFade: true,
 }
 
+/** Stores the SVG dot-anchor position for each km value after the last render. */
+let _lastKmAnchorPositions: Record<number, { x: number; y: number }> = {}
+
+/** Returns anchor positions (the route dots) for each km label from the last frame render. */
+export function getLastKmAnchorPositions(): Record<number, { x: number; y: number }> {
+  return _lastKmAnchorPositions
+}
+
 /**
  * Generate distance markers along the map route at regular intervals.
  */
@@ -203,7 +214,9 @@ function generateMapDistanceMarkers(
   fontSize: number,
   svgWidth: number,
   svgHeight: number,
+  kmLabelOffsets?: Record<number, { dx: number; dy: number }>,
 ): string {
+  _lastKmAnchorPositions = {}
   if (points.length < 2 || intervalKm <= 0) return ''
 
   const totalDist = points[points.length - 1].distance
@@ -319,35 +332,53 @@ function generateMapDistanceMarkers(
     const label = `${km} km`
     const labelW = label.length * charWidth + padX * 2
 
-    // Build candidate angles: start with perpendicular normals, then sweep all 16 directions
-    const baseAngle = Math.atan2(ny, nx)
-    const candidateAngles: number[] = []
-    // First: perpendicular sides (preferred — shortest leader)
-    candidateAngles.push(baseAngle, baseAngle + Math.PI)
-    // Then: all 16 directions in order of angular distance from preferred normal
-    for (let deg = 22.5; deg < 180; deg += 22.5) {
-      const rad = deg * (Math.PI / 180)
-      candidateAngles.push(baseAngle + rad, baseAngle - rad)
-    }
+    // Store anchor position (the route dot) so drag code can use it
+    _lastKmAnchorPositions[km] = { x, y }
 
-    let finalCx = x
-    let finalCy = y
+    let finalCx: number
+    let finalCy: number
     let placed = false
 
-    outer: for (let step = 3; step <= 12; step++) {
-      const offsetDist = fontSize * step
-      for (const angle of candidateAngles) {
-        const cx = x + Math.cos(angle) * offsetDist
-        const cy = y + Math.sin(angle) * offsetDist
-        const lx = cx - labelW / 2
-        const ly = cy - labelH / 2
-        if (!overlapsAny(lx, ly, labelW, labelH, x, y, cx, cy, i)) {
-          finalCx = cx
-          finalCy = cy
-          placedBoxes.push({ x: lx, y: ly, w: labelW, h: labelH })
-          placedLeaders.push({ x1: x, y1: y, x2: cx, y2: cy })
-          placed = true
-          break outer
+    const customOffset = kmLabelOffsets?.[km]
+    if (customOffset) {
+      // Use user-specified offset directly — skip collision detection
+      finalCx = x + customOffset.dx
+      finalCy = y + customOffset.dy
+      placed = true
+      const lx = finalCx - labelW / 2
+      const ly = finalCy - labelH / 2
+      placedBoxes.push({ x: lx, y: ly, w: labelW, h: labelH })
+      placedLeaders.push({ x1: x, y1: y, x2: finalCx, y2: finalCy })
+    } else {
+      finalCx = x
+      finalCy = y
+
+      // Build candidate angles: start with perpendicular normals, then sweep all 16 directions
+      const baseAngle = Math.atan2(ny, nx)
+      const candidateAngles: number[] = []
+      // First: perpendicular sides (preferred — shortest leader)
+      candidateAngles.push(baseAngle, baseAngle + Math.PI)
+      // Then: all 16 directions in order of angular distance from preferred normal
+      for (let deg = 22.5; deg < 180; deg += 22.5) {
+        const rad = deg * (Math.PI / 180)
+        candidateAngles.push(baseAngle + rad, baseAngle - rad)
+      }
+
+      outer: for (let step = 3; step <= 12; step++) {
+        const offsetDist = fontSize * step
+        for (const angle of candidateAngles) {
+          const cx = x + Math.cos(angle) * offsetDist
+          const cy = y + Math.sin(angle) * offsetDist
+          const lx = cx - labelW / 2
+          const ly = cy - labelH / 2
+          if (!overlapsAny(lx, ly, labelW, labelH, x, y, cx, cy, i)) {
+            finalCx = cx
+            finalCy = cy
+            placedBoxes.push({ x: lx, y: ly, w: labelW, h: labelH })
+            placedLeaders.push({ x1: x, y1: y, x2: cx, y2: cy })
+            placed = true
+            break outer
+          }
         }
       }
     }
@@ -362,9 +393,14 @@ function generateMapDistanceMarkers(
       <line x1="${x}" y1="${y}" x2="${finalCx}" y2="${finalCy}"
             stroke="${color}" stroke-width="2" opacity="0.55"/>
       <rect x="${labelX}" y="${labelY}" width="${labelW}" height="${labelH}" rx="${rx}"
-            fill="rgba(0,0,0,0.70)" stroke="${color}" stroke-width="1.5" opacity="0.95"/>
+            fill="rgba(0,0,0,0.70)" stroke="${color}" stroke-width="1.5" opacity="0.95"
+            data-km-value="${km}" style="cursor:grab"/>
       <text x="${finalCx}" y="${labelY + labelH - padY}" fill="${color}" font-size="${fontSize}"
-            font-family="sans-serif" text-anchor="middle" opacity="1">${label}</text>
+            font-family="sans-serif" text-anchor="middle" opacity="1"
+            data-km-value="${km}" style="cursor:grab">${label}</text>
+      <rect x="${labelX - 8}" y="${labelY - 8}" width="${labelW + 16}" height="${labelH + 16}"
+            fill="transparent" pointer-events="all"
+            data-km-value="${km}" style="cursor:grab"/>
     `)
   }
 
@@ -910,7 +946,7 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
       : ''
 
     const distLabels = showDistanceMarkers
-      ? generateMapDistanceMarkers(animPoints, distanceMarkerInterval, mapMarkerColor, 28, width, mapHeight)
+      ? generateMapDistanceMarkers(animPoints, distanceMarkerInterval, mapMarkerColor, 28, width, mapHeight, options.kmLabelOffsets)
       : ''
     const startEnd = showStartEndLabels
       ? generateMapStartEndLabels(animPoints, mapMarkerColor, 14)
@@ -980,7 +1016,7 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     // These overlays are always in screen-space (unaffected by chase zoom)
     const fadeOverlay = showMapFade
       ? `<rect x="0" y="${Math.round(mapHeight * 0.62)}" width="${width}" height="${Math.round(mapHeight * 0.38)}"
-               fill="url(#map-fade-gradient)"/>`
+               fill="url(#map-fade-gradient)" pointer-events="none"/>`
       : ''
     const northArrowHtml = showNorthArrow ? generateNorthArrow(width, mapMarkerColor) : ''
     const scaleBarHtml = showScaleBar ? generateScaleBar(routeBounds, width, mapHeight, mapMarkerColor) : ''

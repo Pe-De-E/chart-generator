@@ -204,6 +204,15 @@ export function useRouteMapConfig(
     updateConfig({ riverLabelOffsets: { ...riverLabelOffsets.value, [name]: t } })
   }
 
+  const kmLabelOffsets = computed({
+    get: () => getConfig().kmLabelOffsets ?? {} as Record<number, { dx: number; dy: number }>,
+    set: (value: Record<number, { dx: number; dy: number }>) => updateConfig({ kmLabelOffsets: value }),
+  })
+
+  function setKmLabelOffset(km: number, offset: { dx: number; dy: number }) {
+    updateConfig({ kmLabelOffsets: { ...kmLabelOffsets.value, [km]: offset } })
+  }
+
   const cityOpacity = computed({
     get: () => getConfig().cityOpacity ?? 0.50,
     set: (value: number) => updateConfig({ cityOpacity: value }),
@@ -484,6 +493,8 @@ export function useRouteMapConfig(
     showRivers,
     riverLabelOffsets,
     setRiverLabelOffset,
+    kmLabelOffsets,
+    setKmLabelOffset,
     showCities,
     borderOpacity,
     riverOpacity,

@@ -10,6 +10,7 @@
               class="silhouette-chart"
               v-html="animationSvg"
               @click="onPreviewClick"
+              @mousedown="onPreviewMousedown"
             ></div>
             <div
               v-if="animationConfig.showStatsOverlay"
@@ -216,6 +217,8 @@ export interface RouteMapAnimationConfig {
   showNorthArrow: boolean;
   showScaleBar: boolean;
   showMapFade: boolean;
+  // Per-km label drag offsets (dx/dy in SVG coords from route anchor)
+  kmLabelOffsets?: Record<number, { dx: number; dy: number }>;
 }
 
 export const DEFAULT_ROUTEMAP_ANIMATION_CONFIG: RouteMapAnimationConfig = {
@@ -343,7 +346,7 @@ import type { AnimationOptions } from '@chart-generator/shared'
 import { DEFAULT_ANIMATION_OPTIONS } from '@chart-generator/shared'
 import { useChartAnimation, type PlaybackSpeed } from '../../composables/useChartAnimation'
 import { useVideoExport } from '../../composables/useVideoExport'
-import { generateCombinedFrame } from '../../utils/chartGenerators/routeMap/combinedFrame'
+import { generateCombinedFrame, getLastKmAnchorPositions } from '../../utils/chartGenerators/routeMap/combinedFrame'
 import type { CombinedFrameOptions } from '../../utils/chartGenerators/routeMap/combinedFrame'
 import { getTitleCardOpacity, TITLE_CARD_DURATION_MS, OUTRO_DURATION_MS } from '../../utils/titleCardGenerator'
 import ExportSettingsDialog from './ExportSettingsDialog.vue'
@@ -483,6 +486,43 @@ function onStatsDragEnd() {
   isDragging.value = false
   document.removeEventListener('mousemove', onStatsDragMove)
   document.removeEventListener('mouseup', onStatsDragEnd)
+}
+
+// ── Km label drag ──
+function onPreviewMousedown(e: MouseEvent) {
+  const target = e.target as SVGElement | null
+  const kmStr = target?.getAttribute?.('data-km-value')
+  if (!kmStr) return
+
+  const km = Number(kmStr)
+  const anchor = getLastKmAnchorPositions()[km]
+  if (!anchor || !previewRef.value) return
+
+  const rect = previewRef.value.getBoundingClientRect()
+  const scale = rect.width / 1080
+
+  let hasMoved = false
+  const startClientX = e.clientX
+  const startClientY = e.clientY
+
+  const onMove = (ev: MouseEvent) => {
+    // Skip tiny movements to distinguish click from drag
+    if (!hasMoved && Math.abs(ev.clientX - startClientX) < 3 && Math.abs(ev.clientY - startClientY) < 3) return
+    hasMoved = true
+    const dx = (ev.clientX - rect.left) / scale - anchor.x
+    const dy = (ev.clientY - rect.top) / scale - anchor.y
+    emit('update:animationConfig', {
+      ...props.animationConfig,
+      kmLabelOffsets: { ...props.animationConfig.kmLabelOffsets, [km]: { dx, dy } },
+    })
+  }
+  const onUp = () => {
+    document.removeEventListener('mousemove', onMove)
+    document.removeEventListener('mouseup', onUp)
+  }
+  document.addEventListener('mousemove', onMove)
+  document.addEventListener('mouseup', onUp)
+  e.preventDefault()
 }
 
 // ── River label click cycling ──
@@ -886,6 +926,8 @@ function buildFrameOptions(progress: number, overrides: Partial<CombinedFrameOpt
     showNorthArrow: cfg.showNorthArrow ?? true,
     showScaleBar: cfg.showScaleBar ?? true,
     showMapFade: cfg.showMapFade ?? true,
+    // Km label drag offsets
+    kmLabelOffsets: cfg.kmLabelOffsets,
     // Overrides
     ...overrides,
   }

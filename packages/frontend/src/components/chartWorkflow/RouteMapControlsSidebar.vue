@@ -410,6 +410,9 @@
               hide-details
               class="mt-1 ml-6"
             />
+            <div v-if="showDistanceMarkers" class="text-caption text-medium-emphasis mt-2">
+              <v-icon size="12" class="mr-1">mdi-cursor-move</v-icon>Kilometer-Labels ziehen zum Neupositionieren
+            </div>
           </div>
         </div>
 
