@@ -17,6 +17,7 @@ Legende: 🟢 1 Tag · 🟡 2–3 Tage · 🔴 Stretch (Ende Woche) · ✅ Erled
 - ~~**Momente visuell verbessert** — Amber-Farbe, größer, gestrichelte Verbindungslinie zum Routenpunkt~~
 - ~~**Routen-Kontur (Halo)** — breitere, halbtransparente Kopie der Routenfarbe darunter, sichtbar auf dunklen und hellen Hintergründen~~
 - ~~**Feedback-Button** — direkt in der App-Sidebar, öffnet Dialog~~
+- ~~**Dunkel/Hell-Modus** — Toggle in der App-Sidebar~~
 - ~~**Flüsse verbessert** — Glow-Effekt (Doppelstrich), variable Strichstärke nach Typ, Streams ergänzt~~
 - ~~**Wälder** (`natural=wood`, `landuse=forest`) — grüne Flächen, Mindestflächen-Filter~~
 - ~~**Ortsgrenzen** (`place=city|town|village`) — gestrichelte Polygon-Umrisse~~
@@ -163,7 +164,7 @@ Legende: 🟢 1 Tag · 🟡 2–3 Tage · 🔴 Stretch (Ende Woche) · ✅ Erled
 91. 🟢 **"Gerade hochgeladen"** Konfetti-Animation beim ersten Rendern
 92. 🟢 **Zeitstempel im Video** — läuft mit GPS-Zeit mit
 93. 🟡 **Kamera-Shake** — minimales Wackeln beim Chase-Mode für immersiveres Gefühl
-94. 🟢 **Dunkel/Hell-Modus** für die App selbst
+94. ✅ ~~**Dunkel/Hell-Modus** für die App selbst~~
 95. 🟢 **Ladebalken beim Overpass-Fetch** mit Schätzung "~3 Sekunden"
 
 ---
