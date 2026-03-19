@@ -15,6 +15,7 @@ Legende: 🟢 1 Tag · 🟡 2–3 Tage · 🔴 Stretch (Ende Woche) · ✅ Erled
 - ~~**Km-Labels frei positionierbar** — Drag & Drop direkt im SVG-Preview, Positionen werden gespeichert~~
 - ~~**Momente-Chips frei positionierbar** — Drag & Drop, Chips sofort sichtbar nach Aktivierung (Ghost-Opacity)~~
 - ~~**Momente visuell verbessert** — Amber-Farbe, größer, gestrichelte Verbindungslinie zum Routenpunkt~~
+- ~~**Routen-Kontur (Halo)** — breitere, halbtransparente Kopie der Routenfarbe darunter, sichtbar auf dunklen und hellen Hintergründen~~
 - ~~**Flüsse verbessert** — Glow-Effekt (Doppelstrich), variable Strichstärke nach Typ, Streams ergänzt~~
 - ~~**Wälder** (`natural=wood`, `landuse=forest`) — grüne Flächen, Mindestflächen-Filter~~
 - ~~**Ortsgrenzen** (`place=city|town|village`) — gestrichelte Polygon-Umrisse~~
@@ -155,7 +156,7 @@ Legende: 🟢 1 Tag · 🟡 2–3 Tage · 🔴 Stretch (Ende Woche) · ✅ Erled
 
 86. ✅ ~~**Puls-Animation am Marker** — der Punkt "atmet" während er sich bewegt~~
 87. ✅ ~~**Route erscheint mit Zeichnen-Effekt** — Linie wird sichtbar gezeichnet~~
-88. 🟢 **Schatten unter Route-Linie** — dezenter Drop-Shadow für Tiefe
+88. ✅ ~~**Schatten unter Route-Linie** — dezenter Drop-Shadow für Tiefe~~
 89. 🟢 **Kartenrand-Vignette** — dunkler Rand-Gradient für kinematischen Look
 90. 🟢 **Start-Marker = grün, Ziel-Marker = rot** — klar unterscheidbar
 91. 🟢 **"Gerade hochgeladen"** Konfetti-Animation beim ersten Rendern
