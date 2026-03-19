@@ -242,7 +242,10 @@
               <v-slider v-model="borderOpacity" :min="0.05" :max="1" :step="0.05" density="compact" hide-details />
             </template>
             <v-checkbox v-model="showRivers" label="Fluesse" density="compact" hide-details class="mt-1" />
-            <v-progress-linear v-if="showRivers && riverLoading" indeterminate color="primary" height="2" class="mt-1" />
+            <template v-if="showRivers && riverLoading">
+              <v-progress-linear :model-value="riverLP.progress.value" color="primary" height="2" class="mt-1" />
+              <div v-if="riverLP.label.value" class="text-caption text-medium-emphasis" style="font-size:10px">{{ riverLP.label.value }}</div>
+            </template>
             <template v-if="showRivers">
               <label class="text-caption text-medium-emphasis d-block mb-1 mt-1">Deckkraft: {{ Math.round(riverOpacity * 100) }}%</label>
               <v-slider v-model="riverOpacity" :min="0.05" :max="1" :step="0.05" density="compact" hide-details />
@@ -256,41 +259,56 @@
               <v-slider v-model="cityOpacity" :min="0.05" :max="1" :step="0.05" density="compact" hide-details />
             </template>
             <v-checkbox v-model="showPlaceBoundaries" label="Ortsgrenzen" density="compact" hide-details class="mt-1" />
-            <v-progress-linear v-if="showPlaceBoundaries && placeBoundaryLoading" indeterminate color="primary" height="2" class="mt-1" />
+            <template v-if="showPlaceBoundaries && placeBoundaryLoading">
+              <v-progress-linear :model-value="placeBoundaryLP.progress.value" color="primary" height="2" class="mt-1" />
+              <div v-if="placeBoundaryLP.label.value" class="text-caption text-medium-emphasis" style="font-size:10px">{{ placeBoundaryLP.label.value }}</div>
+            </template>
             <template v-if="showPlaceBoundaries">
               <label class="text-caption text-medium-emphasis d-block mb-1 mt-1">Deckkraft: {{ Math.round(placeBoundaryOpacity * 100) }}%</label>
               <v-slider v-model="placeBoundaryOpacity" :min="0.05" :max="1" :step="0.05" density="compact" hide-details />
             </template>
             <v-checkbox v-model="showForests" label="Waelder" density="compact" hide-details class="mt-1" />
-            <div v-if="showForests && forestLoading" class="d-flex align-center gap-2 mt-1 text-caption text-medium-emphasis">
-              <v-progress-circular indeterminate size="14" width="2" color="primary" class="mr-1" />
-              Wälder werden geladen…
-            </div>
+            <template v-if="showForests && forestLoading">
+              <v-progress-linear :model-value="forestLP.progress.value" color="primary" height="2" class="mt-1" />
+              <div v-if="forestLP.label.value" class="text-caption text-medium-emphasis" style="font-size:10px">{{ forestLP.label.value }}</div>
+            </template>
             <template v-if="showForests">
               <label class="text-caption text-medium-emphasis d-block mb-1 mt-1">Deckkraft: {{ Math.round(forestOpacity * 100) }}%</label>
               <v-slider v-model="forestOpacity" :min="0.05" :max="1" :step="0.05" density="compact" hide-details />
             </template>
             <v-checkbox v-model="showVineyards" label="Weinberge & Obstgaerten" density="compact" hide-details class="mt-1" />
-            <v-progress-linear v-if="showVineyards && vineyardLoading" indeterminate color="primary" height="2" class="mt-1" />
+            <template v-if="showVineyards && vineyardLoading">
+              <v-progress-linear :model-value="vineyardLP.progress.value" color="primary" height="2" class="mt-1" />
+              <div v-if="vineyardLP.label.value" class="text-caption text-medium-emphasis" style="font-size:10px">{{ vineyardLP.label.value }}</div>
+            </template>
             <template v-if="showVineyards">
               <label class="text-caption text-medium-emphasis d-block mb-1 mt-1">Deckkraft: {{ Math.round(vineyardOpacity * 100) }}%</label>
               <v-slider v-model="vineyardOpacity" :min="0.05" :max="1" :step="0.05" density="compact" hide-details />
             </template>
             <v-checkbox v-model="showMeadows" label="Wiesen & Felder" density="compact" hide-details class="mt-1" />
-            <v-progress-linear v-if="showMeadows && meadowLoading" indeterminate color="primary" height="2" class="mt-1" />
+            <template v-if="showMeadows && meadowLoading">
+              <v-progress-linear :model-value="meadowLP.progress.value" color="primary" height="2" class="mt-1" />
+              <div v-if="meadowLP.label.value" class="text-caption text-medium-emphasis" style="font-size:10px">{{ meadowLP.label.value }}</div>
+            </template>
             <template v-if="showMeadows">
               <label class="text-caption text-medium-emphasis d-block mb-1 mt-1">Deckkraft: {{ Math.round(meadowOpacity * 100) }}%</label>
               <v-slider v-model="meadowOpacity" :min="0.05" :max="1" :step="0.05" density="compact" hide-details />
             </template>
             <v-checkbox v-model="showWater" label="Seen & Gewaesser" density="compact" hide-details class="mt-1" />
-            <v-progress-linear v-if="showWater && waterLoading" indeterminate color="primary" height="2" class="mt-1" />
+            <template v-if="showWater && waterLoading">
+              <v-progress-linear :model-value="waterLP.progress.value" color="primary" height="2" class="mt-1" />
+              <div v-if="waterLP.label.value" class="text-caption text-medium-emphasis" style="font-size:10px">{{ waterLP.label.value }}</div>
+            </template>
             <template v-if="showWater">
               <label class="text-caption text-medium-emphasis d-block mb-1 mt-1">Deckkraft: {{ Math.round(waterOpacity * 100) }}%</label>
               <v-slider v-model="waterOpacity" :min="0.05" :max="1" :step="0.05" density="compact" hide-details />
             </template>
             <v-checkbox v-model="showGlaciers" label="Gletscher" density="compact" hide-details class="mt-1" />
             <v-checkbox v-model="showUrban" label="Siedlungen" density="compact" hide-details class="mt-1" />
-            <v-progress-linear v-if="(showGlaciers || showUrban) && landCoverLoading" indeterminate color="primary" height="2" class="mt-1" />
+            <template v-if="(showGlaciers || showUrban) && landCoverLoading">
+              <v-progress-linear :model-value="landCoverLP.progress.value" color="primary" height="2" class="mt-1" />
+              <div v-if="landCoverLP.label.value" class="text-caption text-medium-emphasis" style="font-size:10px">{{ landCoverLP.label.value }}</div>
+            </template>
             <template v-if="showGlaciers">
               <label class="text-caption text-medium-emphasis d-block mb-1 mt-1">Gletscher Deckkraft: {{ Math.round(glacierOpacity * 100) }}%</label>
               <v-slider v-model="glacierOpacity" :min="0.05" :max="1" :step="0.05" density="compact" hide-details />
@@ -300,13 +318,19 @@
               <v-slider v-model="urbanOpacity" :min="0.05" :max="1" :step="0.05" density="compact" hide-details />
             </template>
             <v-checkbox v-model="showRoads" label="Strassen" density="compact" hide-details class="mt-1" />
-            <v-progress-linear v-if="showRoads && roadLoading" indeterminate color="primary" height="2" class="mt-1" />
+            <template v-if="showRoads && roadLoading">
+              <v-progress-linear :model-value="roadLP.progress.value" color="primary" height="2" class="mt-1" />
+              <div v-if="roadLP.label.value" class="text-caption text-medium-emphasis" style="font-size:10px">{{ roadLP.label.value }}</div>
+            </template>
             <template v-if="showRoads">
               <label class="text-caption text-medium-emphasis d-block mb-1 mt-1">Deckkraft: {{ Math.round(roadOpacity * 100) }}%</label>
               <v-slider v-model="roadOpacity" :min="0.05" :max="1" :step="0.05" density="compact" hide-details />
             </template>
             <v-checkbox v-model="showPeaks" label="Gipfel" density="compact" hide-details class="mt-1" />
-            <v-progress-linear v-if="showPeaks && peakLoading" indeterminate color="primary" height="2" class="mt-1" />
+            <template v-if="showPeaks && peakLoading">
+              <v-progress-linear :model-value="peakLP.progress.value" color="primary" height="2" class="mt-1" />
+              <div v-if="peakLP.label.value" class="text-caption text-medium-emphasis" style="font-size:10px">{{ peakLP.label.value }}</div>
+            </template>
             <template v-if="showPeaks">
               <label class="text-caption text-medium-emphasis d-block mb-1 mt-1">Deckkraft: {{ Math.round(peakOpacity * 100) }}%</label>
               <v-slider v-model="peakOpacity" :min="0.05" :max="1" :step="0.05" density="compact" hide-details />
@@ -322,13 +346,19 @@
 
             <v-divider class="my-2" />
             <v-checkbox v-model="showSatellite" label="Satellitenbild" density="compact" hide-details class="mt-1" />
-            <v-progress-linear v-if="showSatellite && satelliteLoading" indeterminate color="primary" height="2" class="mt-1" />
+            <template v-if="showSatellite && satelliteLoading">
+              <v-progress-linear :model-value="satelliteLP.progress.value" color="primary" height="2" class="mt-1" />
+              <div v-if="satelliteLP.label.value" class="text-caption text-medium-emphasis" style="font-size:10px">{{ satelliteLP.label.value }}</div>
+            </template>
             <template v-if="showSatellite">
               <label class="text-caption text-medium-emphasis d-block mb-1 mt-1">Deckkraft: {{ Math.round(satelliteOpacity * 100) }}%</label>
               <v-slider v-model="satelliteOpacity" :min="0.10" :max="1.00" :step="0.05" density="compact" hide-details />
             </template>
             <v-checkbox v-model="showHillshade" label="Schummerung (Hillshade)" density="compact" hide-details class="mt-1" />
-            <v-progress-linear v-if="showHillshade && hillshadeLoading" indeterminate color="primary" height="2" class="mt-1" />
+            <template v-if="showHillshade && hillshadeLoading">
+              <v-progress-linear :model-value="hillshadeLP.progress.value" color="primary" height="2" class="mt-1" />
+              <div v-if="hillshadeLP.label.value" class="text-caption text-medium-emphasis" style="font-size:10px">{{ hillshadeLP.label.value }}</div>
+            </template>
             <template v-if="showHillshade">
               <label class="text-caption text-medium-emphasis d-block mb-1 mt-1">Deckkraft: {{ Math.round(hillshadeOpacity * 100) }}%</label>
               <v-slider v-model="hillshadeOpacity" :min="0.05" :max="0.80" :step="0.05" density="compact" hide-details />
@@ -336,7 +366,10 @@
               <v-slider v-model="hillshadeStrength" :min="0.005" :max="0.10" :step="0.005" density="compact" hide-details />
             </template>
             <v-checkbox v-model="showContours" label="Hoehenlinien" density="compact" hide-details class="mt-1" />
-            <v-progress-linear v-if="showContours && contourLoading" indeterminate color="primary" height="2" class="mt-1" />
+            <template v-if="showContours && contourLoading">
+              <v-progress-linear :model-value="contourLP.progress.value" color="primary" height="2" class="mt-1" />
+              <div v-if="contourLP.label.value" class="text-caption text-medium-emphasis" style="font-size:10px">{{ contourLP.label.value }}</div>
+            </template>
             <template v-if="showContours">
               <label class="text-caption text-medium-emphasis d-block mb-1 mt-1">Deckkraft: {{ Math.round(contourOpacity * 100) }}%</label>
               <v-slider v-model="contourOpacity" :min="0.05" :max="0.60" :step="0.05" density="compact" hide-details />
@@ -827,6 +860,7 @@ import { ref, computed, nextTick } from 'vue'
 import type { PropType } from 'vue'
 import type { PlaybackSpeed } from '../../composables/useChartAnimation'
 import { useRouteMapConfig } from '../../composables/useRouteMapConfig'
+import { useLoadingProgress } from '../../composables/useLoadingProgress'
 import { uploadService } from '../../services/upload.service'
 import type { RouteMapAnimationConfig } from './RouteMapChartStep.vue'
 import type { Annotation, AnnotationType } from '../../utils/chartGenerators/elevationChart/types'
@@ -1107,6 +1141,20 @@ const {
   () => props.animationConfig,
   updateAnimationConfig,
 )
+
+// --- Loading Progress ---
+const riverLP         = useLoadingProgress(() => props.riverLoading,         3000)
+const placeBoundaryLP = useLoadingProgress(() => props.placeBoundaryLoading, 3000)
+const forestLP        = useLoadingProgress(() => props.forestLoading,        3500)
+const vineyardLP      = useLoadingProgress(() => props.vineyardLoading,      3000)
+const meadowLP        = useLoadingProgress(() => props.meadowLoading,        3000)
+const waterLP         = useLoadingProgress(() => props.waterLoading,         3000)
+const landCoverLP     = useLoadingProgress(() => props.landCoverLoading,     3000)
+const roadLP          = useLoadingProgress(() => props.roadLoading,          3000)
+const peakLP          = useLoadingProgress(() => props.peakLoading,          3000)
+const satelliteLP     = useLoadingProgress(() => props.satelliteLoading,     4000)
+const hillshadeLP     = useLoadingProgress(() => props.hillshadeLoading,     4000)
+const contourLP       = useLoadingProgress(() => props.contourLoading,       5000)
 
 // --- Land Use Color Schemes ---
 
