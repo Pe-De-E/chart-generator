@@ -315,6 +315,12 @@
             </template>
 
             <v-divider class="my-2" />
+            <v-checkbox v-model="showSatellite" label="Satellitenbild" density="compact" hide-details class="mt-1" />
+            <v-progress-linear v-if="showSatellite && satelliteLoading" indeterminate color="primary" height="2" class="mt-1" />
+            <template v-if="showSatellite">
+              <label class="text-caption text-medium-emphasis d-block mb-1 mt-1">Deckkraft: {{ Math.round(satelliteOpacity * 100) }}%</label>
+              <v-slider v-model="satelliteOpacity" :min="0.10" :max="1.00" :step="0.05" density="compact" hide-details />
+            </template>
             <v-checkbox v-model="showHillshade" label="Schummerung (Hillshade)" density="compact" hide-details class="mt-1" />
             <v-progress-linear v-if="showHillshade && hillshadeLoading" indeterminate color="primary" height="2" class="mt-1" />
             <template v-if="showHillshade">
@@ -860,6 +866,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  satelliteLoading: {
+    type: Boolean,
+    default: false,
+  },
   hillshadeLoading: {
     type: Boolean,
     default: false,
@@ -1046,6 +1056,9 @@ const {
   // Peaks
   showPeaks,
   peakOpacity,
+  // Satellite
+  showSatellite,
+  satelliteOpacity,
   // Hillshade
   showHillshade,
   hillshadeOpacity,

@@ -8,8 +8,12 @@ Legende: 🟢 1 Tag · 🟡 2–3 Tage · 🔴 Stretch (Ende Woche) · ✅ Erled
 
 ---
 
-## ✅ Heute umgesetzt (außerhalb der Liste)
+## ✅ Zuletzt umgesetzt
 
+- ~~**Satellitenbild als Hintergrund** — Esri World Imagery Kacheln, Deckkraft-Slider, Proxy war schon vorhanden~~
+- ~~**Km-Labels frei positionierbar** — Drag & Drop direkt im SVG-Preview, Positionen werden gespeichert~~
+- ~~**Momente-Chips frei positionierbar** — Drag & Drop, Chips sofort sichtbar nach Aktivierung (Ghost-Opacity)~~
+- ~~**Momente visuell verbessert** — Amber-Farbe, größer, gestrichelte Verbindungslinie zum Routenpunkt~~
 - ~~**Flüsse verbessert** — Glow-Effekt (Doppelstrich), variable Strichstärke nach Typ, Streams ergänzt~~
 - ~~**Wälder** (`natural=wood`, `landuse=forest`) — grüne Flächen, Mindestflächen-Filter~~
 - ~~**Ortsgrenzen** (`place=city|town|village`) — gestrichelte Polygon-Umrisse~~
@@ -27,7 +31,7 @@ Legende: 🟢 1 Tag · 🟡 2–3 Tage · 🔴 Stretch (Ende Woche) · ✅ Erled
 7. ✅ ~~**Schummerung** (Hillshade) — aus AWS Terrarium Höhendaten eine Schattenebene berechnen~~
 8. ✅ ~~**Topografischer Kartenstil** — vordefiniertes Preset das alle Geo-Layer zusammen aktiviert~~
 9. ✅ ~~**Straßen** — Hauptstraßen/Autobahnen aus Overpass, sehr dezent, nur als Orientierung~~
-10. 🔴 **Satellitenbild als Hintergrund** — optionale Kachel-Ebene hinter allem (schon Proxy vorhanden)
+10. ✅ ~~**Satellitenbild als Hintergrund** — optionale Kachel-Ebene hinter allem (schon Proxy vorhanden)~~
 
 ---
 
@@ -56,8 +60,8 @@ Legende: 🟢 1 Tag · 🟡 2–3 Tage · 🔴 Stretch (Ende Woche) · ✅ Erled
 26. 🟡 **Live-Stats animiert** — Zahlen zählen während Animation hoch (Distance, Gain, Time)
 27. 🟡 **Segmentvergleich** — markiere ein Segment, zeige Vor/Zurück-Zeiten
 28. 🟡 **Höhenprofilvergleich** — zwei Routen im gleichen Chart vergleichen
-29. 🟢 **Max/Min Annotationen auto** — höchster/niedrigster Punkt auto-markiert
-30. 🟢 **Pässe auto-erkennen** — GPX-Hochpunkte als Pass-Label (schon teilweise via Overpass Peaks)
+29. ✅ ~~**Max/Min Annotationen auto** — höchster/niedrigster Punkt, steilster Auf-/Abstieg auto-markiert (Momente-Feature)~~
+30. ✅ ~~**Pässe / Gipfel erkennen** — GPX-Hochpunkte als Peaks aus Overpass API mit Label~~
 
 ---
 
@@ -84,7 +88,7 @@ Legende: 🟢 1 Tag · 🟡 2–3 Tage · 🔴 Stretch (Ende Woche) · ✅ Erled
 44. 🟢 **Wetter-Overlay** — manuell eingebbar (Temperatur, Bedingungen)
 45. 🟢 **Logo/Wasserzeichen** — eigenes Bild hochladen als Overlay
 46. 🟡 **Strava-Segment-Namen** als Annotations einblenden
-47. ✅ ~~**Kilometermarker** konfigurierbar — alle 5km, 10km, etc.~~
+47. ✅ ~~**Kilometermarker** — konfigurierbar (Intervall wählbar) + frei per Drag positionierbar~~
 48. 🟢 **Startzeit einblenden** — "Gestartet: 07:42 Uhr"
 49. 🟡 **Teammate-Tracking** — mehrere Routen gleichzeitig animiert (z.B. Gruppenausfahrt)
 50. 🟢 **Fortschrittsbalken** unten — subtiler Balken der mit Animation mitläuft
@@ -124,7 +128,7 @@ Legende: 🟢 1 Tag · 🟡 2–3 Tage · 🔴 Stretch (Ende Woche) · ✅ Erled
 ## 🔒 Datenschutz & Kontrolle (Relive: Daten gehen auf deren Server)
 
 71. 🟢 **"Alle Daten bleiben lokal"** — prominent kommunizieren, kein Upload der GPX-Daten
-72. ✅ ~~**Route unscharf machen** — Start/Ziel automatisch anonymisieren (±500m)~~
+72. ✅ ~~**Route anonymisieren** — Start/Ziel automatisch unscharf machen (Radius konfigurierbar)~~
 73. 🟢 **Bereich ausblenden** — User zieht Rechteck auf Karte, dieser Bereich wird nicht animiert
 74. 🟡 **Offline-Modus** — gecachte Tiles, App läuft auch ohne Internet
 75. 🟢 **DSGVO-Banner prominent** — "Kein Account nötig, keine Daten gespeichert"
@@ -149,7 +153,7 @@ Legende: 🟢 1 Tag · 🟡 2–3 Tage · 🔴 Stretch (Ende Woche) · ✅ Erled
 ## 💡 Kleine Quick-Wins die großen Eindruck machen
 
 86. ✅ ~~**Puls-Animation am Marker** — der Punkt "atmet" während er sich bewegt~~
-87. ✅ ~~**Route erscheint mit Zeichnen-Effekt** — Linie wird sichtbar gezeichnet (schon vorhanden, polieren)~~
+87. ✅ ~~**Route erscheint mit Zeichnen-Effekt** — Linie wird sichtbar gezeichnet~~
 88. 🟢 **Schatten unter Route-Linie** — dezenter Drop-Shadow für Tiefe
 89. 🟢 **Kartenrand-Vignette** — dunkler Rand-Gradient für kinematischen Look
 90. 🟢 **Start-Marker = grün, Ziel-Marker = rot** — klar unterscheidbar
@@ -171,19 +175,17 @@ Legende: 🟢 1 Tag · 🟡 2–3 Tage · 🔴 Stretch (Ende Woche) · ✅ Erled
 
 ---
 
-## Prioritäten für diese Woche
+## Prioritäten — nächste Schritte
 
-Wenn ich priorisieren müsste — diese 10 zuerst:
-
-| # | Feature | Warum |
-|---|---------|-------|
-| 1 | Wasserflächen (Seen) | Sofort sichtbar, 1 Tag |
-| 2 | Farbthemen/Presets | Größter WOW-Effekt für neue User |
-| 3 | One-Click Demo Route | Senkt Onboarding-Friction drastisch |
-| 4 | FIT-File Support | Öffnet Garmin-Zielgruppe |
-| 5 | Marker-Icon wählbar | Kleine Sache, große Personalisierung |
-| 6 | Schummerung (Hillshade) | Kein anderes kostenloses Tool bietet das |
-| 7 | Outro mit Gesamtstats | Perfektes letztes Frame für Social |
-| 8 | Route unscharf machen | Datenschutz = Vertrauen |
-| 9 | Keyboard Shortcuts | Macht die App sofort professioneller |
-| 10 | "Alle Daten bleiben lokal" kommunizieren | Killer-Argument gegen Relive |
+| # | Feature | Status | Warum |
+|---|---------|--------|-------|
+| 1 | ~~Wasserflächen (Seen)~~ | ✅ | — |
+| 2 | Farbthemen / Presets | 🟢 | Größter WOW-Effekt für neue User |
+| 3 | One-Click Demo Route | 🟢 | Senkt Onboarding-Friction drastisch |
+| 4 | FIT-File Support | 🟢 | Öffnet Garmin-Zielgruppe |
+| 5 | Marker-Icon wählbar | 🟢 | Kleine Sache, große Personalisierung |
+| 6 | ~~Schummerung (Hillshade)~~ | ✅ | — |
+| 7 | Outro mit Gesamtstats | 🟢 | Perfektes letztes Frame für Social |
+| 8 | ~~Route anonymisieren~~ | ✅ | — |
+| 9 | Keyboard Shortcuts | 🟢 | Macht die App sofort professioneller |
+| 10 | "Alle Daten bleiben lokal" kommunizieren | 🟢 | Killer-Argument gegen Relive |

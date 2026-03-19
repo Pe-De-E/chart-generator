@@ -124,6 +124,9 @@ export interface CombinedFrameOptions {
   // Pre-rendered place boundary layer (async, from Overpass API)
   placeBoundaryLayerSvg?: string
 
+  // Pre-rendered satellite imagery (async, from Esri World Imagery tiles)
+  satelliteLayerSvg?: string
+
   // Pre-rendered hillshade (async, from terrain tiles)
   hillshadeLayerSvg?: string
 
@@ -863,6 +866,7 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     riverLayerSvg,
     peakLayerSvg,
     placeBoundaryLayerSvg,
+    satelliteLayerSvg,
     hillshadeLayerSvg,
     forestLayerSvg,
     vineyardLayerSvg,
@@ -1006,6 +1010,7 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
 
     // Wrap geo/contour layers in a clipping container — coordinates extend far
     // beyond the viewport since 110m data covers a wide area
+    const satelliteHtml = satelliteLayerSvg || ''
     const hillshadeHtml = hillshadeLayerSvg || ''
     const forestHtml = forestLayerSvg || ''
     const vineyardHtml = vineyardLayerSvg || ''
@@ -1050,8 +1055,8 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
       ? `<g mask="url(#veg-exclude-water)">${vegHtml}</g>`
       : vegHtml
 
-    // Render order (back to front): hillshade → vegetation (masked by water) → water → place boundaries → contours → roads → rivers → geo → peaks
-    const allGeoHtml = hillshadeHtml + maskedVegHtml + waterHtml + placeBoundaryHtml + contourHtml + roadHtml + riverHtml + geoLayersHtml + peakHtml
+    // Render order (back to front): satellite → hillshade → vegetation (masked by water) → water → place boundaries → contours → roads → rivers → geo → peaks
+    const allGeoHtml = satelliteHtml + hillshadeHtml + maskedVegHtml + waterHtml + placeBoundaryHtml + contourHtml + roadHtml + riverHtml + geoLayersHtml + peakHtml
     const geoDefs = vegetationMaskDef ? `<defs>${vegetationMaskDef}</defs>` : ''
     const geoClipped = allGeoHtml
       ? `<svg x="0" y="0" width="${width}" height="${mapHeight}" overflow="hidden">${geoDefs}${allGeoHtml}</svg>`

@@ -37,6 +37,7 @@
       :slider-progress="sliderProgress"
       :video-export-supported="videoExport.isSupported.value"
       :video-exporting="videoExport.isExporting.value"
+      :satellite-loading="satelliteLoading"
       :hillshade-loading="hillshadeLoading"
       :contour-loading="contourLoading"
       :river-loading="riverLoading"
@@ -192,6 +193,9 @@ export interface RouteMapAnimationConfig {
   anonymizeStart: boolean;
   anonymizeEnd: boolean;
   anonymizeRadiusM: number;
+  // Satellite imagery
+  showSatellite: boolean;
+  satelliteOpacity: number;
   // Hillshade
   showHillshade: boolean;
   hillshadeOpacity: number;
@@ -313,6 +317,9 @@ export const DEFAULT_ROUTEMAP_ANIMATION_CONFIG: RouteMapAnimationConfig = {
   anonymizeStart: false,
   anonymizeEnd: false,
   anonymizeRadiusM: 300,
+  // Satellite imagery
+  showSatellite: false,
+  satelliteOpacity: 0.85,
   // Hillshade
   showHillshade: false,
   hillshadeOpacity: 0.35,
@@ -379,6 +386,8 @@ import { useMeadowLayer } from '../../composables/useMeadowLayer'
 import type { MeadowConfig } from '../../utils/chartGenerators/routeMap/meadowLayer'
 import { useHillshadeLayer } from '../../composables/useHillshadeLayer'
 import type { HillshadeConfig } from '../../utils/chartGenerators/routeMap/hillshadeLayer'
+import { useSatelliteLayer } from '../../composables/useSatelliteLayer'
+import type { SatelliteConfig } from '../../utils/chartGenerators/routeMap/satelliteLayer'
 
 // Slider progress state
 const sliderProgress = ref(0)
@@ -593,6 +602,20 @@ const contourProjParams = computed(() => {
     padding: { top: 50, right: 50, bottom: 50, left: 50 },
   })
 })
+
+// ── Satellite layer (async tile fetch + OffscreenCanvas) ──
+const satelliteConfig = computed<SatelliteConfig | null>(() => {
+  const cfg = props.animationConfig
+  if (!cfg.showSatellite) return null
+  return { opacity: cfg.satelliteOpacity }
+})
+const { satelliteSvg, isLoading: satelliteLoading } = useSatelliteLayer(
+  contourRouteBounds,
+  contourProjParams,
+  satelliteConfig,
+  computed(() => 1080),
+  contourMapHeight,
+)
 
 // ── Hillshade layer (async terrain tile fetch + OffscreenCanvas) ──
 const hillshadeConfig = computed<HillshadeConfig | null>(() => {
@@ -937,6 +960,7 @@ function buildFrameOptions(progress: number, overrides: Partial<CombinedFrameOpt
       contourShowLabels: cfg.contourShowLabels,
     } : undefined,
     // Pre-rendered geo layers (fetched on demand; null config = disabled = empty SVG)
+    satelliteLayerSvg:     satelliteSvg.value,
     hillshadeLayerSvg:     hillshadeSvg.value,
     contourLayerSvg:       contourSvg.value,
     riverLayerSvg:         riverSvg.value,

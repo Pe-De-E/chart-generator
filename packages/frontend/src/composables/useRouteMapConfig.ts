@@ -314,6 +314,18 @@ export function useRouteMapConfig(
     set: (value: number) => updateConfig({ anonymizeRadiusM: value }),
   })
 
+  // --- Satellite ---
+
+  const showSatellite = computed({
+    get: () => getConfig().showSatellite ?? false,
+    set: (value: boolean) => updateConfig({ showSatellite: value }),
+  })
+
+  const satelliteOpacity = computed({
+    get: () => getConfig().satelliteOpacity ?? 0.85,
+    set: (value: number) => updateConfig({ satelliteOpacity: value }),
+  })
+
   // --- Hillshade ---
 
   const showHillshade = computed({
@@ -528,6 +540,9 @@ export function useRouteMapConfig(
     anonymizeStart,
     anonymizeEnd,
     anonymizeRadiusM,
+    // Satellite
+    showSatellite,
+    satelliteOpacity,
     // Hillshade
     showHillshade,
     hillshadeOpacity,
