@@ -187,5 +187,6 @@ Legende: 🟢 1 Tag · 🟡 2–3 Tage · 🔴 Stretch (Ende Woche) · ✅ Erled
 | 6 | ~~Schummerung (Hillshade)~~ | ✅ | — |
 | 7 | Outro mit Gesamtstats | 🟢 | Perfektes letztes Frame für Social |
 | 8 | ~~Route anonymisieren~~ | ✅ | — |
-| 9 | Keyboard Shortcuts | 🟢 | Macht die App sofort professioneller |
-| 10 | "Alle Daten bleiben lokal" kommunizieren | 🟢 | Killer-Argument gegen Relive |
+| 9 | ~~Satellitenbild als Hintergrund~~ | ✅ | — |
+| 10 | Keyboard Shortcuts | 🟢 | Macht die App sofort professioneller |
+| 11 | "Alle Daten bleiben lokal" kommunizieren | 🟢 | Killer-Argument gegen Relive |
