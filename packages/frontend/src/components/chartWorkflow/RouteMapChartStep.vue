@@ -50,6 +50,8 @@
       :water-loading="waterLoading"
       :land-cover-loading="landCoverLoading"
       :road-loading="roadLoading"
+      :can-undo="canUndo"
+      :can-redo="canRedo"
       @update:animation-config="$emit('update:animationConfig', $event)"
       @update:chart-title="$emit('update:chartTitle', $event)"
       @back="$emit('back')"
@@ -59,6 +61,8 @@
       @set-speed="setSpeed"
       @slider-change="onSliderChange"
       @open-export-settings="openExportSettings"
+      @undo="$emit('undo')"
+      @redo="$emit('redo')"
     />
 
     <!-- Export Settings Dialog -->
@@ -420,6 +424,14 @@ const props = defineProps({
     type: Array as PropType<number[]>,
     default: undefined,
   },
+  canUndo: {
+    type: Boolean,
+    default: false,
+  },
+  canRedo: {
+    type: Boolean,
+    default: false,
+  },
 })
 
 const emit = defineEmits<{
@@ -427,6 +439,8 @@ const emit = defineEmits<{
   save: []
   'update:chartTitle': [value: string]
   'update:animationConfig': [value: RouteMapAnimationConfig]
+  'undo': []
+  'redo': []
 }>()
 
 // ── Stats overlay drag ──

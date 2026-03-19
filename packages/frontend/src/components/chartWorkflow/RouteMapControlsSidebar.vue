@@ -119,6 +119,12 @@
           placeholder="z.B. Alpenueberquerung Tag 1"
           prepend-inner-icon="mdi-pencil"
         />
+        <div class="d-flex ga-1 mt-2">
+          <v-btn icon="mdi-undo" size="small" variant="tonal"
+            :disabled="!canUndo" @click="$emit('undo')" />
+          <v-btn icon="mdi-redo" size="small" variant="tonal"
+            :disabled="!canRedo" @click="$emit('redo')" />
+        </div>
       </div>
 
       <!-- Tab Navigation -->
@@ -922,6 +928,14 @@ const props = defineProps({
     type: Array as PropType<Array<{ label: string; value: number }>>,
     default: () => [],
   },
+  canUndo: {
+    type: Boolean,
+    default: false,
+  },
+  canRedo: {
+    type: Boolean,
+    default: false,
+  },
 })
 
 const emit = defineEmits<{
@@ -935,6 +949,8 @@ const emit = defineEmits<{
   'set-speed': [speed: PlaybackSpeed]
   'slider-change': [value: number]
   'open-export-settings': []
+  'undo': []
+  'redo': []
 }>()
 
 // --- Internal state ---

@@ -130,12 +130,17 @@
             <RouteMapChartStep
               v-if="visualizationMode === 'route-map'"
               v-model:chart-title="chartTitle"
-              v-model:animation-config="routeMapConfig"
+              :animation-config="routeMapConfig"
               :route-points="routePoints"
               :chart-data="chartDataForAnimation"
               :time-array="timeArray"
+              :can-undo="canUndo"
+              :can-redo="canRedo"
+              @update:animation-config="handleRouteMapConfigUpdate"
               @back="currentStep = 1"
               @save="saveChart"
+              @undo="undoRouteMapConfig"
+              @redo="redoRouteMapConfig"
             />
             <TerrainChartStep
               v-if="visualizationMode === 'terrain'"
@@ -211,6 +216,68 @@ const { tableHeaders, tableItems, parseGPX, resetData } = useCSVParser()
 const chartTitle = ref('Route Map')
 const routeMapConfig = ref<RouteMapAnimationConfig>({ ...DEFAULT_ROUTEMAP_ANIMATION_CONFIG })
 const terrainConfig = ref<TerrainAnimationConfig>({ ...DEFAULT_TERRAIN_ANIMATION_CONFIG })
+
+// ── Route map undo/redo (snapshot-before-burst, max 50) ──
+const routeMapPast = ref<RouteMapAnimationConfig[]>([])
+const routeMapFuture = ref<RouteMapAnimationConfig[]>([])
+let _rmSnapshot: RouteMapAnimationConfig | null = null
+let _rmHasSnapshot = ref(false)
+let _rmTimer: ReturnType<typeof setTimeout> | null = null
+
+const canUndo = computed(() => routeMapPast.value.length > 0 || _rmHasSnapshot.value)
+const canRedo = computed(() => routeMapFuture.value.length > 0)
+
+function cloneConfig(config: RouteMapAnimationConfig): RouteMapAnimationConfig {
+  return JSON.parse(JSON.stringify(config))
+}
+
+function handleRouteMapConfigUpdate(newConfig: RouteMapAnimationConfig) {
+  if (!_rmSnapshot) {
+    _rmSnapshot = cloneConfig(routeMapConfig.value)
+    _rmHasSnapshot.value = true
+  }
+  routeMapConfig.value = newConfig
+  routeMapFuture.value = []
+  if (_rmTimer) clearTimeout(_rmTimer)
+  _rmTimer = setTimeout(() => {
+    if (_rmSnapshot) {
+      routeMapPast.value = [...routeMapPast.value.slice(-49), _rmSnapshot]
+      _rmSnapshot = null
+      _rmHasSnapshot.value = false
+    }
+    _rmTimer = null
+  }, 800)
+}
+
+function undoRouteMapConfig() {
+  if (_rmTimer) { clearTimeout(_rmTimer); _rmTimer = null }
+  if (_rmSnapshot) {
+    routeMapFuture.value = [cloneConfig(routeMapConfig.value), ...routeMapFuture.value]
+    routeMapConfig.value = _rmSnapshot
+    _rmSnapshot = null
+    _rmHasSnapshot.value = false
+    return
+  }
+  if (routeMapPast.value.length === 0) return
+  const prev = routeMapPast.value[routeMapPast.value.length - 1]
+  routeMapPast.value = routeMapPast.value.slice(0, -1)
+  routeMapFuture.value = [cloneConfig(routeMapConfig.value), ...routeMapFuture.value]
+  routeMapConfig.value = prev
+}
+
+function redoRouteMapConfig() {
+  if (routeMapFuture.value.length === 0) return
+  routeMapPast.value = [...routeMapPast.value, cloneConfig(routeMapConfig.value)]
+  routeMapConfig.value = routeMapFuture.value[0]
+  routeMapFuture.value = routeMapFuture.value.slice(1)
+}
+
+function handleUndoRedoKey(e: KeyboardEvent) {
+  const ctrl = e.ctrlKey || e.metaKey
+  if (!ctrl) return
+  if (e.key === 'z' && !e.shiftKey) { e.preventDefault(); undoRouteMapConfig() }
+  if ((e.key === 'z' && e.shiftKey) || e.key === 'y') { e.preventDefault(); redoRouteMapConfig() }
+}
 
 // Chart data for animation (distance → elevation)
 const chartDataForAnimation = computed(() => {
@@ -314,6 +381,12 @@ function resetWizard() {
   routeMapConfig.value = { ...DEFAULT_ROUTEMAP_ANIMATION_CONFIG }
   terrainConfig.value = { ...DEFAULT_TERRAIN_ANIMATION_CONFIG }
   chartTitle.value = 'Route Map'
+  // Clear undo/redo history
+  routeMapPast.value = []
+  routeMapFuture.value = []
+  _rmSnapshot = null
+  _rmHasSnapshot.value = false
+  if (_rmTimer) { clearTimeout(_rmTimer); _rmTimer = null }
 }
 
 async function saveChart() {
@@ -365,6 +438,8 @@ onMounted(async () => {
   if (chartId) {
     await loadChartData(chartId)
   }
+
+  window.addEventListener('keydown', handleUndoRedoKey)
 })
 
 // When the user navigates from an existing chart (/gpx?id=x) to creating a
@@ -428,7 +503,10 @@ async function loadChartData(chartId: string) {
 }
 
 window.addEventListener('chart:new', resetWizard)
-onUnmounted(() => window.removeEventListener('chart:new', resetWizard))
+onUnmounted(() => {
+  window.removeEventListener('chart:new', resetWizard)
+  window.removeEventListener('keydown', handleUndoRedoKey)
+})
 </script>
 
 <style scoped>
