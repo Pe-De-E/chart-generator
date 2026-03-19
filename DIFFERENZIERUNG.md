@@ -10,6 +10,7 @@ Legende: 🟢 1 Tag · 🟡 2–3 Tage · 🔴 Stretch (Ende Woche) · ✅ Erled
 
 ## ✅ Zuletzt umgesetzt
 
+- ~~**Undo/Redo für Konfiguration** — Snapshot-before-burst, max 50 Einträge, 800 ms Debounce, Ctrl+Z / Ctrl+Shift+Z~~
 - ~~**Satellitenbild als Hintergrund** — Esri World Imagery Kacheln, Deckkraft-Slider, Proxy war schon vorhanden~~
 - ~~**Km-Labels frei positionierbar** — Drag & Drop direkt im SVG-Preview, Positionen werden gespeichert~~
 - ~~**Momente-Chips frei positionierbar** — Drag & Drop, Chips sofort sichtbar nach Aktivierung (Ghost-Opacity)~~
@@ -115,7 +116,7 @@ Legende: 🟢 1 Tag · 🟡 2–3 Tage · 🔴 Stretch (Ende Woche) · ✅ Erled
 61. 🟢 **One-Click Demo** — Beispiel-Route vorgeladen, sofort spielen ohne Upload
 62. 🟢 **Preset-Gallery** — 6 fertige Styles zum Anklicken, sofort sieht man das Ergebnis
 63. 🟡 **Tour durch Features** — interaktiver Tooltip-Guide beim ersten Besuch
-64. 🟢 **Undo/Redo** für Konfigurationsänderationen
+64. ✅ ~~**Undo/Redo** für Konfigurationsänderationen~~
 65. 🟢 **Config als JSON exportieren/importieren** — Settings zwischen Projekten teilen
 66. 🟡 **Vorschau-Thumbnails** für Farbthemen statt nur Text-Dropdown
 67. 🟢 **Keyboard Shortcuts** — Leertaste = Play/Pause, Pfeile = vor/zurück scrubben
