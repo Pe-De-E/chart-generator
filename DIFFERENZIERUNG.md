@@ -16,6 +16,7 @@ Legende: 🟢 1 Tag · 🟡 2–3 Tage · 🔴 Stretch (Ende Woche) · ✅ Erled
 - ~~**Momente-Chips frei positionierbar** — Drag & Drop, Chips sofort sichtbar nach Aktivierung (Ghost-Opacity)~~
 - ~~**Momente visuell verbessert** — Amber-Farbe, größer, gestrichelte Verbindungslinie zum Routenpunkt~~
 - ~~**Routen-Kontur (Halo)** — breitere, halbtransparente Kopie der Routenfarbe darunter, sichtbar auf dunklen und hellen Hintergründen~~
+- ~~**Feedback-Button** — direkt in der App-Sidebar, öffnet Dialog~~
 - ~~**Flüsse verbessert** — Glow-Effekt (Doppelstrich), variable Strichstärke nach Typ, Streams ergänzt~~
 - ~~**Wälder** (`natural=wood`, `landuse=forest`) — grüne Flächen, Mindestflächen-Filter~~
 - ~~**Ortsgrenzen** (`place=city|town|village`) — gestrichelte Polygon-Umrisse~~
@@ -173,7 +174,7 @@ Legende: 🟢 1 Tag · 🟡 2–3 Tage · 🔴 Stretch (Ende Woche) · ✅ Erled
 97. 🟢 **Share-Button** der direkt zu Instagram/TikTok führt
 98. 🟡 **Galerie öffentlicher Routen** — User können ihr Video freigeben, andere sehen es
 99. 🟡 **Embed-Code** — fertige Animation als `<iframe>` einbetten
-100. 🟢 **Feedback-Button** direkt in der App — niedrigschwellig, geht an dich als Email
+100. ✅ ~~**Feedback-Button** direkt in der App — niedrigschwellig, geht an dich als Email~~
 
 ---
 
