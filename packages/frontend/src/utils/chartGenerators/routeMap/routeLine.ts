@@ -28,6 +28,10 @@ export interface RouteLineStyle {
   speedColoring?: boolean
   /** Intensity of speed coloring (1-8, default 5) */
   speedColorIntensity?: number
+  /** Render a dark outline/halo beneath the route for contrast against bright backgrounds */
+  routeHalo?: boolean
+  /** Opacity of the halo outline (0–1, default 0.35) */
+  routeHaloOpacity?: number
 }
 
 export const DEFAULT_ROUTE_LINE_STYLE: RouteLineStyle = {
@@ -367,6 +371,27 @@ export function generateRouteLine(
   const defs = generateRouteLineDefs(points, progress, style, clipId, svgWidth, svgHeight)
 
   const elements: string[] = []
+
+  // Halo/outline — wider soft copy of the revealed route for depth/readability
+  // Uses the route's own color at reduced opacity so it's visible on any background
+  if (style.routeHalo) {
+    const haloOpacity = style.routeHaloOpacity ?? 0.25
+    const haloWidth = style.width + 8
+    const revealedForHalo = partialPolyline(points, progress)
+    if (revealedForHalo) {
+      elements.push(`
+        <polyline
+          points="${revealedForHalo}"
+          fill="none"
+          stroke="${style.color}"
+          stroke-width="${haloWidth}"
+          stroke-opacity="${haloOpacity}"
+          stroke-linejoin="round"
+          stroke-linecap="round"
+        />
+      `)
+    }
+  }
 
   // Full trail (dashed, low opacity) — shows entire route outline
   if (style.trailDash && style.trailOpacity && style.trailOpacity > 0) {

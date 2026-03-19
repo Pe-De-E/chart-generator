@@ -75,6 +75,16 @@ export function useRouteMapConfig(
     set: (value: number) => updateConfig({ routeTrailOpacity: value }),
   })
 
+  const routeHalo = computed({
+    get: () => getConfig().routeHalo ?? false,
+    set: (value: boolean) => updateConfig({ routeHalo: value }),
+  })
+
+  const routeHaloOpacity = computed({
+    get: () => getConfig().routeHaloOpacity ?? 0.25,
+    set: (value: number) => updateConfig({ routeHaloOpacity: value }),
+  })
+
   // --- Map Marker ---
 
   const showMapMarker = computed({
@@ -488,6 +498,8 @@ export function useRouteMapConfig(
     routeGlowIntensity,
     routeTrailDash,
     routeTrailOpacity,
+    routeHalo,
+    routeHaloOpacity,
     // Map Marker
     showMapMarker,
     mapMarkerSize,

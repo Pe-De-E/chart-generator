@@ -225,6 +225,9 @@ export interface RouteMapAnimationConfig {
   showNorthArrow: boolean;
   showScaleBar: boolean;
   showMapFade: boolean;
+  // Route halo/outline
+  routeHalo: boolean;
+  routeHaloOpacity: number;
   // Per-km label drag offsets (dx/dy in SVG coords from route anchor)
   kmLabelOffsets?: Record<number, { dx: number; dy: number }>;
   // Per-annotation chip positions (absolute SVG x/y for chip center)
@@ -348,6 +351,9 @@ export const DEFAULT_ROUTEMAP_ANIMATION_CONFIG: RouteMapAnimationConfig = {
   showNorthArrow: true,
   showScaleBar: true,
   showMapFade: true,
+  // Route halo/outline
+  routeHalo: false,
+  routeHaloOpacity: 0.25,
 };
 </script>
 
@@ -925,6 +931,8 @@ function buildFrameOptions(progress: number, overrides: Partial<CombinedFrameOpt
       elevationColorIntensity: cfg.elevationColorIntensity,
       speedColoring: cfg.showSpeedColoring,
       speedColorIntensity: cfg.speedColorIntensity,
+      routeHalo: cfg.routeHalo,
+      routeHaloOpacity: cfg.routeHaloOpacity,
     },
     showMapMarker: cfg.showMapMarker,
     mapMarkerSize: cfg.mapMarkerSize,

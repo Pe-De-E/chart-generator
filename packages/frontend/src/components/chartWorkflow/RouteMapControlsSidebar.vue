@@ -378,6 +378,11 @@
             </template>
             <label class="text-caption text-medium-emphasis d-block mb-1 mt-3">Vorschau-Spur: {{ Math.round(routeTrailOpacity * 100) }}%</label>
             <v-slider v-model="routeTrailOpacity" :min="0" :max="0.5" :step="0.05" density="compact" hide-details thumb-label />
+            <v-checkbox v-model="routeHalo" label="Kontur (dunkler Rand)" density="compact" hide-details color="primary" class="mt-1" />
+            <template v-if="routeHalo">
+              <label class="text-caption text-medium-emphasis d-block mb-1 mt-2">Kontur-Deckkraft: {{ Math.round(routeHaloOpacity * 100) }}%</label>
+              <v-slider v-model="routeHaloOpacity" :min="0.05" :max="0.8" :step="0.05" density="compact" hide-details thumb-label />
+            </template>
             <v-checkbox v-model="showElevationColoring" label="Route nach Hoehe einfaerben" density="compact" hide-details color="primary" class="mt-2" :disabled="showSpeedColoring" />
             <template v-if="showElevationColoring && !showSpeedColoring">
               <label class="text-caption text-medium-emphasis d-block mb-1 mt-2">Intensitaet: {{ elevationColorIntensity }}</label>
@@ -1024,6 +1029,8 @@ const {
   routeGlowColor,
   routeGlowIntensity,
   routeTrailOpacity,
+  routeHalo,
+  routeHaloOpacity,
   showMapMarker,
   mapMarkerSize,
   mapMarkerColor,
