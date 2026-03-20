@@ -18,6 +18,7 @@ Legende: 🟢 1 Tag · 🟡 2–3 Tage · 🔴 Stretch (Ende Woche) · ✅ Erled
 - ~~**Routen-Kontur (Halo)** — breitere, halbtransparente Kopie der Routenfarbe darunter, sichtbar auf dunklen und hellen Hintergründen~~
 - ~~**Feedback-Button** — direkt in der App-Sidebar, öffnet Dialog~~
 - ~~**Dunkel/Hell-Modus** — Toggle in der App-Sidebar~~
+- ~~**Ladebalken mit Fortschritt & Schätzung** — simulierter Fortschritt + "~X Sek." für alle 12 Geo-Layer~~
 - ~~**Flüsse verbessert** — Glow-Effekt (Doppelstrich), variable Strichstärke nach Typ, Streams ergänzt~~
 - ~~**Wälder** (`natural=wood`, `landuse=forest`) — grüne Flächen, Mindestflächen-Filter~~
 - ~~**Ortsgrenzen** (`place=city|town|village`) — gestrichelte Polygon-Umrisse~~
@@ -80,7 +81,7 @@ Legende: 🟢 1 Tag · 🟡 2–3 Tage · 🔴 Stretch (Ende Woche) · ✅ Erled
 37. 🟡 **GIF-Export** — für Plattformen ohne Video-Support
 38. 🔴 **Mehrere Routen in einem Video** — z.B. Hin- und Rückweg
 39. 🟢 **Intro-Dauer** konfigurierbar — wie lange Titel steht (schon teilweise vorhanden)
-40. 🟢 **Outro mit Gesamtstats** — letztes Frame zeigt alle Zahlen zusammengefasst
+40. 🟢 **Outro mit Gesamtstats** — letztes Frame zeigt alle Zahlen zusammengefasst und eine Funktion, das man beides tauschen kann intro <-> outro
 
 ---
 
@@ -165,7 +166,7 @@ Legende: 🟢 1 Tag · 🟡 2–3 Tage · 🔴 Stretch (Ende Woche) · ✅ Erled
 92. 🟢 **Zeitstempel im Video** — läuft mit GPS-Zeit mit
 93. 🟡 **Kamera-Shake** — minimales Wackeln beim Chase-Mode für immersiveres Gefühl
 94. ✅ ~~**Dunkel/Hell-Modus** für die App selbst~~
-95. 🟢 **Ladebalken beim Overpass-Fetch** mit Schätzung "~3 Sekunden"
+95. ✅ ~~**Ladebalken beim Overpass-Fetch** mit Schätzung "~3 Sekunden"~~
 
 ---
 
