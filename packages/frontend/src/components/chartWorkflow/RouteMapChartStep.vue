@@ -704,14 +704,10 @@ const { riverSvg, detectedNames: detectedRiverNames, isLoading: riverLoading } =
 )
 
 // ── Peak layer (async fetch from Overpass API) ──
-const peakConfig = computed<PeakConfig | null>(() => {
-  const cfg = props.animationConfig
-  if (!cfg.showPeaks) return null
-  return {
-    color: '#ffffff',
-    opacity: cfg.peakOpacity,
-  }
-})
+const peakConfig = computed<PeakConfig>(() => ({
+  color: '#ffffff',
+  opacity: props.animationConfig.peakOpacity,
+}))
 const { peakSvg, isLoading: peakLoading } = usePeakLayer(
   contourRouteBounds,
   contourProjParams,
@@ -722,14 +718,10 @@ const { peakSvg, isLoading: peakLoading } = usePeakLayer(
 )
 
 // ── Place boundary polygons (async fetch from Overpass API) ──
-const placeBoundaryConfig = computed<PlaceBoundaryConfig | null>(() => {
-  const cfg = props.animationConfig
-  if (!cfg.showPlaceBoundaries) return null
-  return {
-    color: '#ffffff',
-    opacity: cfg.placeBoundaryOpacity,
-  }
-})
+const placeBoundaryConfig = computed<PlaceBoundaryConfig>(() => ({
+  color: '#ffffff',
+  opacity: props.animationConfig.placeBoundaryOpacity,
+}))
 const { placeBoundarySvg, isLoading: placeBoundaryLoading } = usePlaceBoundaries(
   contourRouteBounds,
   contourProjParams,
@@ -739,14 +731,11 @@ const { placeBoundarySvg, isLoading: placeBoundaryLoading } = usePlaceBoundaries
 )
 
 // ── Forest layer (async fetch from Overpass API) ──
-const forestConfig = computed<ForestConfig | null>(() => {
-  const cfg = props.animationConfig
-  if (!cfg.showForests) return null
-  return {
-    color: cfg.forestColor ?? '#4a8c3f',
-    opacity: cfg.forestOpacity,
-  }
-})
+// Always compute (never null) so the SVG is preloaded; visibility gated in buildFrameOptions.
+const forestConfig = computed<ForestConfig>(() => ({
+  color: props.animationConfig.forestColor ?? '#4a8c3f',
+  opacity: props.animationConfig.forestOpacity,
+}))
 const { forestSvg, isLoading: forestLoading } = useForestLayer(
   contourRouteBounds,
   contourProjParams,
@@ -756,14 +745,10 @@ const { forestSvg, isLoading: forestLoading } = useForestLayer(
 )
 
 // ── Water bodies (async fetch from Overpass API) ──
-const waterConfig = computed<WaterConfig | null>(() => {
-  const cfg = props.animationConfig
-  if (!cfg.showWater) return null
-  return {
-    color: cfg.waterColor ?? '#4a90d9',
-    opacity: cfg.waterOpacity,
-  }
-})
+const waterConfig = computed<WaterConfig>(() => ({
+  color: props.animationConfig.waterColor ?? '#4a90d9',
+  opacity: props.animationConfig.waterOpacity,
+}))
 const { waterSvg, isLoading: waterLoading } = useWaterLayer(
   contourRouteBounds,
   contourProjParams,
@@ -773,18 +758,14 @@ const { waterSvg, isLoading: waterLoading } = useWaterLayer(
 )
 
 // ── Land cover layer: glaciers + urban areas (async, Overpass API) ──
-const landCoverConfig = computed<LandCoverConfig | null>(() => {
-  const cfg = props.animationConfig
-  if (!cfg.showGlaciers && !cfg.showUrban) return null
-  return {
-    showGlaciers: cfg.showGlaciers,
-    glacierOpacity: cfg.glacierOpacity,
-    glacierColor: cfg.glacierColor,
-    showUrban: cfg.showUrban,
-    urbanOpacity: cfg.urbanOpacity,
-    urbanColor: cfg.urbanColor,
-  }
-})
+const landCoverConfig = computed<LandCoverConfig>(() => ({
+  showGlaciers: props.animationConfig.showGlaciers,
+  glacierOpacity: props.animationConfig.glacierOpacity,
+  glacierColor: props.animationConfig.glacierColor,
+  showUrban: props.animationConfig.showUrban,
+  urbanOpacity: props.animationConfig.urbanOpacity,
+  urbanColor: props.animationConfig.urbanColor,
+}))
 const { landCoverSvg, isLoading: landCoverLoading } = useLandCoverLayer(
   contourRouteBounds,
   contourProjParams,
@@ -794,14 +775,10 @@ const { landCoverSvg, isLoading: landCoverLoading } = useLandCoverLayer(
 )
 
 // ── Vineyard & orchard layer (async fetch from Overpass API) ──
-const vineyardConfig = computed<VineyardConfig | null>(() => {
-  const cfg = props.animationConfig
-  if (!cfg.showVineyards) return null
-  return {
-    color: cfg.vineyardColor ?? '#c8a04a',
-    opacity: cfg.vineyardOpacity,
-  }
-})
+const vineyardConfig = computed<VineyardConfig>(() => ({
+  color: props.animationConfig.vineyardColor ?? '#c8a04a',
+  opacity: props.animationConfig.vineyardOpacity,
+}))
 const { vineyardSvg, isLoading: vineyardLoading } = useVineyardLayer(
   contourRouteBounds,
   contourProjParams,
@@ -811,14 +788,10 @@ const { vineyardSvg, isLoading: vineyardLoading } = useVineyardLayer(
 )
 
 // ── Meadow & farmland layer (async fetch from Overpass API) ──
-const meadowConfig = computed<MeadowConfig | null>(() => {
-  const cfg = props.animationConfig
-  if (!cfg.showMeadows) return null
-  return {
-    color: cfg.meadowColor ?? '#b5c97a',
-    opacity: cfg.meadowOpacity,
-  }
-})
+const meadowConfig = computed<MeadowConfig>(() => ({
+  color: props.animationConfig.meadowColor ?? '#b5c97a',
+  opacity: props.animationConfig.meadowOpacity,
+}))
 const { meadowSvg, isLoading: meadowLoading } = useMeadowLayer(
   contourRouteBounds,
   contourProjParams,
@@ -828,14 +801,10 @@ const { meadowSvg, isLoading: meadowLoading } = useMeadowLayer(
 )
 
 // ── Road layer (async fetch from Overpass API) ──
-const roadConfig = computed<RoadConfig | null>(() => {
-  const cfg = props.animationConfig
-  if (!cfg.showRoads) return null
-  return {
-    color: '#ffffff',
-    opacity: cfg.roadOpacity,
-  }
-})
+const roadConfig = computed<RoadConfig>(() => ({
+  color: '#ffffff',
+  opacity: props.animationConfig.roadOpacity,
+}))
 const { roadSvg, isLoading: roadLoading } = useRoadLayer(
   contourRouteBounds,
   contourProjParams,
@@ -1035,19 +1004,19 @@ function buildFrameOptions(progress: number, overrides: Partial<CombinedFrameOpt
       contourMajorInterval: cfg.contourMajorInterval,
       contourShowLabels: cfg.contourShowLabels,
     } : undefined,
-    // Pre-rendered geo layers (fetched on demand; null config = disabled = empty SVG)
+    // Pre-rendered geo layers — always precomputed, gated here by the show-flag
     satelliteLayerSvg:     satelliteSvg.value,
     hillshadeLayerSvg:     hillshadeSvg.value,
     contourLayerSvg:       contourSvg.value,
     riverLayerSvg:         riverSvg.value,
-    peakLayerSvg:          peakSvg.value,
-    placeBoundaryLayerSvg: placeBoundarySvg.value,
-    forestLayerSvg:        forestSvg.value,
-    vineyardLayerSvg:      vineyardSvg.value,
-    meadowLayerSvg:        meadowSvg.value,
-    waterLayerSvg:         waterSvg.value,
-    landCoverLayerSvg:     landCoverSvg.value,
-    roadLayerSvg:          roadSvg.value,
+    peakLayerSvg:          cfg.showPeaks          ? peakSvg.value          : '',
+    placeBoundaryLayerSvg: cfg.showPlaceBoundaries ? placeBoundarySvg.value : '',
+    forestLayerSvg:        cfg.showForests         ? forestSvg.value        : '',
+    vineyardLayerSvg:      cfg.showVineyards       ? vineyardSvg.value      : '',
+    meadowLayerSvg:        cfg.showMeadows         ? meadowSvg.value        : '',
+    waterLayerSvg:         cfg.showWater           ? waterSvg.value         : '',
+    landCoverLayerSvg:     (cfg.showGlaciers || cfg.showUrban) ? landCoverSvg.value : '',
+    roadLayerSvg:          cfg.showRoads           ? roadSvg.value          : '',
     // Privacy
     anonymizeStart: cfg.anonymizeStart,
     anonymizeEnd: cfg.anonymizeEnd,
