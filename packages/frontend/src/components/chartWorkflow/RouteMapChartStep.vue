@@ -785,10 +785,15 @@ const { riverSvg, detectedNames: detectedRiverNames, isLoading: riverLoading } =
 )
 
 // ── Peak layer (async fetch from Overpass API) ──
-const peakConfig = computed<PeakConfig>(() => ({
-  color: '#ffffff',
-  opacity: props.animationConfig.peakOpacity,
-}))
+// Returns null when disabled so useGeoLayer clears layerSvg immediately.
+// Re-enabling hits the module-level peakSvgCache so the fetch is instant.
+const peakConfig = computed<PeakConfig | null>(() => {
+  if (!props.animationConfig.showPeaks) return null
+  return {
+    color: '#ffffff',
+    opacity: props.animationConfig.peakOpacity,
+  }
+})
 const { peakSvg, isLoading: peakLoading } = usePeakLayer(
   contourRouteBounds,
   contourProjParams,
