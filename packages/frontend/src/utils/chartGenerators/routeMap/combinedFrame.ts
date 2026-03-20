@@ -835,8 +835,14 @@ function generateWeatherChip(
   const parts1 = [escape(condition), escape(temp)].filter(Boolean)
   const line    = parts1.join('  ')            // two spaces between condition and temp
 
+  // Estimate text width: emoji chars count as ~1.1×, others ~0.58× font size
+  const estimatedTextW = Array.from(line).reduce((sum, ch) => {
+    const cp = ch.codePointAt(0) ?? 0
+    const isEmoji = cp > 0x2000
+    return sum + Math.round(fontSize * (isEmoji ? 1.1 : 0.58))
+  }, 0)
   const chipH = fontSize + padY * 2
-  const chipW = Math.round(width * 0.28)       // narrower: ~300px at 1080
+  const chipW = estimatedTextW + padX * 2
 
   // Position from normalized x/y (0-1) over the full frame
   const chipX = Math.round(x * (width  - chipW))

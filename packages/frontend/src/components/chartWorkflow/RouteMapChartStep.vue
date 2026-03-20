@@ -557,8 +557,9 @@ function onStatsDragEnd() {
 }
 
 // ── Weather chip drag ──
-// Chip SVG dimensions (must match generateWeatherChip)
-const WEATHER_CHIP_W_SVG = Math.round(1080 * 0.28)   // ~302
+// Chip SVG dimensions — height is fixed; width is a generous estimate
+// (actual chip auto-fits text, but drag handle uses a fixed approximation)
+const WEATHER_CHIP_W_SVG = Math.round(1080 * 0.38)   // ~410 — fits most weather strings
 const WEATHER_CHIP_H_SVG = Math.round(1080 * 0.044 + 1080 * 0.02 * 2)  // ~91
 
 const weatherDragHandleStyle = computed(() => {
