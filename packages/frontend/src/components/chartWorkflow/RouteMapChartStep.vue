@@ -558,8 +558,8 @@ function onStatsDragEnd() {
 
 // ── Weather chip drag ──
 // Chip SVG dimensions (must match generateWeatherChip)
-const WEATHER_CHIP_W_SVG = Math.round(1080 * 0.44)   // ~475
-const WEATHER_CHIP_H_SVG = Math.round(1080 * 0.042 + 1080 * 0.052 + 1080 * 0.012 + 1080 * 0.022 * 2) // ~155
+const WEATHER_CHIP_W_SVG = Math.round(1080 * 0.28)   // ~302
+const WEATHER_CHIP_H_SVG = Math.round(1080 * 0.044 + 1080 * 0.02 * 2)  // ~91
 
 const weatherDragHandleStyle = computed(() => {
   if (!previewRef.value) return {}

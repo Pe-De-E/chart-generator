@@ -97,7 +97,7 @@ Legende: 🟢 1 Tag · 🟡 2–3 Tage · 🔴 Stretch (Ende Woche) · ✅ Erled
 47. ✅ ~~**Kilometermarker** — konfigurierbar (Intervall wählbar) + frei per Drag positionierbar~~
 48. 🟢 **Startzeit einblenden** — "Gestartet: 07:42 Uhr"
 49. 🟡 **Teammate-Tracking** — mehrere Routen gleichzeitig animiert (z.B. Gruppenausfahrt)
-50. 🟢 **Fortschrittsbalken** unten — subtiler Balken der mit Animation mitläuft
+50. ~~**Fortschrittsbalken** unten~~ — übersprungen
 
 ---
 

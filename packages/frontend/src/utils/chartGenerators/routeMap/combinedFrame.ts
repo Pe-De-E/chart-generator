@@ -827,57 +827,39 @@ function generateWeatherChip(
 
   const shadow = `stroke="rgba(0,0,0,0.9)" stroke-width="6" paint-order="stroke fill" stroke-linejoin="round"`
 
-  const condFontSize = Math.round(width * 0.042)   // ~45px at 1080 — condition line (has emoji)
-  const tempFontSize = Math.round(width * 0.052)   // ~56px at 1080 — temperature, bigger + bold
-  const padX = Math.round(width * 0.04)
-  const padY = Math.round(width * 0.022)
-  const gap  = Math.round(width * 0.012)           // space between condition and temp
+  // Single line: "☀️ Sonnig  18°C"
+  const fontSize = Math.round(width * 0.044)   // ~47px at 1080
+  const padX     = Math.round(width * 0.036)
+  const padY     = Math.round(width * 0.02)
 
-  const condLine = escape(condition)
-  const tempLine = escape(temp)
+  const parts1 = [escape(condition), escape(temp)].filter(Boolean)
+  const line    = parts1.join('  ')            // two spaces between condition and temp
 
-  const contentH = (condLine ? condFontSize : 0) + (condLine && tempLine ? gap : 0) + (tempLine ? tempFontSize : 0)
-  const chipH    = contentH + padY * 2
-  const chipW    = Math.round(width * 0.44)
+  const chipH = fontSize + padY * 2
+  const chipW = Math.round(width * 0.28)       // narrower: ~300px at 1080
 
   // Position from normalized x/y (0-1) over the full frame
   const chipX = Math.round(x * (width  - chipW))
   const chipY = Math.round(y * (height - chipH))
 
-  const rx = 16   // subtle rounded corners, not a full pill
+  const rx = Math.round(chipH / 2)   // full pill shape
 
   const parts: string[] = []
 
-  // Background — more opaque for legibility
+  // Background pill
   parts.push(
     `<rect x="${chipX}" y="${chipY}" width="${chipW}" height="${chipH}" rx="${rx}" ry="${rx}"` +
     ` fill="rgba(0,0,0,0.72)" opacity="${opacity.toFixed(2)}"/>`
   )
 
-  let ty = chipY + padY
-
-  // Condition line (emoji + label) — smaller, sits above temp
-  if (condLine) {
-    ty += condFontSize
-    parts.push(
-      `<text x="${chipX + padX}" y="${ty}" font-size="${condFontSize}" font-weight="600"` +
-      ` fill="${color}" opacity="${opacity.toFixed(2)}"` +
-      ` font-family="system-ui, -apple-system, sans-serif"` +
-      ` ${shadow}>${condLine}</text>`
-    )
-    ty += gap
-  }
-
-  // Temperature — large + bold, most prominent
-  if (tempLine) {
-    ty += tempFontSize
-    parts.push(
-      `<text x="${chipX + padX}" y="${ty}" font-size="${tempFontSize}" font-weight="bold"` +
-      ` fill="${color}" opacity="${opacity.toFixed(2)}"` +
-      ` font-family="system-ui, -apple-system, sans-serif"` +
-      ` ${shadow}>${tempLine}</text>`
-    )
-  }
+  // Single text line, vertically centered
+  const ty = chipY + padY + fontSize
+  parts.push(
+    `<text x="${chipX + padX}" y="${ty}" font-size="${fontSize}" font-weight="600"` +
+    ` fill="${color}" opacity="${opacity.toFixed(2)}"` +
+    ` font-family="system-ui, -apple-system, sans-serif"` +
+    ` ${shadow}>${line}</text>`
+  )
 
   return parts.join('\n')
 }
