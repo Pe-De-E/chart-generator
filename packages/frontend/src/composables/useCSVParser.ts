@@ -41,6 +41,7 @@ export interface GPXParseResult {
   downsampling: DownsampleResult
   validation: GPXValidationResult
   routePoints: RoutePoint[]
+  gpxStartTime?: number  // absolute Unix timestamp (ms) of first GPX trackpoint
 }
 
 export interface TableHeader {
@@ -310,6 +311,7 @@ export function useCSVParser() {
       downsampling: downsamplingResult,
       validation: validationResult,
       routePoints,
+      gpxStartTime: firstTimestamp ?? undefined,
     }
   }
 

@@ -19,6 +19,7 @@ Legende: 🟢 1 Tag · 🟡 2–3 Tage · 🔴 Stretch (Ende Woche) · ✅ Erled
 - ~~**Feedback-Button** — direkt in der App-Sidebar, öffnet Dialog~~
 - ~~**Dunkel/Hell-Modus** — Toggle in der App-Sidebar~~
 - ~~**Ladebalken mit Fortschritt & Schätzung** — simulierter Fortschritt + "~X Sek." für alle 12 Geo-Layer~~
+- ~~**Wetter-Overlay** — automatisch via Open-Meteo API aus GPX-Koordinaten + Zeitstempel, editierbar~~
 - ~~**Flüsse verbessert** — Glow-Effekt (Doppelstrich), variable Strichstärke nach Typ, Streams ergänzt~~
 - ~~**Wälder** (`natural=wood`, `landuse=forest`) — grüne Flächen, Mindestflächen-Filter~~
 - ~~**Ortsgrenzen** (`place=city|town|village`) — gestrichelte Polygon-Umrisse~~
@@ -90,7 +91,7 @@ Legende: 🟢 1 Tag · 🟡 2–3 Tage · 🔴 Stretch (Ende Woche) · ✅ Erled
 41. 🟢 **Beliebige Text-Overlays** — User tippt Text, positioniert frei per Drag
 42. 🟢 **Aktivitätstyp-Label** — "🚴 Radfahren", "🏃 Laufen", "🥾 Wandern" als Chip
 43. 🟢 **Datum/Uhrzeit Overlay** — aus GPX-Timestamp automatisch
-44. 🟢 **Wetter-Overlay** — manuell eingebbar (Temperatur, Bedingungen)
+44. ✅ ~~**Wetter-Overlay** — automatisch aus GPX-Timestamp + Open-Meteo API~~
 45. 🟢 **Logo/Wasserzeichen** — eigenes Bild hochladen als Overlay
 46. 🟡 **Strava-Segment-Namen** als Annotations einblenden
 47. ✅ ~~**Kilometermarker** — konfigurierbar (Intervall wählbar) + frei per Drag positionierbar~~

@@ -18,6 +18,12 @@
               :style="dragHandleStyle"
               @mousedown.prevent="onStatsDragStart"
             />
+            <div
+              v-if="animationConfig.showWeatherOverlay"
+              class="stats-drag-handle"
+              :style="weatherDragHandleStyle"
+              @mousedown.prevent="onWeatherDragStart"
+            />
           </div>
         </div>
       </div>
@@ -50,6 +56,8 @@
       :water-loading="waterLoading"
       :land-cover-loading="landCoverLoading"
       :road-loading="roadLoading"
+      :weather-loading="weatherLoading"
+      :weather-hours-count="weatherHours?.length ?? 0"
       :can-undo="canUndo"
       :can-redo="canRedo"
       @update:animation-config="$emit('update:animationConfig', $event)"
@@ -230,6 +238,13 @@ export interface RouteMapAnimationConfig {
   outroDurationSec: number;
   showOutroStats: boolean;  // show stats card on outro (or intro when swapped)
   swapIntroOutro: boolean;  // swap: stats first, title last
+  // Weather overlay
+  showWeatherOverlay: boolean;
+  weatherTemp: string;        // e.g. "18°C"
+  weatherCondition: string;   // e.g. "☀️ Sonnig"
+  weatherOverlayColor: string;
+  weatherX: number;           // 0-1 normalized horizontal position
+  weatherY: number;           // 0-1 normalized vertical position
   // Route halo/outline
   routeHalo: boolean;
   routeHaloOpacity: number;
@@ -361,6 +376,13 @@ export const DEFAULT_ROUTEMAP_ANIMATION_CONFIG: RouteMapAnimationConfig = {
   outroDurationSec: 1.5,
   showOutroStats: false,
   swapIntroOutro: false,
+  // Weather overlay
+  showWeatherOverlay: false,
+  weatherTemp: '',
+  weatherCondition: '',
+  weatherOverlayColor: '#ffffff',
+  weatherX: 0.0,
+  weatherY: 0.5,
   // Route halo/outline
   routeHalo: false,
   routeHaloOpacity: 0.25,
@@ -378,6 +400,7 @@ import { useVideoExport } from '../../composables/useVideoExport'
 import { generateCombinedFrame, getLastKmAnchorPositions, getLastAnnotationChipPositions } from '../../utils/chartGenerators/routeMap/combinedFrame'
 import type { CombinedFrameOptions } from '../../utils/chartGenerators/routeMap/combinedFrame'
 import { getTitleCardOpacity } from '../../utils/titleCardGenerator'
+import { useWeatherLayer, getWeatherAtOffset } from '../../composables/useWeatherLayer'
 import ExportSettingsDialog from './ExportSettingsDialog.vue'
 import type { ExportSettings } from './ExportSettingsDialog.vue'
 import VideoExportProgressDialog from './VideoExportProgressDialog.vue'
@@ -439,6 +462,10 @@ const props = defineProps({
   timeArray: {
     type: Array as PropType<number[]>,
     default: undefined,
+  },
+  gpxStartTime: {
+    type: Number as PropType<number | null>,
+    default: null,
   },
   canUndo: {
     type: Boolean,
@@ -527,6 +554,59 @@ function onStatsDragEnd() {
   isDragging.value = false
   document.removeEventListener('mousemove', onStatsDragMove)
   document.removeEventListener('mouseup', onStatsDragEnd)
+}
+
+// ── Weather chip drag ──
+// Chip SVG dimensions (must match generateWeatherChip)
+const WEATHER_CHIP_W_SVG = Math.round(1080 * 0.44)   // ~475
+const WEATHER_CHIP_H_SVG = Math.round(1080 * 0.042 + 1080 * 0.052 + 1080 * 0.012 + 1080 * 0.022 * 2) // ~155
+
+const weatherDragHandleStyle = computed(() => {
+  if (!previewRef.value) return {}
+  const rect  = previewRef.value.getBoundingClientRect()
+  const scale = rect.width / 1080
+  const maxX  = (1080 - WEATHER_CHIP_W_SVG) * scale
+  const maxY  = (1920 - WEATHER_CHIP_H_SVG) * scale
+  const boxX  = (props.animationConfig.weatherX ?? 0.0) * maxX
+  const boxY  = (props.animationConfig.weatherY ?? 0.5) * maxY
+  return {
+    left:   `${boxX}px`,
+    top:    `${boxY}px`,
+    width:  `${WEATHER_CHIP_W_SVG * scale}px`,
+    height: `${WEATHER_CHIP_H_SVG * scale}px`,
+    cursor: isDragging.value ? 'grabbing' : 'grab',
+  }
+})
+
+function onWeatherDragStart(e: MouseEvent) {
+  if (!previewRef.value) return
+  isDragging.value = true
+  const rect  = previewRef.value.getBoundingClientRect()
+  const scale = rect.width / 1080
+  const maxX  = (1080 - WEATHER_CHIP_W_SVG) * scale
+  const maxY  = (1920 - WEATHER_CHIP_H_SVG) * scale
+  const curX  = (props.animationConfig.weatherX ?? 0.0) * maxX
+  const curY  = (props.animationConfig.weatherY ?? 0.5) * maxY
+  dragOffset.value = { x: e.clientX - rect.left - curX, y: e.clientY - rect.top - curY }
+  document.addEventListener('mousemove', onWeatherDragMove)
+  document.addEventListener('mouseup', onWeatherDragEnd)
+}
+
+function onWeatherDragMove(e: MouseEvent) {
+  if (!isDragging.value || !previewRef.value) return
+  const rect  = previewRef.value.getBoundingClientRect()
+  const scale = rect.width / 1080
+  const maxX  = (1080 - WEATHER_CHIP_W_SVG) * scale
+  const maxY  = (1920 - WEATHER_CHIP_H_SVG) * scale
+  const newX  = Math.max(0, Math.min(1, (e.clientX - rect.left - dragOffset.value.x) / maxX))
+  const newY  = Math.max(0, Math.min(1, (e.clientY - rect.top  - dragOffset.value.y) / maxY))
+  emit('update:animationConfig', { ...props.animationConfig, weatherX: newX, weatherY: newY })
+}
+
+function onWeatherDragEnd() {
+  isDragging.value = false
+  document.removeEventListener('mousemove', onWeatherDragMove)
+  document.removeEventListener('mouseup', onWeatherDragEnd)
 }
 
 // ── Km label drag ──
@@ -875,6 +955,31 @@ function buildOutroOverlayOptions(opacity: number): CombinedFrameOptions['outroO
   }
 }
 
+// ── Weather auto-detection ──
+const weatherStartLat  = computed(() => props.routePoints[0]?.lat  ?? null)
+const weatherStartLon  = computed(() => props.routePoints[0]?.lon  ?? null)
+const weatherStartTime = computed(() => props.gpxStartTime ?? null)
+const weatherDurationMs = computed(() => totalRouteStats.value.totalTimeMs ?? 0)
+
+const { weatherHours, isLoading: weatherLoading } = useWeatherLayer(
+  weatherStartLat,
+  weatherStartLon,
+  weatherStartTime,
+  weatherDurationMs,
+)
+
+// Returns the elapsed ms into the activity for a given chart animation progress (0-1).
+// Uses actual GPS time data when available, falls back to linear interpolation.
+function getElapsedMsAtProgress(progress: number): number {
+  const points = props.routePoints
+  if (points.length === 0) return 0
+  const idx = Math.round(progress * (points.length - 1))
+  const pt  = points[Math.min(idx, points.length - 1)]
+  if (pt.time != null) return pt.time
+  // Fallback: linear through total duration
+  return progress * (totalRouteStats.value.totalTimeMs ?? 0)
+}
+
 // Animation settings for the composable
 const animationSettings = computed<AnimationOptions>(() => ({
   ...DEFAULT_ANIMATION_OPTIONS,
@@ -1039,6 +1144,34 @@ function buildFrameOptions(progress: number, overrides: Partial<CombinedFrameOpt
     // so every chip is visible and draggable from the first frame.
     // Export renderFrame overrides this to false for the progressive reveal.
     showAllAnnotations: true,
+    // Weather overlay chip — animated via hourly data, falls back to manual fields
+    weatherOverlay: (() => {
+      if (!cfg.showWeatherOverlay) return undefined
+      if (weatherHours.value && weatherHours.value.length > 0) {
+        const elapsedMs = getElapsedMsAtProgress(progress)
+        const entry = getWeatherAtOffset(weatherHours.value, elapsedMs)
+        return {
+          temp:      `${entry.tempC}°C`,
+          condition: entry.condition,
+          color:     cfg.weatherOverlayColor || '#ffffff',
+          opacity:   1,
+          x:         cfg.weatherX ?? 0.0,
+          y:         cfg.weatherY ?? 0.5,
+        }
+      }
+      // Manual fallback
+      if (cfg.weatherTemp || cfg.weatherCondition) {
+        return {
+          temp:      cfg.weatherTemp,
+          condition: cfg.weatherCondition,
+          color:     cfg.weatherOverlayColor || '#ffffff',
+          opacity:   1,
+          x:         cfg.weatherX ?? 0.0,
+          y:         cfg.weatherY ?? 0.5,
+        }
+      }
+      return undefined
+    })(),
     // Overrides
     ...overrides,
   }

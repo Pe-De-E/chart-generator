@@ -171,6 +171,16 @@ export interface CombinedFrameOptions {
     color: string
   }
 
+  // Weather overlay (temperature + condition chip)
+  weatherOverlay?: {
+    temp: string        // e.g. "18°C"
+    condition: string   // e.g. "☀️ Sonnig"
+    color: string       // text/icon color
+    opacity: number     // 0-1
+    x?: number          // 0-1 normalized horizontal position
+    y?: number          // 0-1 normalized vertical position
+  }
+
   // Stats overlay (distance, elevation gain, current elevation, time)
   showStatsOverlay?: boolean
   statsOverlayColor?: string
@@ -798,6 +808,81 @@ function generateOutroStatsCard(
 }
 
 /**
+ * Generate a small weather chip (temperature + condition) pinned to the bottom-left.
+ * Rendered as a pill with a semi-transparent dark background.
+ */
+function generateWeatherChip(
+  options: NonNullable<CombinedFrameOptions['weatherOverlay']>,
+  width: number,
+  height: number,
+): string {
+  const { temp, condition, opacity, x = 0.0, y = 0.5 } = options
+  const color = options.color || '#ffffff'   // fallback — prevents fill="undefined" → black
+  if (opacity <= 0 || (!temp && !condition)) return ''
+
+  const escape = (s: string) => s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+
+  const shadow = `stroke="rgba(0,0,0,0.9)" stroke-width="6" paint-order="stroke fill" stroke-linejoin="round"`
+
+  const condFontSize = Math.round(width * 0.042)   // ~45px at 1080 — condition line (has emoji)
+  const tempFontSize = Math.round(width * 0.052)   // ~56px at 1080 — temperature, bigger + bold
+  const padX = Math.round(width * 0.04)
+  const padY = Math.round(width * 0.022)
+  const gap  = Math.round(width * 0.012)           // space between condition and temp
+
+  const condLine = escape(condition)
+  const tempLine = escape(temp)
+
+  const contentH = (condLine ? condFontSize : 0) + (condLine && tempLine ? gap : 0) + (tempLine ? tempFontSize : 0)
+  const chipH    = contentH + padY * 2
+  const chipW    = Math.round(width * 0.44)
+
+  // Position from normalized x/y (0-1) over the full frame
+  const chipX = Math.round(x * (width  - chipW))
+  const chipY = Math.round(y * (height - chipH))
+
+  const rx = 16   // subtle rounded corners, not a full pill
+
+  const parts: string[] = []
+
+  // Background — more opaque for legibility
+  parts.push(
+    `<rect x="${chipX}" y="${chipY}" width="${chipW}" height="${chipH}" rx="${rx}" ry="${rx}"` +
+    ` fill="rgba(0,0,0,0.72)" opacity="${opacity.toFixed(2)}"/>`
+  )
+
+  let ty = chipY + padY
+
+  // Condition line (emoji + label) — smaller, sits above temp
+  if (condLine) {
+    ty += condFontSize
+    parts.push(
+      `<text x="${chipX + padX}" y="${ty}" font-size="${condFontSize}" font-weight="600"` +
+      ` fill="${color}" opacity="${opacity.toFixed(2)}"` +
+      ` font-family="system-ui, -apple-system, sans-serif"` +
+      ` ${shadow}>${condLine}</text>`
+    )
+    ty += gap
+  }
+
+  // Temperature — large + bold, most prominent
+  if (tempLine) {
+    ty += tempFontSize
+    parts.push(
+      `<text x="${chipX + padX}" y="${ty}" font-size="${tempFontSize}" font-weight="bold"` +
+      ` fill="${color}" opacity="${opacity.toFixed(2)}"` +
+      ` font-family="system-ui, -apple-system, sans-serif"` +
+      ` ${shadow}>${tempLine}</text>`
+    )
+  }
+
+  return parts.join('\n')
+}
+
+/**
  * Remove near-duplicate consecutive points to smooth animation through GPS pauses.
  *
  * GPS devices keep recording during pauses, creating many clustered points at the
@@ -969,6 +1054,8 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     // Title / outro stats card
     titleOverlay,
     outroOverlay,
+    // Weather chip
+    weatherOverlay,
     // Stats
     showStatsOverlay = false,
     statsOverlayColor = '#ffffff',
@@ -1428,6 +1515,11 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     ? generateOutroStatsCard(outroOverlay, width, height)
     : ''
 
+  // ── Weather Chip ──
+  const weatherHtml = weatherOverlay
+    ? generateWeatherChip(weatherOverlay, width, height)
+    : ''
+
   // ── Compose ──
   const allDefs = [bg.defs, mapDefs, elevDefs].filter(Boolean).join('\n')
   const hasSceneOpacity = sceneOpacity != null && sceneOpacity < 1
@@ -1445,6 +1537,7 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     ${elevContent}
     ${dividerHtml}
     ${opacityClose}
+    ${weatherHtml}
     ${titleHtml}
     ${outroHtml}
   </svg>`

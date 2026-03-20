@@ -547,6 +547,52 @@
             >
               {{ swapIntroOutro ? '⇄ Stats zuerst, Titel am Ende' : '⇄ Intro ↔ Outro tauschen' }}
             </v-btn>
+            <v-divider class="my-3" />
+            <div class="section-label">
+              Wetter-Overlay
+              <v-progress-circular v-if="weatherLoading" indeterminate size="14" width="2" class="ml-2" />
+            </div>
+            <v-checkbox v-model="showWeatherOverlay" label="Wetter einblenden" density="compact" hide-details color="primary" />
+            <template v-if="showWeatherOverlay">
+              <div v-if="weatherLoading" class="text-caption text-medium-emphasis mt-1">
+                Wetterdaten werden geladen…
+              </div>
+              <div v-else-if="weatherHoursCount > 0" class="text-caption text-medium-emphasis mt-1">
+                {{ weatherHoursCount }} Stunden geladen · animiert sich mit der Route
+              </div>
+              <div v-else class="text-caption text-medium-emphasis mt-1">
+                Manuell eingeben (kein GPS-Zeitstempel gefunden)
+              </div>
+              <template v-if="weatherHoursCount === 0 && !weatherLoading">
+                <label class="text-caption text-medium-emphasis d-block mb-1 mt-2">Temperatur</label>
+                <v-text-field
+                  v-model="weatherTemp"
+                  density="compact"
+                  variant="outlined"
+                  hide-details
+                  placeholder="z.B. 18°C"
+                  class="mb-2"
+                />
+                <label class="text-caption text-medium-emphasis d-block mb-1">Wetterbedingung</label>
+                <v-text-field
+                  v-model="weatherCondition"
+                  density="compact"
+                  variant="outlined"
+                  hide-details
+                  placeholder="z.B. ☀️ Sonnig"
+                  class="mb-2"
+                />
+              </template>
+              <div class="d-flex align-center mt-2">
+                <label class="text-caption text-medium-emphasis mr-3">Farbe</label>
+                <v-menu :close-on-content-click="false">
+                  <template #activator="{ props: menuProps }">
+                    <div class="color-swatch" :style="{ backgroundColor: weatherOverlayColor }" v-bind="menuProps"></div>
+                  </template>
+                  <v-color-picker v-model="weatherOverlayColor" mode="hexa" show-swatches />
+                </v-menu>
+              </div>
+            </template>
             <label class="text-caption text-medium-emphasis d-block mb-1 mt-3">Animationsmodus</label>
             <v-btn-toggle v-model="animationMode" mandatory density="compact" variant="outlined" divided class="w-100">
               <v-btn value="uniform" size="small" class="flex-grow-1">Gleichmaessig</v-btn>
@@ -981,6 +1027,14 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  weatherLoading: {
+    type: Boolean,
+    default: false,
+  },
+  weatherHoursCount: {
+    type: Number,
+    default: 0,
+  },
   chartData: {
     type: Array as PropType<Array<{ label: string; value: number }>>,
     default: () => [],
@@ -1159,6 +1213,10 @@ const {
   updateAnnotationText,
   deleteAnnotation,
   addCustomAnnotation,
+  showWeatherOverlay,
+  weatherTemp,
+  weatherCondition,
+  weatherOverlayColor,
 } = useRouteMapConfig(
   () => props.animationConfig,
   updateAnimationConfig,

@@ -134,6 +134,7 @@
               :route-points="routePoints"
               :chart-data="chartDataForAnimation"
               :time-array="timeArray"
+              :gpx-start-time="gpxStartTime"
               :can-undo="canUndo"
               :can-redo="canRedo"
               @update:animation-config="handleRouteMapConfigUpdate"
@@ -287,6 +288,11 @@ const chartDataForAnimation = computed(() => {
     value: Number(item.col_1) || 0,
   }))
 })
+
+// Absolute start timestamp from GPX (for weather auto-detection)
+const gpxStartTime = computed<number | null>(() =>
+  lastGPXResult.value?.gpxStartTime ?? null
+)
 
 // Smoothed time array
 const timeArray = computed<number[] | undefined>(() => {

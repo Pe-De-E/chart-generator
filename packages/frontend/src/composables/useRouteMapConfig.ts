@@ -504,6 +504,38 @@ export function useRouteMapConfig(
     set: (value: boolean) => updateConfig({ showMapFade: value }),
   })
 
+  // --- Weather Overlay ---
+
+  const showWeatherOverlay = computed({
+    get: () => getConfig().showWeatherOverlay ?? false,
+    set: (value: boolean) => updateConfig({ showWeatherOverlay: value }),
+  })
+
+  const weatherTemp = computed({
+    get: () => getConfig().weatherTemp ?? '',
+    set: (value: string) => updateConfig({ weatherTemp: value }),
+  })
+
+  const weatherCondition = computed({
+    get: () => getConfig().weatherCondition ?? '',
+    set: (value: string) => updateConfig({ weatherCondition: value }),
+  })
+
+  const weatherOverlayColor = computed({
+    get: () => getConfig().weatherOverlayColor ?? '#ffffff',
+    set: (value: string) => updateConfig({ weatherOverlayColor: value }),
+  })
+
+  const weatherX = computed({
+    get: () => getConfig().weatherX ?? 0.0,
+    set: (value: number) => updateConfig({ weatherX: value }),
+  })
+
+  const weatherY = computed({
+    get: () => getConfig().weatherY ?? 0.5,
+    set: (value: number) => updateConfig({ weatherY: value }),
+  })
+
   return {
     // All shared elevation fields
     ...elevationConfig,
@@ -613,5 +645,12 @@ export function useRouteMapConfig(
     updateAnnotationText,
     deleteAnnotation,
     addCustomAnnotation,
+    // Weather overlay
+    showWeatherOverlay,
+    weatherTemp,
+    weatherCondition,
+    weatherOverlayColor,
+    weatherX,
+    weatherY,
   }
 }
