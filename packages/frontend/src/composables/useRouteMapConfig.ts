@@ -16,6 +16,18 @@ export function useRouteMapConfig(
   // Reuse all shared elevation config fields
   const elevationConfig = useElevationConfig(getConfig, updateConfig)
 
+  // --- Intro / Outro Duration ---
+
+  const introDurationSec = computed({
+    get: () => getConfig().introDurationSec ?? 1,
+    set: (value: number) => updateConfig({ introDurationSec: value }),
+  })
+
+  const outroDurationSec = computed({
+    get: () => getConfig().outroDurationSec ?? 1.5,
+    set: (value: number) => updateConfig({ outroDurationSec: value }),
+  })
+
   // --- Map Camera ---
 
   const mapCameraMode = computed({
@@ -486,6 +498,8 @@ export function useRouteMapConfig(
     // All shared elevation fields
     ...elevationConfig,
     // Map Camera
+    introDurationSec,
+    outroDurationSec,
     mapCameraMode,
     mapChaseZoomLevel,
     mapChaseZoomOutStart,

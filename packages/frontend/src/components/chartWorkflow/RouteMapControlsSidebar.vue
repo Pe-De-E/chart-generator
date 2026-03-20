@@ -529,6 +529,10 @@
               <v-text-field v-model.number="animationDuration" label="Dauer (Sek.)" type="number" :min="1" :max="30" variant="outlined" density="compact" hide-details />
               <v-select v-model="animationEasing" label="Easing" :items="easingOptions" variant="outlined" density="compact" hide-details />
             </div>
+            <label class="text-caption text-medium-emphasis d-block mb-1 mt-3">Intro-Dauer: {{ introDurationSec.toFixed(1) }} Sek.</label>
+            <v-slider v-model="introDurationSec" :min="0" :max="5" :step="0.5" density="compact" hide-details thumb-label />
+            <label class="text-caption text-medium-emphasis d-block mb-1 mt-2">Outro-Dauer: {{ outroDurationSec.toFixed(1) }} Sek.</label>
+            <v-slider v-model="outroDurationSec" :min="0" :max="5" :step="0.5" density="compact" hide-details thumb-label />
             <label class="text-caption text-medium-emphasis d-block mb-1 mt-3">Animationsmodus</label>
             <v-btn-toggle v-model="animationMode" mandatory density="compact" variant="outlined" divided class="w-100">
               <v-btn value="uniform" size="small" class="flex-grow-1">Gleichmaessig</v-btn>
@@ -1054,6 +1058,8 @@ const {
   imageOverlayColor,
   imageOverlayOpacity,
   // Map-specific fields
+  introDurationSec,
+  outroDurationSec,
   mapCameraMode,
   mapChaseZoomLevel,
   mapChaseZoomOutStart,

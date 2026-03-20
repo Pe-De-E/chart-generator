@@ -225,6 +225,9 @@ export interface RouteMapAnimationConfig {
   showNorthArrow: boolean;
   showScaleBar: boolean;
   showMapFade: boolean;
+  // Intro / Outro duration
+  introDurationSec: number;
+  outroDurationSec: number;
   // Route halo/outline
   routeHalo: boolean;
   routeHaloOpacity: number;
@@ -351,6 +354,9 @@ export const DEFAULT_ROUTEMAP_ANIMATION_CONFIG: RouteMapAnimationConfig = {
   showNorthArrow: true,
   showScaleBar: true,
   showMapFade: true,
+  // Intro / Outro duration
+  introDurationSec: 1,
+  outroDurationSec: 1.5,
   // Route halo/outline
   routeHalo: false,
   routeHaloOpacity: 0.25,
@@ -367,7 +373,7 @@ import { useChartAnimation, type PlaybackSpeed } from '../../composables/useChar
 import { useVideoExport } from '../../composables/useVideoExport'
 import { generateCombinedFrame, getLastKmAnchorPositions, getLastAnnotationChipPositions } from '../../utils/chartGenerators/routeMap/combinedFrame'
 import type { CombinedFrameOptions } from '../../utils/chartGenerators/routeMap/combinedFrame'
-import { getTitleCardOpacity, TITLE_CARD_DURATION_MS, OUTRO_DURATION_MS } from '../../utils/titleCardGenerator'
+import { getTitleCardOpacity } from '../../utils/titleCardGenerator'
 import ExportSettingsDialog from './ExportSettingsDialog.vue'
 import type { ExportSettings } from './ExportSettingsDialog.vue'
 import VideoExportProgressDialog from './VideoExportProgressDialog.vue'
@@ -838,10 +844,11 @@ const { roadSvg, isLoading: roadLoading } = useRoadLayer(
 const hasTitleCard = computed(() => !!props.chartTitle.trim())
 const chartDurationMs = computed(() => props.animationConfig.duration * 1000)
 const introDurationMs = computed(() =>
-  hasTitleCard.value ? TITLE_CARD_DURATION_MS : 0
+  hasTitleCard.value ? (props.animationConfig.introDurationSec ?? 1) * 1000 : 0
 )
+const outroDurationMs = computed(() => (props.animationConfig.outroDurationSec ?? 1.5) * 1000)
 const totalDurationMs = computed(() =>
-  chartDurationMs.value + introDurationMs.value + OUTRO_DURATION_MS
+  chartDurationMs.value + introDurationMs.value + outroDurationMs.value
 )
 // titleEnd: fraction at which title phase ends (0 if no title)
 const titleEnd = computed(() =>
@@ -1096,9 +1103,10 @@ async function startVideoExport(settings: ExportSettings) {
   const [width, height] = settings.resolution.split('x').map(Number)
 
   const hasTitle = !!props.chartTitle.trim()
-  const titleMs = hasTitle ? TITLE_CARD_DURATION_MS : 0
+  const titleMs = hasTitle ? (props.animationConfig.introDurationSec ?? 1) * 1000 : 0
   const chartMs = props.animationConfig.duration * 1000
-  const totalMs = titleMs + chartMs + OUTRO_DURATION_MS
+  const outroMs = (props.animationConfig.outroDurationSec ?? 1.5) * 1000
+  const totalMs = titleMs + chartMs + outroMs
   const exportTitleEnd = titleMs / totalMs
   const exportAnimEnd = (titleMs + chartMs) / totalMs
 
