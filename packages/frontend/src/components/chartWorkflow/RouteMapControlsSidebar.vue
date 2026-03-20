@@ -533,6 +533,20 @@
             <v-slider v-model="introDurationSec" :min="0" :max="5" :step="0.5" density="compact" hide-details thumb-label />
             <label class="text-caption text-medium-emphasis d-block mb-1 mt-2">Outro-Dauer: {{ outroDurationSec.toFixed(1) }} Sek.</label>
             <v-slider v-model="outroDurationSec" :min="0" :max="5" :step="0.5" density="compact" hide-details thumb-label />
+            <v-divider class="my-3" />
+            <div class="section-label">Outro Gesamtstats</div>
+            <v-checkbox v-model="showOutroStats" label="Statistik-Karte im Outro" density="compact" hide-details color="primary" />
+            <v-btn
+              v-if="showOutroStats"
+              :variant="swapIntroOutro ? 'flat' : 'outlined'"
+              :color="swapIntroOutro ? 'primary' : undefined"
+              block
+              size="small"
+              class="mt-2"
+              @click="swapIntroOutro = !swapIntroOutro"
+            >
+              {{ swapIntroOutro ? '⇄ Stats zuerst, Titel am Ende' : '⇄ Intro ↔ Outro tauschen' }}
+            </v-btn>
             <label class="text-caption text-medium-emphasis d-block mb-1 mt-3">Animationsmodus</label>
             <v-btn-toggle v-model="animationMode" mandatory density="compact" variant="outlined" divided class="w-100">
               <v-btn value="uniform" size="small" class="flex-grow-1">Gleichmaessig</v-btn>
@@ -1060,6 +1074,8 @@ const {
   // Map-specific fields
   introDurationSec,
   outroDurationSec,
+  showOutroStats,
+  swapIntroOutro,
   mapCameraMode,
   mapChaseZoomLevel,
   mapChaseZoomOutStart,

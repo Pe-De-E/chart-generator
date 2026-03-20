@@ -28,6 +28,16 @@ export function useRouteMapConfig(
     set: (value: number) => updateConfig({ outroDurationSec: value }),
   })
 
+  const showOutroStats = computed({
+    get: () => getConfig().showOutroStats ?? false,
+    set: (value: boolean) => updateConfig({ showOutroStats: value }),
+  })
+
+  const swapIntroOutro = computed({
+    get: () => getConfig().swapIntroOutro ?? false,
+    set: (value: boolean) => updateConfig({ swapIntroOutro: value }),
+  })
+
   // --- Map Camera ---
 
   const mapCameraMode = computed({
@@ -500,6 +510,8 @@ export function useRouteMapConfig(
     // Map Camera
     introDurationSec,
     outroDurationSec,
+    showOutroStats,
+    swapIntroOutro,
     mapCameraMode,
     mapChaseZoomLevel,
     mapChaseZoomOutStart,

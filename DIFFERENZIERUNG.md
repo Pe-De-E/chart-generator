@@ -80,8 +80,8 @@ Legende: 🟢 1 Tag · 🟡 2–3 Tage · 🔴 Stretch (Ende Woche) · ✅ Erled
 36. 🟢 **Standbild-Export** — schönstes Frame als PNG/SVG exportieren
 37. 🟡 **GIF-Export** — für Plattformen ohne Video-Support
 38. 🔴 **Mehrere Routen in einem Video** — z.B. Hin- und Rückweg
-39. 🟢 **Intro-Dauer** konfigurierbar — wie lange Titel steht (schon teilweise vorhanden)
-40. 🟢 **Outro mit Gesamtstats** — letztes Frame zeigt alle Zahlen zusammengefasst und eine Funktion, das man beides tauschen kann intro <-> outro
+39. ✅ ~~**Intro-Dauer** konfigurierbar — wie lange Titel steht (schon teilweise vorhanden)~~
+40. ✅ ~~**Outro mit Gesamtstats** — letztes Frame zeigt alle Zahlen zusammengefasst und eine Funktion, das man beides tauschen kann intro <-> outro~~
 
 ---
 
@@ -190,7 +190,7 @@ Legende: 🟢 1 Tag · 🟡 2–3 Tage · 🔴 Stretch (Ende Woche) · ✅ Erled
 | 4 | FIT-File Support | 🟢 | Öffnet Garmin-Zielgruppe |
 | 5 | Marker-Icon wählbar | 🟢 | Kleine Sache, große Personalisierung |
 | 6 | ~~Schummerung (Hillshade)~~ | ✅ | — |
-| 7 | Outro mit Gesamtstats | 🟢 | Perfektes letztes Frame für Social |
+| 7 | ~~Outro mit Gesamtstats~~ | ✅ | — |
 | 8 | ~~Route anonymisieren~~ | ✅ | — |
 | 9 | ~~Satellitenbild als Hintergrund~~ | ✅ | — |
 | 10 | Keyboard Shortcuts | 🟢 | Macht die App sofort professioneller |

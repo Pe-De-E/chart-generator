@@ -225,9 +225,11 @@ export interface RouteMapAnimationConfig {
   showNorthArrow: boolean;
   showScaleBar: boolean;
   showMapFade: boolean;
-  // Intro / Outro duration
+  // Intro / Outro duration + stats card
   introDurationSec: number;
   outroDurationSec: number;
+  showOutroStats: boolean;  // show stats card on outro (or intro when swapped)
+  swapIntroOutro: boolean;  // swap: stats first, title last
   // Route halo/outline
   routeHalo: boolean;
   routeHaloOpacity: number;
@@ -354,9 +356,11 @@ export const DEFAULT_ROUTEMAP_ANIMATION_CONFIG: RouteMapAnimationConfig = {
   showNorthArrow: true,
   showScaleBar: true,
   showMapFade: true,
-  // Intro / Outro duration
+  // Intro / Outro duration + stats card
   introDurationSec: 1,
   outroDurationSec: 1.5,
+  showOutroStats: false,
+  swapIntroOutro: false,
   // Route halo/outline
   routeHalo: false,
   routeHaloOpacity: 0.25,
@@ -840,24 +844,67 @@ const { roadSvg, isLoading: roadLoading } = useRoadLayer(
   contourMapHeight,
 )
 
-// Animation phases: Title (optional) → Chart animation → Outro (full image)
+// Animation phases: Intro (optional) → Chart animation → Outro (full image)
 const hasTitleCard = computed(() => !!props.chartTitle.trim())
+const showOutroStats = computed(() => props.animationConfig.showOutroStats ?? false)
+const swapIntroOutro = computed(() => props.animationConfig.swapIntroOutro ?? false)
+
+// What content appears in each phase (depends on swap toggle)
+// Normal: intro = title card, outro = stats card
+// Swapped: intro = stats card, outro = title card
+const hasIntroContent = computed(() =>
+  swapIntroOutro.value ? showOutroStats.value : hasTitleCard.value
+)
+const hasOutroContent = computed(() =>
+  swapIntroOutro.value ? hasTitleCard.value : showOutroStats.value
+)
+
+// Total route stats (computed once for outro stats card)
+const totalRouteStats = computed(() => {
+  if (props.routePoints.length < 2 || props.chartData.length < 2) {
+    return { distance: 0, elevGain: 0, elevLoss: 0, totalTimeMs: null as number | null }
+  }
+  const totalDistance = props.routePoints[props.routePoints.length - 1].distance
+  let elevGain = 0, elevLoss = 0
+  for (let i = 1; i < props.chartData.length; i++) {
+    const diff = props.chartData[i].value - props.chartData[i - 1].value
+    if (diff > 0) elevGain += diff
+    else elevLoss += diff
+  }
+  const lastTime = props.routePoints[props.routePoints.length - 1].time
+  return { distance: totalDistance, elevGain, elevLoss, totalTimeMs: lastTime ?? null }
+})
+
 const chartDurationMs = computed(() => props.animationConfig.duration * 1000)
 const introDurationMs = computed(() =>
-  hasTitleCard.value ? (props.animationConfig.introDurationSec ?? 1) * 1000 : 0
+  hasIntroContent.value ? (props.animationConfig.introDurationSec ?? 1) * 1000 : 0
 )
 const outroDurationMs = computed(() => (props.animationConfig.outroDurationSec ?? 1.5) * 1000)
 const totalDurationMs = computed(() =>
   chartDurationMs.value + introDurationMs.value + outroDurationMs.value
 )
-// titleEnd: fraction at which title phase ends (0 if no title)
+// introEnd: fraction at which intro phase ends (0 if no intro content)
 const titleEnd = computed(() =>
-  hasTitleCard.value ? introDurationMs.value / totalDurationMs.value : 0
+  hasIntroContent.value ? introDurationMs.value / totalDurationMs.value : 0
 )
 // animEnd: fraction at which the animation phase ends (outro starts here)
 const animEnd = computed(() =>
   (introDurationMs.value + chartDurationMs.value) / totalDurationMs.value
 )
+
+// Build the outroOverlay options (for stats card)
+function buildOutroOverlayOptions(opacity: number): CombinedFrameOptions['outroOverlay'] {
+  if (!showOutroStats.value) return undefined
+  return {
+    title: props.chartTitle || undefined,
+    totalDistance: totalRouteStats.value.distance,
+    totalElevGain: totalRouteStats.value.elevGain,
+    totalElevLoss: totalRouteStats.value.elevLoss,
+    totalTimeMs: totalRouteStats.value.totalTimeMs,
+    opacity,
+    color: props.animationConfig.titleColor || '#ffffff',
+  }
+}
 
 // Animation settings for the composable
 const animationSettings = computed<AnimationOptions>(() => ({
@@ -1034,21 +1081,34 @@ const animationSvg = computed(() => {
 
   const progress = animationProgress.value
 
-  // Phase 1: Title card — clean background with title overlay (no route yet)
-  if (hasTitleCard.value && progress <= titleEnd.value) {
-    const titleProgress = titleEnd.value > 0 ? progress / titleEnd.value : 1
-    return generateCombinedFrame(buildFrameOptions(0, {
-      sceneOpacity: 1,
-      titleOverlay: {
-        text: props.chartTitle,
-        opacity: getTitleCardOpacity(titleProgress),
-        color: props.animationConfig.titleColor || '#ffffff',
-      },
-      showElevationMarker: false,
-      showMapMarker: false,
-      showElevationLabels: false,
-      showDistanceLabels: false,
-    }))
+  const swap = swapIntroOutro.value
+  const titleColor = props.animationConfig.titleColor || '#ffffff'
+
+  // Phase 1: Intro card — title (normal) or stats (swapped)
+  if (hasIntroContent.value && progress <= titleEnd.value) {
+    const introProgress = titleEnd.value > 0 ? progress / titleEnd.value : 1
+    const cardOpacity = getTitleCardOpacity(introProgress)
+    if (swap) {
+      // Stats card on clean background
+      return generateCombinedFrame(buildFrameOptions(0, {
+        sceneOpacity: 1,
+        outroOverlay: buildOutroOverlayOptions(cardOpacity),
+        showElevationMarker: false,
+        showMapMarker: false,
+        showElevationLabels: false,
+        showDistanceLabels: false,
+      }))
+    } else {
+      // Title card on clean background
+      return generateCombinedFrame(buildFrameOptions(0, {
+        sceneOpacity: 1,
+        titleOverlay: { text: props.chartTitle, opacity: cardOpacity, color: titleColor },
+        showElevationMarker: false,
+        showMapMarker: false,
+        showElevationLabels: false,
+        showDistanceLabels: false,
+      }))
+    }
   }
 
   // Phase 2: Chart animation — route reveals from start to finish
@@ -1062,17 +1122,27 @@ const animationSvg = computed(() => {
     const fadeIn = fadeInT * fadeInT
 
     return generateCombinedFrame(buildFrameOptions(chartProgress, {
-      sceneOpacity: hasTitleCard.value ? fadeIn : undefined,
+      sceneOpacity: hasIntroContent.value ? fadeIn : undefined,
     }))
   }
 
   // Phase 3: Outro — full static image, fades in over first 30%
   const outroProgress = (progress - animEnd.value) / (1 - animEnd.value)
   const fadeIn = Math.min(1, outroProgress / 0.3)
+  if (swap && hasTitleCard.value) {
+    // Title card on completed route
+    return generateCombinedFrame(buildFrameOptions(1, {
+      showElevationMarker: false,
+      showMapMarker: false,
+      titleOverlay: { text: props.chartTitle, opacity: getTitleCardOpacity(outroProgress), color: titleColor },
+    }))
+  }
+  // Stats card (or plain outro) on completed route
   return generateCombinedFrame(buildFrameOptions(1, {
     showElevationMarker: false,
     showMapMarker: false,
     sceneOpacity: fadeIn,
+    outroOverlay: buildOutroOverlayOptions(fadeIn),
   }))
 })
 
@@ -1103,12 +1173,30 @@ async function startVideoExport(settings: ExportSettings) {
   const [width, height] = settings.resolution.split('x').map(Number)
 
   const hasTitle = !!props.chartTitle.trim()
-  const titleMs = hasTitle ? (props.animationConfig.introDurationSec ?? 1) * 1000 : 0
+  const exportShowOutroStats = props.animationConfig.showOutroStats ?? false
+  const exportSwap = props.animationConfig.swapIntroOutro ?? false
+  const exportHasIntroContent = exportSwap ? exportShowOutroStats : hasTitle
+  const exportTitleMs = exportHasIntroContent ? (props.animationConfig.introDurationSec ?? 1) * 1000 : 0
   const chartMs = props.animationConfig.duration * 1000
   const outroMs = (props.animationConfig.outroDurationSec ?? 1.5) * 1000
-  const totalMs = titleMs + chartMs + outroMs
-  const exportTitleEnd = titleMs / totalMs
-  const exportAnimEnd = (titleMs + chartMs) / totalMs
+  const totalMs = exportTitleMs + chartMs + outroMs
+  const exportTitleEnd = exportTitleMs / totalMs
+  const exportAnimEnd = (exportTitleMs + chartMs) / totalMs
+  const exportTitleColor = props.animationConfig.titleColor || '#ffffff'
+
+  const exportStats = totalRouteStats.value
+  function exportOutroOverlay(opacity: number): CombinedFrameOptions['outroOverlay'] {
+    if (!exportShowOutroStats) return undefined
+    return {
+      title: props.chartTitle || undefined,
+      totalDistance: exportStats.distance,
+      totalElevGain: exportStats.elevGain,
+      totalElevLoss: exportStats.elevLoss,
+      totalTimeMs: exportStats.totalTimeMs,
+      opacity,
+      color: exportTitleColor,
+    }
+  }
 
   await videoExport.exportVideo({
     width,
@@ -1118,22 +1206,31 @@ async function startVideoExport(settings: ExportSettings) {
     durationMs: totalMs,
     filename: `${props.chartTitle || 'route-map'}-reel.mp4`,
     renderFrame: (progress: number) => {
-      // Phase 1: Title — clean background with title overlay (no route yet)
-      if (hasTitle && progress <= exportTitleEnd) {
-        const titleProgress = exportTitleEnd > 0 ? progress / exportTitleEnd : 1
-        return generateCombinedFrame(buildFrameOptions(0, {
-          sceneOpacity: 1,
-          titleOverlay: {
-            text: props.chartTitle,
-            opacity: getTitleCardOpacity(titleProgress),
-            color: props.animationConfig.titleColor || '#ffffff',
-          },
-          showElevationMarker: false,
-          showMapMarker: false,
-          showElevationLabels: false,
-          showDistanceLabels: false,
-          showAllAnnotations: false,
-        }))
+      // Phase 1: Intro card
+      if (exportHasIntroContent && progress <= exportTitleEnd) {
+        const introProgress = exportTitleEnd > 0 ? progress / exportTitleEnd : 1
+        const cardOpacity = getTitleCardOpacity(introProgress)
+        if (exportSwap) {
+          return generateCombinedFrame(buildFrameOptions(0, {
+            sceneOpacity: 1,
+            outroOverlay: exportOutroOverlay(cardOpacity),
+            showElevationMarker: false,
+            showMapMarker: false,
+            showElevationLabels: false,
+            showDistanceLabels: false,
+            showAllAnnotations: false,
+          }))
+        } else {
+          return generateCombinedFrame(buildFrameOptions(0, {
+            sceneOpacity: 1,
+            titleOverlay: { text: props.chartTitle, opacity: cardOpacity, color: exportTitleColor },
+            showElevationMarker: false,
+            showMapMarker: false,
+            showElevationLabels: false,
+            showDistanceLabels: false,
+            showAllAnnotations: false,
+          }))
+        }
       }
 
       // Phase 2: Chart animation — route reveals from start to finish
@@ -1146,18 +1243,27 @@ async function startVideoExport(settings: ExportSettings) {
         const fadeIn = fadeInT * fadeInT
 
         return generateCombinedFrame(buildFrameOptions(chartProgress, {
-          sceneOpacity: hasTitle ? fadeIn : undefined,
+          sceneOpacity: exportHasIntroContent ? fadeIn : undefined,
           showAllAnnotations: false,
         }))
       }
 
-      // Phase 3: Outro — full static image, fades in over first 30%
+      // Phase 3: Outro — full static image
       const outroProgress = (progress - exportAnimEnd) / (1 - exportAnimEnd)
       const fadeIn = Math.min(1, outroProgress / 0.3)
+      if (exportSwap && hasTitle) {
+        return generateCombinedFrame(buildFrameOptions(1, {
+          showElevationMarker: false,
+          showMapMarker: false,
+          titleOverlay: { text: props.chartTitle, opacity: getTitleCardOpacity(outroProgress), color: exportTitleColor },
+          showAllAnnotations: false,
+        }))
+      }
       return generateCombinedFrame(buildFrameOptions(1, {
         showElevationMarker: false,
         showMapMarker: false,
         sceneOpacity: fadeIn,
+        outroOverlay: exportOutroOverlay(fadeIn),
         showAllAnnotations: false,
       }))
     },

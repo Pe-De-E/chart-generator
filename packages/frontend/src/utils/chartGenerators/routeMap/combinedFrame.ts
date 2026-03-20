@@ -160,6 +160,17 @@ export interface CombinedFrameOptions {
     color: string
   }
 
+  // Outro/intro stats card overlay (full-screen summary)
+  outroOverlay?: {
+    title?: string
+    totalDistance: number
+    totalElevGain: number
+    totalElevLoss: number
+    totalTimeMs: number | null
+    opacity: number   // 0-1
+    color: string
+  }
+
   // Stats overlay (distance, elevation gain, current elevation, time)
   showStatsOverlay?: boolean
   statsOverlayColor?: string
@@ -706,6 +717,87 @@ function generateStatsOverlay(
 }
 
 /**
+ * Generate a full-screen stats summary overlay for the outro / intro stats card.
+ * Renders a semi-transparent scrim + centered title + stat rows.
+ */
+function generateOutroStatsCard(
+  options: NonNullable<CombinedFrameOptions['outroOverlay']>,
+  width: number,
+  height: number,
+): string {
+  const { title, totalDistance, totalElevGain, totalElevLoss, totalTimeMs, opacity, color } = options
+  if (opacity <= 0) return ''
+
+  const escape = (s: string) => s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+
+  const shadow = `stroke="rgba(0,0,0,0.85)" stroke-width="7" paint-order="stroke fill" stroke-linejoin="round"`
+  const titleFontSize = Math.min(Math.round(width * 0.05), 54)
+  const valueFontSize = Math.min(Math.round(width * 0.07), 76)
+  const labelFontSize = Math.min(Math.round(width * 0.028), 30)
+  const cx = width / 2
+
+  const distStr = totalDistance >= 100
+    ? `${Math.round(totalDistance)} km`
+    : `${totalDistance.toFixed(1)} km`
+  const gainStr = `+${Math.round(totalElevGain)} m`
+  const lossStr = `-${Math.round(Math.abs(totalElevLoss))} m`
+
+  const rows: Array<{ icon: string; value: string; label: string }> = [
+    { icon: '↔', value: distStr, label: 'Strecke' },
+    { icon: '↑', value: gainStr, label: 'Aufstieg' },
+    { icon: '↓', value: lossStr, label: 'Abstieg' },
+  ]
+  if (totalTimeMs !== null) {
+    rows.push({ icon: '⏱', value: formatElapsedTime(totalTimeMs), label: 'Dauer' })
+  }
+
+  const rowBlockHeight = valueFontSize * 1.2 + labelFontSize * 1.6 + 28
+  const totalRowsHeight = rows.length * rowBlockHeight
+  const titleBlockHeight = title ? titleFontSize * 1.4 + 48 : 0
+  const contentHeight = titleBlockHeight + totalRowsHeight
+  let nextY = (height - contentHeight) / 2
+
+  const parts: string[] = []
+
+  // Scrim
+  parts.push(`<rect width="${width}" height="${height}" fill="rgba(0,0,0,${(0.72 * opacity).toFixed(2)})"/>`)
+
+  // Title + thin divider
+  if (title) {
+    const titleY = nextY + titleFontSize
+    parts.push(`<text x="${cx}" y="${titleY}" text-anchor="middle"
+      font-size="${titleFontSize}" font-weight="bold" fill="${color}" opacity="${opacity.toFixed(2)}"
+      font-family="system-ui, -apple-system, sans-serif"
+      ${shadow}>${escape(title)}</text>`)
+    const lineY = titleY + titleFontSize * 0.65
+    const lineHalfW = Math.round(width * 0.22)
+    parts.push(`<line x1="${cx - lineHalfW}" y1="${lineY}" x2="${cx + lineHalfW}" y2="${lineY}"
+      stroke="${color}" stroke-width="1.5" opacity="${(opacity * 0.3).toFixed(2)}"/>`)
+    nextY += titleBlockHeight
+  }
+
+  // Stat rows
+  for (const row of rows) {
+    const valueY = nextY + valueFontSize
+    const labelY = valueY + labelFontSize * 1.6
+    parts.push(`<text x="${cx}" y="${valueY}" text-anchor="middle"
+      font-size="${valueFontSize}" font-weight="bold" fill="${color}" opacity="${opacity.toFixed(2)}"
+      font-family="system-ui, -apple-system, sans-serif"
+      ${shadow}>${row.icon}  ${row.value}</text>`)
+    parts.push(`<text x="${cx}" y="${labelY}" text-anchor="middle"
+      font-size="${labelFontSize}" fill="${color}" opacity="${(opacity * 0.5).toFixed(2)}"
+      font-family="system-ui, -apple-system, sans-serif"
+      letter-spacing="3">${row.label.toUpperCase()}</text>`)
+    nextY += rowBlockHeight
+  }
+
+  return parts.join('\n')
+}
+
+/**
  * Remove near-duplicate consecutive points to smooth animation through GPS pauses.
  *
  * GPS devices keep recording during pauses, creating many clustered points at the
@@ -874,8 +966,9 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     waterLayerSvg,
     landCoverLayerSvg,
     roadLayerSvg,
-    // Title
+    // Title / outro stats card
     titleOverlay,
+    outroOverlay,
     // Stats
     showStatsOverlay = false,
     statsOverlayColor = '#ffffff',
@@ -1330,6 +1423,11 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     `
   }
 
+  // ── Outro / Intro Stats Card ──
+  const outroHtml = outroOverlay
+    ? generateOutroStatsCard(outroOverlay, width, height)
+    : ''
+
   // ── Compose ──
   const allDefs = [bg.defs, mapDefs, elevDefs].filter(Boolean).join('\n')
   const hasSceneOpacity = sceneOpacity != null && sceneOpacity < 1
@@ -1348,5 +1446,6 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     ${dividerHtml}
     ${opacityClose}
     ${titleHtml}
+    ${outroHtml}
   </svg>`
 }
