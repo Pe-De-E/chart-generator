@@ -47,6 +47,11 @@ export function useChartAnimation(
   // Animation frame tracking
   let animationFrameId: number | null = null
   let lastTimestamp: number | null = null
+  // Internal progress tracking (decoupled from Vue ref so we can throttle renders)
+  let actualProgress = progress.value
+  // Cap preview re-renders at 30fps — SVG generation is expensive
+  const RENDER_INTERVAL_MS = 1000 / 30
+  let lastRenderTimestamp: number | null = null
 
   // Computed values
   const totalFrames = computed(() => getFrameCount(animationOptions.value))
@@ -100,23 +105,28 @@ export function useChartAnimation(
 
     if (lastTimestamp === null) {
       lastTimestamp = timestamp
+      lastRenderTimestamp = timestamp
     }
 
     const deltaMs = (timestamp - lastTimestamp) * playbackSpeed.value
     lastTimestamp = timestamp
 
-    // Calculate new progress
-    const newTimeMs = currentTimeMs.value + deltaMs
-    const newProgress = Math.min(newTimeMs / animationOptions.value.durationMs, 1)
+    // Advance internal progress (always accurate, no Vue overhead)
+    actualProgress = Math.min(actualProgress + deltaMs / animationOptions.value.durationMs, 1)
 
-    // Apply easing for display (but store linear progress for seeking)
-    progress.value = newProgress
+    // Push to Vue ref at 30fps max — limits SVG re-generation to every ~33ms
+    const timeSinceRender = timestamp - (lastRenderTimestamp ?? 0)
+    if (timeSinceRender >= RENDER_INTERVAL_MS || actualProgress >= 1) {
+      progress.value = actualProgress
+      lastRenderTimestamp = timestamp
+    }
 
     // Check if animation is complete
-    if (newProgress >= 1) {
+    if (actualProgress >= 1) {
       isPlaying.value = false
       progress.value = 1
       lastTimestamp = null
+      lastRenderTimestamp = null
       return
     }
 
@@ -128,15 +138,20 @@ export function useChartAnimation(
   function play() {
     if (progress.value >= 1) {
       progress.value = 0
+      actualProgress = 0
+    } else {
+      actualProgress = progress.value
     }
     isPlaying.value = true
     lastTimestamp = null
+    lastRenderTimestamp = null
     animationFrameId = requestAnimationFrame(animationLoop)
   }
 
   function pause() {
     isPlaying.value = false
     lastTimestamp = null
+    lastRenderTimestamp = null
     if (animationFrameId !== null) {
       cancelAnimationFrame(animationFrameId)
       animationFrameId = null
@@ -154,10 +169,13 @@ export function useChartAnimation(
   function reset() {
     pause()
     progress.value = 0
+    actualProgress = 0
   }
 
   function seekTo(newProgress: number) {
-    progress.value = Math.max(0, Math.min(1, newProgress))
+    const clamped = Math.max(0, Math.min(1, newProgress))
+    actualProgress = clamped
+    progress.value = clamped
   }
 
   function seekToFrame(frame: number) {
