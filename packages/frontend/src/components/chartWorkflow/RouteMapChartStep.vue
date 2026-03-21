@@ -705,7 +705,11 @@ const contourRouteBounds = computed(() => {
   if (props.routePoints.length < 2) return null
   return calculateRouteBounds(props.routePoints)
 })
-const contourMapHeight = computed(() => Math.round(1920 * props.animationConfig.mapHeightRatio))
+const contourMapHeight = computed(() =>
+  props.animationConfig.showElevationChart
+    ? Math.round(1920 * props.animationConfig.mapHeightRatio)
+    : 1920
+)
 const contourProjParams = computed(() => {
   if (!contourRouteBounds.value) return null
   return getProjectionParams(contourRouteBounds.value, {
