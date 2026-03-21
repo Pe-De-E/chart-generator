@@ -1,4 +1,4 @@
-# Run unit tests + E2E before every push (~3 min)
-# Use --no-verify to skip in emergencies
-pnpm --filter @chart-generator/frontend test --run && \
+# Run unit tests + E2E before pushing (~3 min)
+# Skip with: git push --no-verify
+pnpm --filter @chart-generator/frontend test:coverage && \
 pnpm --filter @chart-generator/frontend test:e2e
