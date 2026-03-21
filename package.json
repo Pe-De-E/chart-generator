@@ -20,10 +20,12 @@
     "test:coverage": "pnpm --filter @chart-generator/frontend test:coverage && pnpm --filter @chart-generator/backend test:coverage",
     "test:e2e": "pnpm --filter @chart-generator/frontend test:e2e",
     "test:ct": "pnpm --filter @chart-generator/frontend test:ct",
-    "sonar:scan": "node scripts/sonar-scan.js"
+    "sonar:scan": "node scripts/sonar-scan.js",
+    "prepare": "husky"
   },
   "devDependencies": {
     "concurrently": "^8.2.0",
+    "husky": "^9.1.7",
     "sharp": "^0.34.5",
     "sonarqube-scanner": "3.5.0"
   }
