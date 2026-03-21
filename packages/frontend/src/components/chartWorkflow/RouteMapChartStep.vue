@@ -1099,6 +1099,10 @@ function buildFrameOptions(progress: number, overrides: Partial<CombinedFrameOpt
     animationMode: cfg.animationMode,
     timeArray: props.timeArray,
     gradientSensitivity: cfg.gradientSensitivity,
+    effortConfig: cfg.effortConfig,
+    // Pan-zoom for elevation section
+    elevationPanZoomEnabled: cfg.panZoomEnabled,
+    elevationPanZoomConfig: { zoomLevel: cfg.panZoomZoomLevel, zoomOutStart: cfg.panZoomZoomOutStart },
     // Elevation visibility
     showElevationChart: cfg.showElevationChart ?? true,
     // Divider

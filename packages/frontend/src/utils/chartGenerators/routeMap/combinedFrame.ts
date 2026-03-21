@@ -12,6 +12,8 @@ import type { Annotation, BackgroundType, PanZoomConfig } from '../elevationChar
 import type { RouteLineStyle } from './routeLine'
 import type { MapCameraConfig } from './mapCamera'
 import { generateBackgroundElements } from '../elevationChart/background'
+import { generateEffortCurve } from '../elevationChart/effort'
+import { calculateCameraViewport } from '../elevationChart/panZoom'
 import { projectRouteToSvg, getProjectionParams } from './projection'
 import type { RouteBounds } from './projection'
 import { generateGeoLayers } from './geoFeatures'
@@ -92,6 +94,15 @@ export interface CombinedFrameOptions {
   animationMode?: 'uniform' | 'time-based' | 'gradient' | 'effort'
   timeArray?: number[]
   gradientSensitivity?: number
+  // Effort mode visual effects
+  effortConfig?: {
+    variableStroke: boolean
+    variableStrokeIntensity: number
+    colorGradient: boolean
+    colorGradientIntensity: number
+    glowAura: boolean
+    glowAuraIntensity: number
+  }
 
   // Pan-zoom for elevation section
   elevationPanZoomEnabled?: boolean
@@ -1015,6 +1026,10 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     animationMode = 'uniform',
     timeArray,
     gradientSensitivity = 3,
+    effortConfig,
+    // Pan-zoom for elevation section
+    elevationPanZoomEnabled = false,
+    elevationPanZoomConfig,
     // Elevation visibility
     showElevationChart = true,
     // Divider
@@ -1337,50 +1352,154 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
         </linearGradient>`
       : ''
 
-    elevDefs = `
-      ${gradientDef}
-      <clipPath id="${elevClipId}">
-        <rect x="0" y="${mapHeight}" width="${fullClipWidth}" height="${elevHeight}"/>
-      </clipPath>
-    `
+    // Effort mode elements (use offset points so they align with the elevation section)
+    const isEffortMode = animationMode === 'effort' && !!effortConfig
+    const effortElements = isEffortMode
+      ? generateEffortCurve(offsetPoints, chartData, curveColor, effortConfig!)
+      : { defs: '', curve: '', glowFilter: '' }
 
-    // Labels
-    const elevLabelsHtml = showElevationLabels
-      ? generateElevationLabels(chartData, offsetChartArea, leftPadding, elevationLabelColor)
-      : ''
-    const distLabelsHtml = showDistanceLabels
-      ? generateCurveDistanceLabels(chartData, offsetChartArea, totalDistanceKm, distanceLabelColor)
-      : ''
+    // ── Pan-Zoom path: nested SVG in local (non-offset) coordinate space ──
+    if (elevationPanZoomEnabled && elevationPanZoomConfig) {
+      // Work in local coords (0 … elevHeight) so calculateCameraViewport gets correct dimensions
+      const markerLocal = getMarkerPosition(viewBoxPoints, effectiveProgress)
+      const camera = calculateCameraViewport(
+        effectiveProgress,
+        elevationPanZoomConfig,
+        elevChartArea,
+        markerLocal,
+        width,
+        elevHeight,
+      )
 
-    // Curve rendering: colored segments or standard monochrome
-    let curveElements: string
-    if (elevationCurveColoring) {
-      const smoothedForColor = smoothViewBoxPointsY(offsetPoints)
-      const coloredArea = showAreaFill
-        ? generateColoredElevationArea(smoothedForColor, offsetChartArea, elevationColorIntensity)
+      const zoomedMarkerSize = scaledMarkerSize / camera.scale
+      const zoomedMarkerStroke = markerStrokeWidth / camera.scale
+
+      // Effort elements in local coords for pan-zoom
+      const effortLocal = isEffortMode
+        ? generateEffortCurve(viewBoxPoints, chartData, curveColor, effortConfig!)
+        : { defs: '', curve: '', glowFilter: '' }
+
+      const markerGlowLocal = isEffortMode && effortConfig!.glowAura
+        ? `filter="url(#${effortLocal.glowFilter})"`
         : ''
-      const coloredLine = generateColoredElevationLine(smoothedForColor, elevationColorIntensity, strokeWidth)
-      curveElements = `${coloredArea}\n${coloredLine}`
+
+      const smoothLineLocal = pointsToSmoothPath(viewBoxPoints)
+      const smoothAreaLocal = pointsToSmoothAreaPath(viewBoxPoints, elevChartArea)
+
+      // Clip progress in local coords
+      const localClipProgress = elevationClipProgress ?? effectiveProgress
+      const localClipWidth = elevChartArea.x + elevChartArea.width * localClipProgress
+      const localClipId = 'combined-elev-panzoom-clip'
+
+      // Curve in local coords
+      let localCurveElements: string
+      if (isEffortMode) {
+        const areaFill = showAreaFill ? `<path d="${smoothAreaLocal}" fill="url(#${elevGradientId})"/>` : ''
+        localCurveElements = `${areaFill}${effortLocal.curve}`
+      } else if (elevationCurveColoring) {
+        const smoothedForColor = smoothViewBoxPointsY(viewBoxPoints)
+        const coloredArea = showAreaFill
+          ? generateColoredElevationArea(smoothedForColor, elevChartArea, elevationColorIntensity)
+          : ''
+        const coloredLine = generateColoredElevationLine(smoothedForColor, elevationColorIntensity, strokeWidth)
+        localCurveElements = `${coloredArea}\n${coloredLine}`
+      } else {
+        const areaFill = showAreaFill ? `<path d="${smoothAreaLocal}" fill="url(#${elevGradientId})"/>` : ''
+        localCurveElements = `${areaFill}
+          <path d="${smoothLineLocal}" fill="none" stroke="${curveColor}"
+                stroke-width="${strokeWidth}" stroke-linejoin="round" stroke-linecap="round"/>`
+      }
+
+      // Labels in local coords (elevChartArea without offset)
+      const elevLabelsLocal = showElevationLabels
+        ? generateElevationLabels(chartData, elevChartArea, leftPadding, elevationLabelColor)
+        : ''
+      const distLabelsLocal = showDistanceLabels
+        ? generateCurveDistanceLabels(chartData, elevChartArea, totalDistanceKm, distanceLabelColor)
+        : ''
+
+      // defs are embedded inside the nested SVG; outer defs remain empty for this section
+      elevDefs = ''
+      elevContent = `
+        <svg x="0" y="${mapHeight}" width="${width}" height="${elevHeight}"
+             viewBox="${camera.x} ${camera.y} ${camera.w} ${camera.h}"
+             preserveAspectRatio="xMidYMid meet" overflow="hidden">
+          <defs>
+            ${effortLocal.defs}
+            ${gradientDef}
+            <clipPath id="${localClipId}">
+              <rect x="0" y="0" width="${localClipWidth}" height="${elevHeight}"/>
+            </clipPath>
+          </defs>
+          ${elevLabelsLocal}
+          ${distLabelsLocal}
+          <g clip-path="url(#${localClipId})">
+            ${localCurveElements}
+          </g>
+          ${showElevationMarker && markerLocal ? `
+            <circle ${markerGlowLocal} cx="${markerLocal.x}" cy="${markerLocal.y}"
+                    r="${zoomedMarkerSize}" fill="${elevationMarkerColor}"
+                    stroke="${curveColor}" stroke-width="${zoomedMarkerStroke}"/>
+          ` : ''}
+        </svg>
+      `
     } else {
-      const areaFillElement = showAreaFill
-        ? `<path d="${smoothAreaPath}" fill="url(#${elevGradientId})"/>`
-        : ''
-      curveElements = `${areaFillElement}
-        <path d="${smoothLinePath}" fill="none" stroke="${curveColor}"
-              stroke-width="${strokeWidth}" stroke-linejoin="round" stroke-linecap="round"/>`
-    }
+      // ── Standard path (no pan-zoom) ──
+      elevDefs = `
+        ${effortElements.defs}
+        ${gradientDef}
+        <clipPath id="${elevClipId}">
+          <rect x="0" y="${mapHeight}" width="${fullClipWidth}" height="${elevHeight}"/>
+        </clipPath>
+      `
 
-    elevContent = `
-      ${elevLabelsHtml}
-      ${distLabelsHtml}
-      <g clip-path="url(#${elevClipId})">
-        ${curveElements}
-      </g>
-      ${showElevationMarker && markerPoint ? `
-        <circle cx="${markerPoint.x}" cy="${markerPoint.y}" r="${scaledMarkerSize}"
-                fill="${elevationMarkerColor}" stroke="${curveColor}" stroke-width="${markerStrokeWidth}"/>
-      ` : ''}
-    `
+      // Labels
+      const elevLabelsHtml = showElevationLabels
+        ? generateElevationLabels(chartData, offsetChartArea, leftPadding, elevationLabelColor)
+        : ''
+      const distLabelsHtml = showDistanceLabels
+        ? generateCurveDistanceLabels(chartData, offsetChartArea, totalDistanceKm, distanceLabelColor)
+        : ''
+
+      // Curve rendering
+      const markerGlow = isEffortMode && effortConfig!.glowAura
+        ? `filter="url(#${effortElements.glowFilter})"`
+        : ''
+
+      let curveElements: string
+      if (isEffortMode) {
+        const areaFillElement = showAreaFill
+          ? `<path d="${smoothAreaPath}" fill="url(#${elevGradientId})"/>`
+          : ''
+        curveElements = `${areaFillElement}${effortElements.curve}`
+      } else if (elevationCurveColoring) {
+        const smoothedForColor = smoothViewBoxPointsY(offsetPoints)
+        const coloredArea = showAreaFill
+          ? generateColoredElevationArea(smoothedForColor, offsetChartArea, elevationColorIntensity)
+          : ''
+        const coloredLine = generateColoredElevationLine(smoothedForColor, elevationColorIntensity, strokeWidth)
+        curveElements = `${coloredArea}\n${coloredLine}`
+      } else {
+        const areaFillElement = showAreaFill
+          ? `<path d="${smoothAreaPath}" fill="url(#${elevGradientId})"/>`
+          : ''
+        curveElements = `${areaFillElement}
+          <path d="${smoothLinePath}" fill="none" stroke="${curveColor}"
+                stroke-width="${strokeWidth}" stroke-linejoin="round" stroke-linecap="round"/>`
+      }
+
+      elevContent = `
+        ${elevLabelsHtml}
+        ${distLabelsHtml}
+        <g clip-path="url(#${elevClipId})">
+          ${curveElements}
+        </g>
+        ${showElevationMarker && markerPoint ? `
+          <circle ${markerGlow} cx="${markerPoint.x}" cy="${markerPoint.y}" r="${scaledMarkerSize}"
+                  fill="${elevationMarkerColor}" stroke="${curveColor}" stroke-width="${markerStrokeWidth}"/>
+        ` : ''}
+      `
+    }
   }
 
   // ── Divider ──
