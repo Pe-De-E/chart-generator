@@ -1,4 +1,4 @@
-# Run unit tests + E2E before pushing (~3 min)
+# Run unit tests before pushing (~20s)
+# E2E tests run in CI — too slow and infrastructure-dependent for local hooks
 # Skip with: git push --no-verify
-pnpm --filter @chart-generator/frontend test:coverage && \
-pnpm --filter @chart-generator/frontend test:e2e
+pnpm --filter @chart-generator/frontend test:coverage
