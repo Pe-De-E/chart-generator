@@ -12,25 +12,6 @@
         </div>
 
         <v-row>
-          <!-- Elevation Chart Option -->
-          <v-col cols="12" sm="6">
-            <v-card
-              variant="outlined"
-              class="chart-type-card pa-4 text-center"
-              :class="{ 'selected': selectedType === 'elevation' }"
-              @click="selectType('elevation')"
-              hover
-            >
-              <v-icon size="64" color="primary" class="mb-3">
-                mdi-terrain
-              </v-icon>
-              <div class="text-h6 mb-2">Höhenprofil (GPX)</div>
-              <div class="text-caption text-medium-emphasis">
-                Erstellen Sie ein Höhenprofil aus einer GPX-Datei
-              </div>
-            </v-card>
-          </v-col>
-
           <!-- Route Map Option -->
           <v-col cols="12" sm="6">
             <v-card
@@ -45,7 +26,7 @@
               </v-icon>
               <div class="text-h6 mb-2">Routenkarte (GPX)</div>
               <div class="text-caption text-medium-emphasis">
-                Karte + Hoehenprofil aus einer GPX-Datei
+                Karte + Höhenprofil aus einer GPX-Datei
               </div>
             </v-card>
           </v-col>
@@ -111,9 +92,9 @@ const dialogVisible = computed({
   set: (value) => emit('update:modelValue', value)
 })
 
-const selectedType = ref<'elevation' | 'route-map' | 'terrain' | null>(null)
+const selectedType = ref<'route-map' | 'terrain' | null>(null)
 
-function selectType(type: 'elevation' | 'route-map' | 'terrain') {
+function selectType(type: 'route-map' | 'terrain') {
   selectedType.value = type
 }
 
@@ -125,9 +106,7 @@ function closeDialog() {
 function confirmSelection() {
   // Dispatch so same-route generators (GPX, Elevation) reset their wizard
   window.dispatchEvent(new CustomEvent('chart:new'))
-  if (selectedType.value === 'elevation') {
-    router.push({ name: 'Elevation' })
-  } else if (selectedType.value === 'route-map') {
+  if (selectedType.value === 'route-map') {
     router.push({ name: 'GPX', query: { mode: 'route-map' } })
   } else if (selectedType.value === 'terrain') {
     router.push({ name: 'GPX', query: { mode: 'terrain' } })

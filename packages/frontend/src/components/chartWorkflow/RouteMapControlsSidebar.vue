@@ -629,6 +629,39 @@
         <div v-show="activeTab === 4">
           <div class="tab-panel">
             <div class="section-label">Farben</div>
+            <!-- Theme Selector -->
+            <v-select
+              :model-value="selectedThemeId"
+              :items="themeOptions"
+              item-title="name"
+              item-value="id"
+              label="Theme"
+              variant="outlined"
+              density="compact"
+              hide-details
+              class="mb-2"
+              @update:model-value="applyTheme"
+            >
+              <template v-slot:item="{ props: itemProps, item }">
+                <v-list-item v-bind="itemProps">
+                  <template v-slot:prepend>
+                    <div class="theme-preview-swatch mr-3" :style="{ background: item.raw.preview }"></div>
+                  </template>
+                  <v-list-item-subtitle>{{ item.raw.description }}</v-list-item-subtitle>
+                </v-list-item>
+              </template>
+              <template v-slot:selection="{ item }">
+                <div class="d-flex align-center">
+                  <div class="theme-preview-swatch mr-2" :style="{ background: item.raw.preview }"></div>
+                  {{ item.raw.name }}
+                </div>
+              </template>
+              <template v-slot:append-item>
+                <v-divider class="my-2" />
+                <v-list-item prepend-icon="mdi-content-save-plus" title="Als Theme speichern" @click="showSaveThemeDialog = true" />
+              </template>
+            </v-select>
+            <v-divider class="mb-3" />
             <v-menu :close-on-content-click="false">
               <template v-slot:activator="{ props: menuProps }">
                 <v-btn v-bind="menuProps" variant="outlined" block>
@@ -917,16 +950,24 @@
       </div>
     </div>
   </v-navigation-drawer>
+
+  <SaveThemeDialog
+    v-model="showSaveThemeDialog"
+    :loading="themesLoading"
+    @save="handleSaveTheme"
+  />
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick } from 'vue'
+import { ref, computed, nextTick, onMounted } from 'vue'
 import type { PropType } from 'vue'
 import type { PlaybackSpeed } from '../../composables/useChartAnimation'
 import { useRouteMapConfig } from '../../composables/useRouteMapConfig'
 import { useLoadingProgress } from '../../composables/useLoadingProgress'
+import { useElevationThemes } from '../../composables/useElevationThemes'
 import { uploadService } from '../../services/upload.service'
 import type { RouteMapAnimationConfig } from './RouteMapChartStep.vue'
+import SaveThemeDialog from './SaveThemeDialog.vue'
 import type { Annotation, AnnotationType } from '../../utils/chartGenerators/elevationChart/types'
 import { detectAnnotations } from '../../utils/chartGenerators/elevationChart/annotationDetection'
 
@@ -1072,6 +1113,8 @@ const controlsCollapsed = computed({
 })
 const activeTab = ref(0)
 const imageUploading = ref(false)
+const selectedThemeId = ref<string | null>(null)
+const showSaveThemeDialog = ref(false)
 
 // Annotation local state
 const isDetecting = ref(false)
@@ -1383,6 +1426,89 @@ function annotationTypeColor(type: AnnotationType): string {
   return colors[type] ?? 'grey'
 }
 
+// --- Theme system ---
+
+const {
+  themes: elevationThemes,
+  loading: themesLoading,
+  fetchThemes,
+  getThemeById,
+  createThemeFromCurrentSettings,
+} = useElevationThemes()
+
+const themeOptions = computed(() =>
+  elevationThemes.value.map((t) => ({
+    id: t.id,
+    name: t.name,
+    description: 'description' in t ? t.description : '',
+    preview: t.preview,
+    isSystem: 'isSystem' in t && t.isSystem,
+  }))
+)
+
+onMounted(() => {
+  fetchThemes()
+})
+
+function applyTheme(themeId: string) {
+  const theme = getThemeById(themeId)
+  if (!theme) return
+  selectedThemeId.value = themeId
+  const { tokens } = theme
+  updateAnimationConfig({
+    duration: tokens.animation.duration,
+    easing: tokens.animation.easing,
+    curveColor: tokens.curve.color,
+    backgroundColor: tokens.background.color,
+    backgroundType: tokens.background.type,
+    gradientColor: tokens.background.gradientColor,
+    meshColor1: tokens.background.meshColors[0],
+    meshColor2: tokens.background.meshColors[1],
+    meshColor3: tokens.background.meshColors[2],
+    showElevationLabels: tokens.labels.showElevation,
+    elevationLabelColor: tokens.labels.elevationColor,
+    showDistanceLabels: tokens.labels.showDistance,
+    distanceLabelColor: tokens.labels.distanceColor,
+    patternColor: tokens.pattern.color,
+    patternOpacity: tokens.pattern.opacity,
+  })
+}
+
+async function handleSaveTheme(name: string, description: string) {
+  const cfg = props.animationConfig
+  let preview = cfg.backgroundColor
+  if (cfg.backgroundType === 'gradient') {
+    preview = `linear-gradient(180deg, ${cfg.backgroundColor} 0%, ${cfg.gradientColor} 100%)`
+  } else if (cfg.backgroundType === 'mesh') {
+    preview = `linear-gradient(135deg, ${cfg.meshColor1} 0%, ${cfg.meshColor2} 50%, ${cfg.meshColor3} 100%)`
+  }
+  await createThemeFromCurrentSettings(
+    name,
+    description || 'Eigenes Theme',
+    preview,
+    {
+      curve: { color: cfg.curveColor, strokeWidth: 6 },
+      marker: { size: cfg.markerSize, color: cfg.curveColor, show: cfg.showMarker },
+      background: {
+        type: (['solid', 'gradient', 'mesh'].includes(cfg.backgroundType)
+          ? cfg.backgroundType
+          : 'solid') as 'solid' | 'gradient' | 'mesh',
+        color: cfg.backgroundColor,
+        gradientColor: cfg.gradientColor,
+        meshColors: [cfg.meshColor1, cfg.meshColor2, cfg.meshColor3],
+      },
+      labels: {
+        elevationColor: cfg.elevationLabelColor,
+        distanceColor: cfg.distanceLabelColor,
+        showElevation: cfg.showElevationLabels,
+        showDistance: cfg.showDistanceLabels,
+      },
+      pattern: { color: cfg.patternColor, opacity: cfg.patternOpacity },
+      animation: { duration: cfg.duration, easing: cfg.easing },
+    }
+  )
+}
+
 // --- Image upload ---
 
 async function handleImageUpload(files: File[] | File | null) {
@@ -1620,6 +1746,14 @@ const imagePositionOptions = [
   height: 26px;
   border-radius: var(--radius-sm, 8px);
   border: 1px solid rgba(var(--v-border-color), 0.2);
+}
+
+.theme-preview-swatch {
+  width: 32px;
+  height: 20px;
+  border-radius: 4px;
+  border: 1px solid rgba(var(--v-border-color), 0.2);
+  flex-shrink: 0;
 }
 
 .image-preview-container {

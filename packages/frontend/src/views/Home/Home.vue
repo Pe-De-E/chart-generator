@@ -54,9 +54,7 @@ function createChart() {
 
 function loadChart(chartId: string) {
   const chart = charts.value.find(c => c.id === chartId)
-  if (chart?.type === 'elevation') {
-    router.push({ name: 'Elevation', query: { id: chartId } })
-  } else if (chart?.type === 'route-map') {
+  if (chart?.type === 'route-map') {
     router.push({ name: 'GPX', query: { id: chartId, mode: 'route-map' } })
   } else if (chart?.type === 'terrain-3d') {
     router.push({ name: 'GPX', query: { id: chartId, mode: 'terrain' } })
