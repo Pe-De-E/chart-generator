@@ -500,13 +500,18 @@ const statsBoxHeightSvg = computed(() => {
   return rows * STATS_ROW_HEIGHT + STATS_PADDING_Y
 })
 
+const effectiveMapHeightSvg = computed(() =>
+  props.animationConfig.showElevationChart
+    ? 1920 * (props.animationConfig.mapHeightRatio ?? 0.6)
+    : 1920
+)
+
 const dragHandleStyle = computed(() => {
   if (!previewRef.value) return {}
   const rect = previewRef.value.getBoundingClientRect()
   const scale = rect.width / 1080
-  const mapHeightSvg = 1920 * (props.animationConfig.mapHeightRatio ?? 0.6)
   const maxX = (1080 - STATS_BOX_WIDTH_SVG) * scale
-  const maxY = (mapHeightSvg - statsBoxHeightSvg.value) * scale
+  const maxY = (effectiveMapHeightSvg.value - statsBoxHeightSvg.value) * scale
   const boxX = (props.animationConfig.statsX ?? 1.0) * maxX
   const boxY = (props.animationConfig.statsY ?? 1.0) * maxY
   return {
@@ -523,9 +528,8 @@ function onStatsDragStart(e: MouseEvent) {
   isDragging.value = true
   const rect = previewRef.value.getBoundingClientRect()
   const scale = rect.width / 1080
-  const mapHeightSvg = 1920 * (props.animationConfig.mapHeightRatio ?? 0.6)
   const maxX = (1080 - STATS_BOX_WIDTH_SVG) * scale
-  const maxY = (mapHeightSvg - statsBoxHeightSvg.value) * scale
+  const maxY = (effectiveMapHeightSvg.value - statsBoxHeightSvg.value) * scale
   const currentLeftPx = (props.animationConfig.statsX ?? 1.0) * maxX
   const currentTopPx = (props.animationConfig.statsY ?? 1.0) * maxY
   dragOffset.value = {
@@ -540,9 +544,8 @@ function onStatsDragMove(e: MouseEvent) {
   if (!isDragging.value || !previewRef.value) return
   const rect = previewRef.value.getBoundingClientRect()
   const scale = rect.width / 1080
-  const mapHeightSvg = 1920 * (props.animationConfig.mapHeightRatio ?? 0.6)
   const maxX = (1080 - STATS_BOX_WIDTH_SVG) * scale
-  const maxY = (mapHeightSvg - statsBoxHeightSvg.value) * scale
+  const maxY = (effectiveMapHeightSvg.value - statsBoxHeightSvg.value) * scale
   const newLeftPx = e.clientX - rect.left - dragOffset.value.x
   const newTopPx = e.clientY - rect.top - dragOffset.value.y
   const newStatsX = Math.max(0, Math.min(1, newLeftPx / maxX))
