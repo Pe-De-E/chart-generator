@@ -46,9 +46,9 @@ Legende: 🟢 1 Tag · 🟡 2–3 Tage · 🔴 Stretch (Ende Woche) · ✅ Erled
 11. 🟢 **Farbthemen / Presets** — 5–8 vorgefertigte Farbschemata (Dark, Light, Topo, Neon, Vintage)
 12. 🟢 **Routenfarbe nach Herzfrequenz** — wenn GPX HR-Daten hat, Farbe = HR-Zone
 13. ✅ ~~**Routenfarbe nach Tempo** — langsam = kalt, schnell = warm~~
-14. 🟢 **Routenfarbe nach Steigung** — grün = flach, rot = steil (schon teilweise vorhanden)
-15. 🟢 **Strichstärke der Route** konfigurierbar — dünne elegante Linie vs. fette Sportlinie
-16. 🟢 **Gestrichelte Route** — Dash-Pattern wählbar (Punkte, Striche, custom)
+14. ✅ ~~**Routenfarbe nach Steigung** — grün = flach, rot = steil (`showElevationColoring` + `showSpeedColoring`)~~
+15. ✅ ~~**Strichstärke der Route** konfigurierbar — `routeWidth` Slider~~
+16. ✅ ~~**Gestrichelte Route** — `routeTrailDash` Pattern für die noch-nicht-gezeichnete Strecke~~
 17. 🟡 **Gradient entlang Route** — Farbe wechselt kontinuierlich von Start bis Ziel
 18. 🟡 **Hintergrundfarbe aus Bild extrahieren** — User lädt Foto hoch, App nimmt Hauptfarbe
 19. 🟡 **Schriftart wählbar** — System-Fonts + Google Fonts für Labels
@@ -74,7 +74,7 @@ Legende: 🟢 1 Tag · 🟡 2–3 Tage · 🔴 Stretch (Ende Woche) · ✅ Erled
 ## 🎬 Animation & Export (Relive: nur ein festes Format)
 
 31. 🟢 **Exportformat wählbar** — 9:16 (Reels), 1:1 (Feed), 16:9 (YouTube), 4:5 (Portrait)
-32. 🟢 **Animationsgeschwindigkeit** — Slider für fps / Gesamtdauer (schon vorhanden, verbessern)
+32. ✅ ~~**Animationsgeschwindigkeit** — `duration` Slider (1–30 Sek.), Easing wählbar~~
 33. 🟡 **Slow-Motion an Pässen** — automatisch langsamer werden bei steilen Segmenten
 34. 🟡 **Reverse-Animation** — Route rückwärts abspielen
 35. 🟡 **Loop-Modus** — Animation wiederholt sich nahtlos (gut für Social)
@@ -161,8 +161,8 @@ Legende: 🟢 1 Tag · 🟡 2–3 Tage · 🔴 Stretch (Ende Woche) · ✅ Erled
 86. ✅ ~~**Puls-Animation am Marker** — der Punkt "atmet" während er sich bewegt~~
 87. ✅ ~~**Route erscheint mit Zeichnen-Effekt** — Linie wird sichtbar gezeichnet~~
 88. ✅ ~~**Schatten unter Route-Linie** — dezenter Drop-Shadow für Tiefe~~
-89. 🟢 **Kartenrand-Vignette** — dunkler Rand-Gradient für kinematischen Look
-90. 🟢 **Start-Marker = grün, Ziel-Marker = rot** — klar unterscheidbar
+89. ✅ ~~**Kartenrand-Vignette** — `showMapFade` Gradient am unteren Kartenrand~~
+90. ✅ ~~**Start-Marker = grün, Ziel-Marker = rot** — klar unterscheidbar (`showStartEndLabels`)~~
 91. 🟢 **"Gerade hochgeladen"** Konfetti-Animation beim ersten Rendern
 92. 🟢 **Zeitstempel im Video** — läuft mit GPS-Zeit mit
 93. 🟡 **Kamera-Shake** — minimales Wackeln beim Chase-Mode für immersiveres Gefühl
@@ -178,6 +178,26 @@ Legende: 🟢 1 Tag · 🟡 2–3 Tage · 🔴 Stretch (Ende Woche) · ✅ Erled
 98. 🟡 **Galerie öffentlicher Routen** — User können ihr Video freigeben, andere sehen es
 99. 🟡 **Embed-Code** — fertige Animation als `<iframe>` einbetten
 100. ✅ ~~**Feedback-Button** direkt in der App — niedrigschwellig, geht an dich als Email~~
+
+---
+
+## ➕ Implementiert (nicht in ursprünglicher Liste)
+
+- ✅ ~~**Chase-Kamera** — Marker-Verfolgung mit Zoom-Out am Ende, optionale Rotation~~
+- ✅ ~~**Pan-Zoom (Kamerafahrt)** — Höhenprofil zoomt ins steilste Segment rein und wieder raus~~
+- ✅ ~~**Effort-Animationsmodus** — variable Strichstärke + Farbverlauf + Glow je nach Steigung~~
+- ✅ ~~**Hintergrundbild** — eigenes Foto als Hintergrund mit Blur, Helligkeit, Kontrast, Overlay~~
+- ✅ ~~**Nordpfeil** — automatisch ausgerichtet (`showNorthArrow`)~~
+- ✅ ~~**Maßstabsleiste** — geografisch korrekt berechnet (`showScaleBar`)~~
+- ✅ ~~**Höhenlinien (Konturen)** — aus AWS Terrarium Tiles, konfigurierbar~~
+- ✅ ~~**Wälder** — `natural=wood` + `landuse=forest` aus Overpass~~
+- ✅ ~~**Fahrtrichtungspfeil** — Pfeil am Marker dreht sich mit Route (`showDirection`)~~
+- ✅ ~~**Start/Ziel-Labels** — A/B Punkte einblendbar (`showStartEndLabels`)~~
+- ✅ ~~**Flüsse** — aus Overpass mit Glow-Effekt und variabler Strichstärke~~
+- ✅ ~~**Ortsgrenzen** — gestrichelte Polygon-Umrisse~~
+- ✅ ~~**Momente (Annotations)** — frei positionierbare Chips mit Leader-Line, Ghost-Preview~~
+- ✅ ~~**Route-Kontur (Halo)** — halbtransparente Outline unter der Route~~
+- ✅ ~~**Gradient/Time-based Animationsmodus** — Route animiert nach Steigung oder GPS-Zeit~~
 
 ---
 
