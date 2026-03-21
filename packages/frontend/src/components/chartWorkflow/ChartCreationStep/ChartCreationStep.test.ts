@@ -119,9 +119,10 @@ describe('ChartCreationStep.vue', () => {
 
     it('should display the chart title input with correct value', () => {
       const wrapper = createWrapper()
-      const titleInput = wrapper.find('.v-text-field')
-      expect(titleInput.exists()).toBe(true)
-      expect(titleInput.attributes('value')).toBe('Test Chart')
+      // Find the ChartSettingsCard and verify it received the chartTitle prop
+      const chartSettingsCard = wrapper.findComponent({ name: 'ChartSettingsCard' })
+      expect(chartSettingsCard.exists()).toBe(true)
+      expect(chartSettingsCard.props('chartTitle')).toBe('Test Chart')
     })
 
     it('should render all chart type buttons', () => {
@@ -177,14 +178,10 @@ describe('ChartCreationStep.vue', () => {
   describe('Event Emissions', () => {
     it('should emit update:chartTitle when title is changed', async () => {
       const wrapper = createWrapper()
-      const input = wrapper.find('.v-text-field')
-
-      // Set the value directly on the element
-      const inputElement = input.element as HTMLInputElement
-      inputElement.value = 'New Chart Title'
-
-      // Trigger the input event
-      await input.trigger('input')
+      // Find the ChartSettingsCard component and trigger the update:chartTitle event directly
+      const chartSettingsCard = wrapper.findComponent({ name: 'ChartSettingsCard' })
+      expect(chartSettingsCard.exists()).toBe(true)
+      await chartSettingsCard.vm.$emit('update:chartTitle', 'New Chart Title')
 
       expect(wrapper.emitted('update:chartTitle')).toBeTruthy()
       expect(wrapper.emitted('update:chartTitle')?.[0]).toEqual(['New Chart Title'])

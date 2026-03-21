@@ -186,7 +186,7 @@ describe('generateAnimationFrames', () => {
 
     // Last frame should exist and be valid SVG
     expect(lastFrame).toContain('<svg')
-    expect(lastFrame).toContain('polyline')
+    expect(lastFrame).toContain('path')
   })
 
   it('includes marker when showMarker is true', () => {

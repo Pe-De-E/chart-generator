@@ -74,8 +74,7 @@ describe('generateElevationChart', () => {
 
       expect(svg).toContain('id="elevation-line"')
       expect(svg).toContain('id="elevation-area"')
-      expect(svg).toContain('<polyline')
-      expect(svg).toContain('<polygon')
+      expect(svg).toContain('<path')
     })
 
     it('includes axes', () => {
@@ -226,8 +225,7 @@ describe('generateElevationChart', () => {
       const options = createSingleSeriesOptions(20, { silhouetteMode: true })
       const svg = generateElevationChart(options)
 
-      expect(svg).toContain('<polyline')
-      expect(svg).toContain('<polygon')
+      expect(svg).toContain('<path')
     })
   })
 

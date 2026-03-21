@@ -13,6 +13,7 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     css: true,
+    exclude: ['node_modules/**', 'dist/**', 'e2e/**', '**/*.ct.spec.ts'],
     server: {
       deps: {
         inline: ['vuetify']
@@ -26,6 +27,7 @@ export default defineConfig({
       exclude: [
         'node_modules/**',
         'dist/**',
+        'e2e/**',
         '**/*.config.ts',
         '**/*.d.ts',
         '**/types.ts',

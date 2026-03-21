@@ -113,7 +113,7 @@ describe('generateCombinedFrame', () => {
     const svg = generateCombinedFrame({ ...baseOptions, routePoints: [] })
     expect(svg).toContain('<svg')
     // Elevation should still render
-    expect(svg).toContain('<polyline')
+    expect(svg).toContain('<path')
   })
 
   it('handles empty chart data gracefully', () => {
