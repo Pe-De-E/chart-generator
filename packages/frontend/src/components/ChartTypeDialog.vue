@@ -40,7 +40,7 @@
               hover
             >
               <v-icon size="64" color="primary" class="mb-3">
-                mdi-mountain
+                mdi-summit
               </v-icon>
               <div class="text-h6 mb-2">3D Gelände (GPX)</div>
               <div class="text-caption text-medium-emphasis">
