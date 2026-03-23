@@ -164,6 +164,7 @@ export interface RouteMapAnimationConfig {
   distanceMarkerInterval: number;
   showStartEndLabels: boolean;
   mapHeightRatio: number;
+  showMapSection: boolean;
   showDivider: boolean;
   dividerColor: string;
   showElevationColoring: boolean;
@@ -310,6 +311,7 @@ export const DEFAULT_ROUTEMAP_ANIMATION_CONFIG: RouteMapAnimationConfig = {
   distanceMarkerInterval: 5,
   showStartEndLabels: false,
   mapHeightRatio: 0.6,
+  showMapSection: true,
   showDivider: false,
   dividerColor: '#ffffff33',
   showElevationColoring: false,
@@ -500,11 +502,13 @@ const statsBoxHeightSvg = computed(() => {
   return rows * STATS_ROW_HEIGHT + STATS_PADDING_Y
 })
 
-const effectiveMapHeightSvg = computed(() =>
-  props.animationConfig.showElevationChart
-    ? 1920 * (props.animationConfig.mapHeightRatio ?? 0.6)
+const effectiveMapHeightSvg = computed(() => {
+  const cfg = props.animationConfig
+  if (!(cfg.showMapSection ?? true)) return 0
+  return (cfg.showElevationChart ?? true)
+    ? 1920 * (cfg.mapHeightRatio ?? 0.6)
     : 1920
-)
+})
 
 const dragHandleStyle = computed(() => {
   if (!previewRef.value) return {}
@@ -708,11 +712,13 @@ const contourRouteBounds = computed(() => {
   if (props.routePoints.length < 2) return null
   return calculateRouteBounds(props.routePoints)
 })
-const contourMapHeight = computed(() =>
-  props.animationConfig.showElevationChart
-    ? Math.round(1920 * props.animationConfig.mapHeightRatio)
+const contourMapHeight = computed(() => {
+  const cfg = props.animationConfig
+  if (!(cfg.showMapSection ?? true)) return 0
+  return (cfg.showElevationChart ?? true)
+    ? Math.round(1920 * cfg.mapHeightRatio)
     : 1920
-)
+})
 const contourProjParams = computed(() => {
   if (!contourRouteBounds.value) return null
   return getProjectionParams(contourRouteBounds.value, {
@@ -1105,6 +1111,7 @@ function buildFrameOptions(progress: number, overrides: Partial<CombinedFrameOpt
     elevationPanZoomConfig: { zoomLevel: cfg.panZoomZoomLevel, zoomOutStart: cfg.panZoomZoomOutStart },
     // Elevation visibility
     showElevationChart: cfg.showElevationChart ?? true,
+    showMapSection: cfg.showMapSection ?? true,
     // Divider
     showDivider: cfg.showDivider,
     dividerColor: cfg.dividerColor,

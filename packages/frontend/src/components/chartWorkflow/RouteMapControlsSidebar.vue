@@ -162,8 +162,9 @@
         <div v-show="activeTab === 0">
           <div class="tab-panel">
             <div class="section-label">Layout</div>
-            <v-checkbox v-model="showElevationChart" label="Höhenprofil anzeigen" density="compact" hide-details color="primary" />
-            <template v-if="showElevationChart">
+            <v-checkbox v-model="showMapSection" label="Karte anzeigen" density="compact" hide-details color="primary" />
+            <v-checkbox v-model="showElevationChart" label="Höhenprofil anzeigen" density="compact" hide-details color="primary" class="mt-1" />
+            <template v-if="showElevationChart && showMapSection">
               <div class="height-control mt-1">
                 <v-slider v-model="mapHeightRatio" :min="0.3" :max="0.8" :step="0.05" hide-details thumb-label color="primary" />
                 <span class="text-caption">{{ Math.round(mapHeightRatio * 100) }}%</span>
@@ -1193,6 +1194,7 @@ const {
   distanceMarkerInterval,
   showStartEndLabels,
   showElevationChart,
+  showMapSection,
   mapHeightRatio,
   showDivider,
   dividerColor,

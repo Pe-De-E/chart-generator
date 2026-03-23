@@ -49,6 +49,7 @@ export interface CombinedFrameOptions {
   height: number                       // SVG height (default 1920)
   mapHeightRatio: number               // 0.4-0.8, default 0.6
   showElevationChart: boolean          // show/hide elevation curve section
+  showMapSection?: boolean             // show/hide map section (elevation-only mode)
 
   // Background (shared for entire frame)
   backgroundColor: string
@@ -215,6 +216,7 @@ export const DEFAULT_COMBINED_FRAME_OPTIONS: Partial<CombinedFrameOptions> = {
   height: 1920,
   mapHeightRatio: 0.6,
   showElevationChart: true,
+  showMapSection: true,
   backgroundColor: '#1a1a2e',
   backgroundType: 'solid',
   mapCameraMode: 'overview',
@@ -1032,6 +1034,7 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     elevationPanZoomConfig,
     // Elevation visibility
     showElevationChart = true,
+    showMapSection = true,
     // Divider
     showDivider = false,
     dividerColor = '#ffffff33',
@@ -1092,8 +1095,11 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     return routePoints.slice(startIdx, endIdx + 1)
   })()
 
-  // Layout split — if elevation is hidden, map takes full height
-  const mapHeight = showElevationChart ? Math.round(height * mapHeightRatio) : height
+  // Layout split
+  // - both visible: map takes mapHeightRatio, elevation gets the rest
+  // - map hidden (elevation-only): mapHeight = 0, elevation takes full height
+  // - elevation hidden: map takes full height
+  const mapHeight = !showMapSection ? 0 : (showElevationChart ? Math.round(height * mapHeightRatio) : height)
   const elevHeight = height - mapHeight
 
   // Remap progress based on animation mode
@@ -1131,7 +1137,7 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
   let mapContent = ''
   let mapDefs = ''
 
-  if (visibleRoutePoints.length >= 2) {
+  if (showMapSection && visibleRoutePoints.length >= 2) {
     const mapConfig = {
       width,
       height: mapHeight,
