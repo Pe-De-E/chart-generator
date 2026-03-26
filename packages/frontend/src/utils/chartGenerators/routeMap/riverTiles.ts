@@ -44,7 +44,14 @@ interface OverpassElement {
 
 // ── Overpass API ──────────────────────────────────────────────────────────────
 
-const OVERPASS_URL = '/overpass/interpreter'
+// Primary via Vite proxy; kumi.systems is a CORS-enabled mirror — used as fallback
+// when the primary returns 5xx or times out (e.g. after the IP was rate-limited).
+// DO NOT remove the fallback: without it, a temporary primary-server hiccup makes
+// rivers permanently invisible until the user restarts the dev server.
+const OVERPASS_URLS = [
+  '/overpass/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+]
 
 /**
  * Query the Overpass API for river and canal ways within the given bounds.
@@ -52,6 +59,7 @@ const OVERPASS_URL = '/overpass/interpreter'
  *
  * Goes through `enqueueOverpassRequest` — do NOT call fetch() directly here.
  * See overpassQueue.ts for why: concurrent layer loads trigger 504 → 429 loops.
+ * Tries each endpoint in order; falls back on 5xx or network error.
  */
 async function fetchRiverGeometries(bounds: RouteBounds): Promise<OverpassElement[]> {
   const { minLat, maxLon, maxLat, minLon } = bounds
@@ -64,14 +72,25 @@ async function fetchRiverGeometries(bounds: RouteBounds): Promise<OverpassElemen
   const body = `data=${encodeURIComponent(query)}`
 
   return enqueueOverpassRequest(async () => {
-    const response = await fetch(OVERPASS_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body,
-    })
-    if (!response.ok) throw new Error(`Overpass river fetch failed: ${response.status}`)
-    const data = await response.json()
-    return (data.elements || []) as OverpassElement[]
+    let lastError: Error = new Error('No Overpass endpoints available')
+    for (const url of OVERPASS_URLS) {
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body,
+        })
+        if (!response.ok) {
+          lastError = new Error(`Overpass river fetch failed: ${response.status}`)
+          continue // try next mirror
+        }
+        const data = await response.json()
+        return (data.elements || []) as OverpassElement[]
+      } catch (e) {
+        lastError = e instanceof Error ? e : new Error(String(e))
+      }
+    }
+    throw lastError
   })
 }
 

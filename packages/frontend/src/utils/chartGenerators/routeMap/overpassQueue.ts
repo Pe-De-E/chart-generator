@@ -19,8 +19,14 @@
  *
  * THE FIX: All Overpass fetches across ALL geo layers (rivers, roads, forests,
  * water, peaks, meadows, vineyards, urban, glaciers, place boundaries) must go
- * through this shared queue. The queue serialises requests with a 600 ms gap
- * between them, which stays well within Overpass's rate limits.
+ * through this shared queue. The queue caps concurrent requests at MAX_CONCURRENT
+ * (= 2), which is the documented limit per IP on overpass-api.de. This keeps
+ * load times fast (layers load in pairs) while preventing rate-limit errors.
+ *
+ * WHY NOT FULLY SERIALISE (1 AT A TIME)?
+ * Strict serialisation with a 600 ms gap means 6 active layers take ~19 s to
+ * load sequentially. MAX_CONCURRENT = 2 loads them in three pairs of ~3 s each
+ * (~9 s total), matching the pre-queue experience of "a few seconds".
  *
  * RULES:
  *  - Every new `fetch(OVERPASS_URL, ...)` call MUST use `enqueueOverpassRequest`
@@ -32,23 +38,23 @@
  * more than two geo layers simultaneously.
  */
 
-/** Minimum gap between successive Overpass requests (ms). */
-const REQUEST_GAP_MS = 600
+/** Maximum number of simultaneous Overpass requests (overpass-api.de allows 2 per IP). */
+const MAX_CONCURRENT = 2
 
-let _running = false
+let _activeCount = 0
 const _queue: Array<() => void> = []
 
 function _drain() {
-  if (_running || _queue.length === 0) return
-  _running = true
-  const next = _queue.shift()!
-  next()
+  while (_activeCount < MAX_CONCURRENT && _queue.length > 0) {
+    _activeCount++
+    const next = _queue.shift()!
+    next()
+  }
 }
 
 /**
  * Enqueue an async Overpass fetch.
- * The provided function is called only when no other request is in-flight,
- * with at least REQUEST_GAP_MS between successive calls.
+ * Up to MAX_CONCURRENT requests run simultaneously; the rest wait in line.
  *
  * Usage:
  *   const data = await enqueueOverpassRequest(() =>
@@ -64,11 +70,8 @@ export function enqueueOverpassRequest<T>(fn: () => Promise<T>): Promise<T> {
       } catch (e) {
         reject(e)
       } finally {
-        // Wait the minimum gap before allowing the next request
-        setTimeout(() => {
-          _running = false
-          _drain()
-        }, REQUEST_GAP_MS)
+        _activeCount--
+        _drain()
       }
     })
     _drain()
