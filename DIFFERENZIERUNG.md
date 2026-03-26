@@ -34,7 +34,7 @@ _Direkte Differenzierung gegenüber Relive, Onboarding-Friction, virales Potenzi
 - 31. **Exportformat wählbar** — 9:16 (Reels), 1:1 (Feed), 16:9 (YouTube) → ohne das ist das Video unbrauchbar für Social
 - ~~26. **Live-Stats animiert** — Zahlen zählen während Animation hoch (Distance, Gain, Time) → viralestsem Feature~~ ✅
 - 53. **FIT-File Support** — Garmin/Wahoo/Polar direkt einlesen → öffnet die größte Zielgruppe
-- 62. **Preset-Gallery** — 6 fertige Styles zum Anklicken → sofortiger WOW-Effekt ohne Konfiguration
+- ~~62. **Preset-Gallery** — 6 fertige Styles zum Anklicken → sofortiger WOW-Effekt ohne Konfiguration~~ ✅
 - 41. **Beliebige Text-Overlays** — User tippt Text, positioniert frei → größte Personalisierungslücke von Relive
 - 36. **Standbild-Export** — schönstes Frame als PNG → viele wollen kein Video, nur ein schönes Bild
 - 96. **"Made with [Appname]"** — opt-in Wasserzeichen → virales Wachstum, kostenloser Marketing-Kanal

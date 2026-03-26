@@ -649,6 +649,30 @@
         <!-- ── Tab 4: Stil ───────────────────────────────── -->
         <div v-show="activeTab === 4">
           <div class="tab-panel">
+            <div class="section-label">Schnell-Stile</div>
+            <div class="preset-gallery">
+              <div
+                v-for="preset in ROUTE_MAP_PRESETS"
+                :key="preset.id"
+                class="preset-card"
+                @click="applyPreset(preset.config)"
+              >
+                <svg width="72" height="44" viewBox="0 0 72 44" xmlns="http://www.w3.org/2000/svg">
+                  <rect width="72" height="44" rx="6" :fill="preset.preview.bg" />
+                  <path
+                    d="M4 34 C16 28 24 14 36 18 C48 22 56 10 68 8"
+                    :stroke="preset.preview.route"
+                    stroke-width="2.5"
+                    fill="none"
+                    stroke-linecap="round"
+                  />
+                  <circle cx="4" cy="34" r="3" :fill="preset.preview.accent" />
+                  <circle cx="68" cy="8" r="3" :fill="preset.preview.accent" />
+                </svg>
+                <span class="preset-name">{{ preset.name }}</span>
+              </div>
+            </div>
+            <v-divider class="my-3" />
             <div class="section-label">Farben</div>
             <!-- Theme Selector -->
             <v-select
@@ -1292,6 +1316,7 @@ const {
   weatherTemp,
   weatherCondition,
   weatherOverlayColor,
+  applyPreset,
 } = useRouteMapConfig(
   () => props.animationConfig,
   updateAnimationConfig,
@@ -1403,6 +1428,97 @@ function applyTopoPreset() {
     contourShowLabels: false,
   })
 }
+
+// --- Route Map Presets ---
+
+interface RouteMapPreset {
+  id: string
+  name: string
+  preview: { bg: string; route: string; accent: string }
+  config: Partial<RouteMapAnimationConfig>
+}
+
+const ROUTE_MAP_PRESETS: RouteMapPreset[] = [
+  {
+    id: 'dark-classic',
+    name: 'Dark Classic',
+    preview: { bg: '#1a1a2e', route: '#ffffff', accent: '#ffffff' },
+    config: {
+      backgroundColor: '#1a1a2e', backgroundType: 'solid',
+      routeColor: '#ffffff', routeGlow: true, routeGlowColor: '#ffffff', routeGlowIntensity: 4,
+      titleColor: '#ffffff', curveColor: '#ffffff', mapMarkerColor: '#ffffff',
+      showHillshade: true, hillshadeOpacity: 0.35,
+      showSatellite: false, showForests: false, showWater: false, showContours: false,
+    },
+  },
+  {
+    id: 'topo-adventure',
+    name: 'Topo',
+    preview: { bg: '#f5f0e8', route: '#d4281e', accent: '#d4281e' },
+    config: {
+      backgroundColor: '#f5f0e8', backgroundType: 'solid',
+      routeColor: '#d4281e', routeGlow: false, routeHalo: true, routeHaloOpacity: 0.2,
+      titleColor: '#2d2d2d', curveColor: '#d4281e', mapMarkerColor: '#d4281e',
+      showHillshade: true, hillshadeOpacity: 0.4,
+      showContours: true, contourOpacity: 0.3,
+      showForests: true, forestOpacity: 0.6,
+      showWater: true, waterOpacity: 0.7,
+      showRivers: true, riverOpacity: 0.5,
+      showSatellite: false,
+    },
+  },
+  {
+    id: 'neon-pulse',
+    name: 'Neon Pulse',
+    preview: { bg: '#0a0a0a', route: '#00f5d4', accent: '#00f5d4' },
+    config: {
+      backgroundColor: '#0a0a0a', backgroundType: 'solid',
+      routeColor: '#00f5d4', routeGlow: true, routeGlowColor: '#00f5d4', routeGlowIntensity: 7,
+      titleColor: '#00f5d4', curveColor: '#00f5d4', mapMarkerColor: '#00f5d4',
+      showHillshade: false, showContours: false, showForests: false, showWater: false,
+      showSatellite: false, showRivers: false, showBorders: false,
+    },
+  },
+  {
+    id: 'satellite',
+    name: 'Satellite',
+    preview: { bg: '#1a2a1a', route: '#ffdd00', accent: '#ffdd00' },
+    config: {
+      backgroundColor: '#1a2a1a', backgroundType: 'solid',
+      showSatellite: true, satelliteOpacity: 0.85,
+      showHillshade: true, hillshadeOpacity: 0.2,
+      routeColor: '#ffdd00', routeGlow: true, routeGlowColor: '#ffdd00', routeGlowIntensity: 5,
+      titleColor: '#ffffff', curveColor: '#ffdd00', mapMarkerColor: '#ffdd00',
+      showForests: false, showWater: false, showContours: false,
+    },
+  },
+  {
+    id: 'minimal-light',
+    name: 'Minimal',
+    preview: { bg: '#ffffff', route: '#2563eb', accent: '#2563eb' },
+    config: {
+      backgroundColor: '#ffffff', backgroundType: 'solid',
+      routeColor: '#2563eb', routeGlow: false, routeHalo: false,
+      titleColor: '#1e293b', curveColor: '#2563eb', mapMarkerColor: '#2563eb',
+      showHillshade: false, showContours: false, showForests: false, showWater: false,
+      showSatellite: false, showRivers: false, showBorders: false,
+    },
+  },
+  {
+    id: 'pastel-wander',
+    name: 'Pastell',
+    preview: { bg: '#f0e9d2', route: '#7c3aed', accent: '#7c3aed' },
+    config: {
+      backgroundColor: '#f0e9d2', backgroundType: 'solid',
+      routeColor: '#7c3aed', routeGlow: false, routeHalo: true, routeHaloOpacity: 0.15,
+      titleColor: '#3b1f5e', curveColor: '#7c3aed', mapMarkerColor: '#7c3aed',
+      showHillshade: true, hillshadeOpacity: 0.2,
+      showForests: true, forestOpacity: 0.5, forestColor: '#a8d5a2',
+      showWater: true, waterOpacity: 0.7, waterColor: '#b3d9e8',
+      showSatellite: false, showContours: false,
+    },
+  },
+]
 
 // --- Annotation helpers ---
 
@@ -1778,6 +1894,38 @@ const imagePositionOptions = [
   height: 26px;
   border-radius: var(--radius-sm, 8px);
   border: 1px solid rgba(var(--v-border-color), 0.2);
+}
+
+.preset-gallery {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.preset-card {
+  cursor: pointer;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1.5px solid transparent;
+  transition: border-color 0.15s, transform 0.1s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-bottom: 4px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.preset-card:hover {
+  border-color: rgb(var(--v-theme-primary));
+  transform: translateY(-1px);
+}
+
+.preset-name {
+  font-size: 10px;
+  margin-top: 3px;
+  text-align: center;
+  opacity: 0.75;
 }
 
 .theme-preview-swatch {

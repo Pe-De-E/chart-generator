@@ -592,6 +592,10 @@ export function useRouteMapConfig(
     set: (value: number) => updateConfig({ weatherY: value }),
   })
 
+  const applyPreset = (partial: Partial<RouteMapAnimationConfig>) => {
+    updateConfig(partial)
+  }
+
   return {
     // All shared elevation fields
     ...elevationConfig,
@@ -719,5 +723,7 @@ export function useRouteMapConfig(
     weatherOverlayColor,
     weatherX,
     weatherY,
+    // Presets
+    applyPreset,
   }
 }
