@@ -1438,6 +1438,10 @@ interface RouteMapPreset {
   config: Partial<RouteMapAnimationConfig>
 }
 
+// Presets only touch visual style (colors, glow, background).
+// They deliberately do NOT set geo-layer toggles (showHillshade, showForests,
+// showWater, showContours, showRivers, showSatellite, showBorders, etc.) so that
+// the user's manually chosen layers are never overridden when switching styles.
 const ROUTE_MAP_PRESETS: RouteMapPreset[] = [
   {
     id: 'dark-classic',
@@ -1447,8 +1451,6 @@ const ROUTE_MAP_PRESETS: RouteMapPreset[] = [
       backgroundColor: '#1a1a2e', backgroundType: 'solid',
       routeColor: '#ffffff', routeGlow: true, routeGlowColor: '#ffffff', routeGlowIntensity: 4,
       titleColor: '#ffffff', curveColor: '#ffffff', mapMarkerColor: '#ffffff',
-      showHillshade: true, hillshadeOpacity: 0.35,
-      showSatellite: false, showForests: false, showWater: false, showContours: false,
     },
   },
   {
@@ -1459,12 +1461,6 @@ const ROUTE_MAP_PRESETS: RouteMapPreset[] = [
       backgroundColor: '#f5f0e8', backgroundType: 'solid',
       routeColor: '#d4281e', routeGlow: false, routeHalo: true, routeHaloOpacity: 0.2,
       titleColor: '#2d2d2d', curveColor: '#d4281e', mapMarkerColor: '#d4281e',
-      showHillshade: true, hillshadeOpacity: 0.4,
-      showContours: true, contourOpacity: 0.3,
-      showForests: true, forestOpacity: 0.6,
-      showWater: true, waterOpacity: 0.7,
-      showRivers: true, riverOpacity: 0.5,
-      showSatellite: false,
     },
   },
   {
@@ -1475,8 +1471,6 @@ const ROUTE_MAP_PRESETS: RouteMapPreset[] = [
       backgroundColor: '#0a0a0a', backgroundType: 'solid',
       routeColor: '#00f5d4', routeGlow: true, routeGlowColor: '#00f5d4', routeGlowIntensity: 7,
       titleColor: '#00f5d4', curveColor: '#00f5d4', mapMarkerColor: '#00f5d4',
-      showHillshade: false, showContours: false, showForests: false, showWater: false,
-      showSatellite: false, showRivers: false, showBorders: false,
     },
   },
   {
@@ -1485,11 +1479,8 @@ const ROUTE_MAP_PRESETS: RouteMapPreset[] = [
     preview: { bg: '#1a2a1a', route: '#ffdd00', accent: '#ffdd00' },
     config: {
       backgroundColor: '#1a2a1a', backgroundType: 'solid',
-      showSatellite: true, satelliteOpacity: 0.85,
-      showHillshade: true, hillshadeOpacity: 0.2,
       routeColor: '#ffdd00', routeGlow: true, routeGlowColor: '#ffdd00', routeGlowIntensity: 5,
       titleColor: '#ffffff', curveColor: '#ffdd00', mapMarkerColor: '#ffdd00',
-      showForests: false, showWater: false, showContours: false,
     },
   },
   {
@@ -1500,8 +1491,6 @@ const ROUTE_MAP_PRESETS: RouteMapPreset[] = [
       backgroundColor: '#ffffff', backgroundType: 'solid',
       routeColor: '#2563eb', routeGlow: false, routeHalo: false,
       titleColor: '#1e293b', curveColor: '#2563eb', mapMarkerColor: '#2563eb',
-      showHillshade: false, showContours: false, showForests: false, showWater: false,
-      showSatellite: false, showRivers: false, showBorders: false,
     },
   },
   {
@@ -1512,10 +1501,6 @@ const ROUTE_MAP_PRESETS: RouteMapPreset[] = [
       backgroundColor: '#f0e9d2', backgroundType: 'solid',
       routeColor: '#7c3aed', routeGlow: false, routeHalo: true, routeHaloOpacity: 0.15,
       titleColor: '#3b1f5e', curveColor: '#7c3aed', mapMarkerColor: '#7c3aed',
-      showHillshade: true, hillshadeOpacity: 0.2,
-      showForests: true, forestOpacity: 0.5, forestColor: '#a8d5a2',
-      showWater: true, waterOpacity: 0.7, waterColor: '#b3d9e8',
-      showSatellite: false, showContours: false,
     },
   },
 ]
