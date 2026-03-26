@@ -19,6 +19,7 @@ import type { RouteBounds } from './projection'
 import { generateGeoLayers } from './geoFeatures'
 import type { GeoLayerConfig } from './geoFeatures'
 import { generateRouteLine, generateRouteMarker, DEFAULT_ROUTE_LINE_STYLE, elevationToColor } from './routeLine'
+import type { MarkerIconType } from './markerIcons'
 import { calculateMapCameraViewport, DEFAULT_MAP_CAMERA_CONFIG } from './mapCamera'
 import { getMarkerPosition } from '../elevationChart/animation'
 import {
@@ -70,6 +71,7 @@ export interface CombinedFrameOptions {
   mapMarkerSize: number
   mapMarkerColor: string
   showMarkerPulse?: boolean
+  markerIcon?: MarkerIconType
   showDirection: boolean
   showDistanceMarkers?: boolean
   distanceMarkerInterval?: number
@@ -225,6 +227,7 @@ export const DEFAULT_COMBINED_FRAME_OPTIONS: Partial<CombinedFrameOptions> = {
   showMapMarker: true,
   mapMarkerSize: 8,
   mapMarkerColor: '#ffffff',
+  markerIcon: 'dot',
   showDirection: true,
   curveColor: '#ffffff',
   showElevationMarker: true,
@@ -1007,6 +1010,7 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     mapMarkerSize,
     mapMarkerColor,
     showMarkerPulse = false,
+    markerIcon = 'dot',
     showDirection,
     showDistanceMarkers = false,
     distanceMarkerInterval = 5,
@@ -1179,7 +1183,7 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
 
     const routeLine = generateRouteLine(animPoints, effectiveProgress, routeStyle, width, mapHeight)
     const marker = showMapMarker
-      ? generateRouteMarker(animPoints, effectiveProgress, mapMarkerSize, mapMarkerColor, routeStyle.color, showDirection, showMarkerPulse)
+      ? generateRouteMarker(animPoints, effectiveProgress, mapMarkerSize, mapMarkerColor, routeStyle.color, showDirection, showMarkerPulse, markerIcon)
       : ''
 
     const distLabels = showDistanceMarkers

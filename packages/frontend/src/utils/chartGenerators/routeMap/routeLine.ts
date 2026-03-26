@@ -7,6 +7,7 @@
 
 import type { MapPoint } from './projection'
 import { getRouteMarkerPosition, getRouteHeading } from './projection'
+import { type MarkerIconType, renderMarkerIcon } from './markerIcons'
 
 /** Styling options for the route line */
 export interface RouteLineStyle {
@@ -32,6 +33,12 @@ export interface RouteLineStyle {
   routeHalo?: boolean
   /** Opacity of the halo outline (0–1, default 0.35) */
   routeHaloOpacity?: number
+  /** Color segments by heart rate zones (blue=Z1, green=Z2, yellow=Z3, orange=Z4, red=Z5) */
+  hrColoring?: boolean
+  /** Intensity of HR coloring (1-8, default 5) */
+  hrColorIntensity?: number
+  /** Max heart rate in bpm used for zone thresholds (default 190) */
+  hfmax?: number
 }
 
 export const DEFAULT_ROUTE_LINE_STYLE: RouteLineStyle = {
@@ -86,6 +93,39 @@ export function elevationToColor(normalizedElev: number, intensity: number): str
   // Saturation scales with intensity
   const sat = 50 + (intensity / 8) * 40  // 50-90%
   const lightness = 45 + (1 - intensity / 8) * 15  // 45-60%
+  return `hsl(${hue.toFixed(0)}, ${sat.toFixed(0)}%, ${lightness.toFixed(0)}%)`
+}
+
+/**
+ * Get heart-rate-zone color for a given BPM value.
+ * Zones: Z1 <60%, Z2 60-70%, Z3 70-80%, Z4 80-90%, Z5 ≥90% of HFmax.
+ * Colors: blue → green → yellow → orange → red, smoothly interpolated within each zone.
+ */
+export function hrToColor(bpm: number, hfmax: number, intensity: number): string {
+  const pct = bpm / hfmax
+  // Zone boundaries as fractions of HFmax
+  const boundaries = [0, 0.60, 0.70, 0.80, 0.90, 1.0]
+  // Hue for each zone start/end (HSL degrees)
+  const hues = [220, 120, 60, 30, 0]
+
+  let zoneIdx = hues.length - 1
+  for (let i = 0; i < boundaries.length - 1; i++) {
+    if (pct < boundaries[i + 1]) {
+      zoneIdx = i
+      break
+    }
+  }
+
+  // Interpolate hue within the zone
+  const zoneStart = boundaries[zoneIdx]
+  const zoneEnd = boundaries[zoneIdx + 1]
+  const t = zoneEnd > zoneStart ? Math.max(0, Math.min(1, (pct - zoneStart) / (zoneEnd - zoneStart))) : 0
+  const hue1 = hues[zoneIdx]
+  const hue2 = hues[Math.min(zoneIdx + 1, hues.length - 1)]
+  const hue = hue1 + (hue2 - hue1) * t
+
+  const sat = 50 + (intensity / 8) * 40
+  const lightness = 45 + (1 - intensity / 8) * 15
   return `hsl(${hue.toFixed(0)}, ${sat.toFixed(0)}%, ${lightness.toFixed(0)}%)`
 }
 
@@ -275,7 +315,7 @@ function getLastRevealedIndex(points: MapPoint[], progress: number): number {
 
 /**
  * Generate colored route segments as individual <line> elements.
- * Supports both elevation coloring and speed coloring (speed takes precedence).
+ * Priority: HR coloring > speed coloring > elevation coloring.
  */
 function generateColoredSegments(
   points: MapPoint[],
@@ -286,39 +326,64 @@ function generateColoredSegments(
   const lastIndex = getLastRevealedIndex(points, progress)
   if (lastIndex < 0) return ''
 
-  // ── Determine normalized color value per segment ──────────────────────────
-  let normalizedValues: number[]
+  // ── Build a per-segment color function ────────────────────────────────────
+  let colorFn: (i: number) => string
 
-  if (style.speedColoring) {
+  if (style.hrColoring) {
+    const rawHr = points.map(p => p.hr ?? 0)
+    const hasHrData = rawHr.some(v => v > 0)
+    if (hasHrData) {
+      const smoothed = movingAverage(rawHr, 5)
+      const hfmax = style.hfmax ?? 190
+      const intensity = style.hrColorIntensity ?? 5
+      // Per-segment avg BPM (average of the two endpoint smoothed values)
+      const segBpm = smoothed.slice(0, -1).map((v, i) => (v + smoothed[i + 1]) / 2)
+      colorFn = (i) => hrToColor(segBpm[i] ?? 0, hfmax, intensity)
+    } else {
+      // No HR data — fall back to elevation
+      const elevs = points.map(p => p.elevation)
+      const minElev = Math.min(...elevs)
+      const range = Math.max(...elevs) - minElev
+      const normElev = points.slice(0, -1).map((p, i) => {
+        const avg = (p.elevation + points[i + 1].elevation) / 2
+        return range > 0 ? (avg - minElev) / range : 0.5
+      })
+      const intensity = style.elevationColorIntensity ?? 5
+      colorFn = (i) => elevationToColor(normElev[i] ?? 0.5, intensity)
+    }
+  } else if (style.speedColoring) {
     const rawSpeeds = computeSegmentSpeeds(points)
     const hasTimeData = rawSpeeds.some(s => s > 0)
     if (hasTimeData) {
       const smoothed = movingAverage(rawSpeeds, 5)
-      normalizedValues = normalizePercentile(smoothed)
+      const normalizedValues = normalizePercentile(smoothed)
+      const intensity = style.speedColorIntensity ?? 5
+      colorFn = (i) => elevationToColor(normalizedValues[i] ?? 0.5, intensity)
     } else {
       // No time data — fall back to elevation coloring
       const elevs = points.map(p => p.elevation)
       const minElev = Math.min(...elevs)
       const range = Math.max(...elevs) - minElev
-      normalizedValues = points.slice(0, -1).map((p, i) => {
+      const normElev = points.slice(0, -1).map((p, i) => {
         const avg = (p.elevation + points[i + 1].elevation) / 2
         return range > 0 ? (avg - minElev) / range : 0.5
       })
+      const intensity = style.elevationColorIntensity ?? 5
+      colorFn = (i) => elevationToColor(normElev[i] ?? 0.5, intensity)
     }
   } else {
     // Elevation coloring
     const elevs = points.map(p => p.elevation)
     const minElev = Math.min(...elevs)
     const range = Math.max(...elevs) - minElev
-    normalizedValues = points.slice(0, -1).map((p, i) => {
+    const normElev = points.slice(0, -1).map((p, i) => {
       const avg = (p.elevation + points[i + 1].elevation) / 2
       return range > 0 ? (avg - minElev) / range : 0.5
     })
+    const intensity = style.elevationColorIntensity ?? 5
+    colorFn = (i) => elevationToColor(normElev[i] ?? 0.5, intensity)
   }
 
-  const intensity = style.speedColoring
-    ? (style.speedColorIntensity ?? 5)
-    : (style.elevationColorIntensity ?? 5)
   const strokeWidth = isGlow ? style.width + 4 : style.width
   const opacity = isGlow ? 0.3 : style.opacity
   const segments: string[] = []
@@ -326,7 +391,7 @@ function generateColoredSegments(
   for (let i = 0; i < lastIndex && i < points.length - 1; i++) {
     const p1 = points[i]
     const p2 = points[i + 1]
-    const color = elevationToColor(normalizedValues[i] ?? 0.5, intensity)
+    const color = colorFn(i)
     segments.push(
       `<line x1="${p1.x.toFixed(1)}" y1="${p1.y.toFixed(1)}" x2="${p2.x.toFixed(1)}" y2="${p2.y.toFixed(1)}"` +
       ` stroke="${color}" stroke-width="${strokeWidth}" stroke-opacity="${opacity}" stroke-linecap="round"/>`
@@ -341,7 +406,7 @@ function generateColoredSegments(
     const p2 = points[lastIndex + 1]
     const endX = p1.x + (p2.x - p1.x) * fraction
     const endY = p1.y + (p2.y - p1.y) * fraction
-    const color = elevationToColor(normalizedValues[lastIndex] ?? 0.5, intensity)
+    const color = colorFn(lastIndex)
     segments.push(
       `<line x1="${p1.x.toFixed(1)}" y1="${p1.y.toFixed(1)}" x2="${endX.toFixed(1)}" y2="${endY.toFixed(1)}"` +
       ` stroke="${color}" stroke-width="${strokeWidth}" stroke-opacity="${opacity}" stroke-linecap="round"/>`
@@ -410,7 +475,7 @@ export function generateRouteLine(
   }
 
   // Revealed portion of the route
-  if (style.elevationColoring || style.speedColoring) {
+  if (style.elevationColoring || style.speedColoring || style.hrColoring) {
     // Colored segments (elevation or speed): individual <line> elements per point pair
     const filterAttr = style.glow ? ' filter="url(#route-glow)"' : ''
 
@@ -459,7 +524,9 @@ export function generateRouteLine(
 }
 
 /**
- * Generate SVG for the route marker (circle + direction arrow).
+ * Generate SVG for the route marker.
+ * markerIcon='dot'  — circle with optional direction arrow (original behaviour)
+ * markerIcon='arrow' — standalone navigation arrow that rotates with heading
  */
 export function generateRouteMarker(
   points: MapPoint[],
@@ -469,13 +536,15 @@ export function generateRouteMarker(
   routeColor: string,
   showDirection: boolean = true,
   showPulse: boolean = false,
+  markerIcon: MarkerIconType = 'dot',
 ): string {
   const pos = getRouteMarkerPosition(points, progress)
   if (!pos) return ''
 
   const elements: string[] = []
+  const heading = points.length >= 2 ? getRouteHeading(points, progress) : 0
 
-  // Pulse rings (3 concentric rings at staggered phases)
+  // Pulse rings — always circles regardless of icon type
   if (showPulse) {
     const PULSE_CYCLES = 8
     for (let i = 0; i < 3; i++) {
@@ -489,31 +558,25 @@ export function generateRouteMarker(
     }
   }
 
-  // Direction arrow
-  if (showDirection && points.length >= 2) {
-    const heading = getRouteHeading(points, progress)
-    const arrowSize = markerSize * 1.8
-    // Triangle pointing in direction of travel
-    elements.push(`
-      <g transform="translate(${pos.x}, ${pos.y}) rotate(${heading})">
-        <polygon
-          points="${arrowSize},0 ${-arrowSize * 0.6},${-arrowSize * 0.5} ${-arrowSize * 0.6},${arrowSize * 0.5}"
-          fill="${markerColor}"
-          opacity="0.6"
-        />
-      </g>
-    `)
+  if (markerIcon === 'arrow') {
+    // Standalone arrow — direction is built into the shape, no separate dot
+    elements.push(renderMarkerIcon('arrow', pos.x, pos.y, markerSize, markerColor, heading, routeColor))
+  } else {
+    // Dot — optional separate direction arrow + circle (original behaviour)
+    if (showDirection && points.length >= 2) {
+      const arrowSize = markerSize * 1.8
+      elements.push(`
+        <g transform="translate(${pos.x}, ${pos.y}) rotate(${heading})">
+          <polygon
+            points="${arrowSize},0 ${-arrowSize * 0.6},${-arrowSize * 0.5} ${-arrowSize * 0.6},${arrowSize * 0.5}"
+            fill="${markerColor}"
+            opacity="0.6"
+          />
+        </g>
+      `)
+    }
+    elements.push(renderMarkerIcon('dot', pos.x, pos.y, markerSize, markerColor, 0, routeColor))
   }
-
-  // Main marker circle
-  elements.push(`
-    <circle
-      cx="${pos.x}" cy="${pos.y}" r="${markerSize}"
-      fill="${markerColor}"
-      stroke="${routeColor}"
-      stroke-width="${Math.max(2, markerSize * 0.3)}"
-    />
-  `)
 
   return elements.join('\n')
 }

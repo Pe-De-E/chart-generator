@@ -251,6 +251,14 @@ export function useCSVParser() {
         }
       }
 
+      // Extract heart rate from <extensions> — handles gpxtpx:hr, ns3:hr, and plain <hr>
+      let hr: number | undefined
+      const hrEl = [...point.querySelectorAll('*')].find(el => el.localName === 'hr')
+      if (hrEl?.textContent) {
+        const hrVal = parseInt(hrEl.textContent, 10)
+        if (!isNaN(hrVal) && hrVal > 0) hr = hrVal
+      }
+
       // Calculate distance from previous point
       if (prevLat !== null && prevLon !== null) {
         cumulativeDistance += haversineDistance(prevLat, prevLon, lat, lon)
@@ -265,6 +273,7 @@ export function useCSVParser() {
         time,
         lat,
         lon,
+        hr,
       })
 
       prevLat = lat
@@ -299,6 +308,7 @@ export function useCSVParser() {
         elevation: p.elevation,
         distance: p.distance,
         time: p.time,
+        hr: p.hr,
       }))
 
     // Update reactive state

@@ -17,6 +17,7 @@ export interface MapPoint {
   elevation: number   // Original elevation (m)
   distance: number    // Cumulative distance (km)
   time?: number       // ms since start
+  hr?: number         // Heart rate (bpm), from GPX extensions
 }
 
 /** Configuration for the map SVG area */
@@ -144,7 +145,7 @@ export function projectRouteToSvg(
 
   if (areaW <= 0 || areaH <= 0) {
     return {
-      mapPoints: points.map(p => ({ x: 0, y: 0, lat: p.lat, lon: p.lon, elevation: p.elevation, distance: p.distance, time: p.time })),
+      mapPoints: points.map(p => ({ x: 0, y: 0, lat: p.lat, lon: p.lon, elevation: p.elevation, distance: p.distance, time: p.time, hr: p.hr })),
       bounds,
       chartArea: { x: areaX, y: areaY, width: 0, height: 0 },
     }
@@ -188,6 +189,7 @@ export function projectRouteToSvg(
       elevation: p.elevation,
       distance: p.distance,
       time: p.time,
+      hr: p.hr,
     }
   })
 
@@ -225,6 +227,7 @@ export function getRouteMarkerPosition(
     elevation: a.elevation + (b.elevation - a.elevation) * t,
     distance: a.distance + (b.distance - a.distance) * t,
     time: a.time != null && b.time != null ? a.time + (b.time - a.time) * t : undefined,
+    hr: a.hr != null && b.hr != null ? Math.round(a.hr + (b.hr - a.hr) * t) : (a.hr ?? b.hr),
   }
 }
 

@@ -165,7 +165,7 @@ describe('generateRouteMarker', () => {
 
   it('positions marker at start for progress 0', () => {
     const svg = generateRouteMarker(mapPoints, 0, 8, '#fff', '#fff')
-    expect(svg).toContain(`cx="${mapPoints[0].x}"`)
-    expect(svg).toContain(`cy="${mapPoints[0].y}"`)
+    expect(svg).toContain(`cx="${mapPoints[0].x.toFixed(1)}"`)
+    expect(svg).toContain(`cy="${mapPoints[0].y.toFixed(1)}"`)
   })
 })

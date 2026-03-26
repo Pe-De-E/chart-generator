@@ -6,6 +6,7 @@
 import { computed } from 'vue'
 import type { RouteMapAnimationConfig } from '../components/chartWorkflow/RouteMapChartStep.vue'
 import { useElevationConfig } from './useElevationConfig'
+import type { MarkerIconType } from '../utils/chartGenerators/routeMap/markerIcons'
 import type { Annotation, AnnotationType } from '../utils/chartGenerators/elevationChart/types'
 import { generateAnnotationId } from '../utils/chartGenerators/elevationChart/annotationDetection'
 
@@ -129,6 +130,11 @@ export function useRouteMapConfig(
     set: (value: boolean) => updateConfig({ showMarkerPulse: value }),
   })
 
+  const markerIcon = computed({
+    get: () => getConfig().markerIcon ?? 'dot' as MarkerIconType,
+    set: (value: MarkerIconType) => updateConfig({ markerIcon: value }),
+  })
+
   // --- Map Labels & Markers ---
 
   const showDirection = computed({
@@ -203,6 +209,21 @@ export function useRouteMapConfig(
   const speedColorIntensity = computed({
     get: () => getConfig().speedColorIntensity ?? 5,
     set: (value: number) => updateConfig({ speedColorIntensity: value }),
+  })
+
+  const showHrColoring = computed({
+    get: () => getConfig().showHrColoring ?? false,
+    set: (value: boolean) => updateConfig({ showHrColoring: value }),
+  })
+
+  const hrColorIntensity = computed({
+    get: () => getConfig().hrColorIntensity ?? 5,
+    set: (value: number) => updateConfig({ hrColorIntensity: value }),
+  })
+
+  const hfmax = computed({
+    get: () => getConfig().hfmax ?? 190,
+    set: (value: number) => updateConfig({ hfmax: value }),
   })
 
   // --- Geo Context Layers ---
@@ -568,6 +589,7 @@ export function useRouteMapConfig(
     mapMarkerSize,
     mapMarkerColor,
     showMarkerPulse,
+    markerIcon,
     // Map Labels & Markers
     showDirection,
     showDistanceMarkers,
@@ -585,6 +607,9 @@ export function useRouteMapConfig(
     showElevationCurveColoring,
     showSpeedColoring,
     speedColorIntensity,
+    showHrColoring,
+    hrColorIntensity,
+    hfmax,
     // Geo Context Layers
     showBorders,
     showRivers,

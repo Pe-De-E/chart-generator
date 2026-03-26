@@ -43,8 +43,8 @@ Legende: 🟢 1 Tag · 🟡 2–3 Tage · 🔴 Stretch (Ende Woche) · ✅ Erled
 
 ## 🎨 Visuelle Anpassung (Relives größte Schwäche)
 
-11. 🟢 **Farbthemen / Presets** — 5–8 vorgefertigte Farbschemata (Dark, Light, Topo, Neon, Vintage)
-12. 🟢 **Routenfarbe nach Herzfrequenz** — wenn GPX HR-Daten hat, Farbe = HR-Zone
+11. ✅ ~~**Farbthemen / Presets** — 5–8 vorgefertigte Farbschemata (Dark, Light, Topo, Neon, Vintage)~~
+12. ✅ **Routenfarbe nach Herzfrequenz** — 5 Zonen (Z1–Z5, blau→rot) basierend auf % HFmax (konfigurierbar, Standard 190 bpm)
 13. ✅ ~~**Routenfarbe nach Tempo** — langsam = kalt, schnell = warm~~
 14. ✅ ~~**Routenfarbe nach Steigung** — grün = flach, rot = steil (`showElevationColoring` + `showSpeedColoring`)~~
 15. ✅ ~~**Strichstärke der Route** konfigurierbar — `routeWidth` Slider~~
@@ -52,7 +52,7 @@ Legende: 🟢 1 Tag · 🟡 2–3 Tage · 🔴 Stretch (Ende Woche) · ✅ Erled
 17. 🟡 **Gradient entlang Route** — Farbe wechselt kontinuierlich von Start bis Ziel
 18. 🟡 **Hintergrundfarbe aus Bild extrahieren** — User lädt Foto hoch, App nimmt Hauptfarbe
 19. 🟡 **Schriftart wählbar** — System-Fonts + Google Fonts für Labels
-20. 🟢 **Marker-Icon wählbar** — Punkt, Pfeil, Fahrrad, Läufer, Wanderer (SVG-Icons)
+20. ✅ **Marker-Icon wählbar** — Punkt, Pfeil (Fahrrad/Läufer/Wanderer im Backlog)
 
 ---
 
@@ -209,7 +209,7 @@ Legende: 🟢 1 Tag · 🟡 2–3 Tage · 🔴 Stretch (Ende Woche) · ✅ Erled
 | 2 | Farbthemen / Presets | 🟢 | Größter WOW-Effekt für neue User |
 | 3 | One-Click Demo Route | 🟢 | Senkt Onboarding-Friction drastisch |
 | 4 | FIT-File Support | 🟢 | Öffnet Garmin-Zielgruppe |
-| 5 | Marker-Icon wählbar | 🟢 | Kleine Sache, große Personalisierung |
+| 5 | Marker-Icon wählbar | ✅ | Kleine Sache, große Personalisierung |
 | 6 | ~~Schummerung (Hillshade)~~ | ✅ | — |
 | 7 | ~~Outro mit Gesamtstats~~ | ✅ | — |
 | 8 | ~~Route anonymisieren~~ | ✅ | — |

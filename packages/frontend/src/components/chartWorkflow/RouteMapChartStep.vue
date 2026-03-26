@@ -159,6 +159,7 @@ export interface RouteMapAnimationConfig {
   mapMarkerSize: number;
   mapMarkerColor: string;
   showMarkerPulse: boolean;
+  markerIcon: MarkerIconType;
   showDirection: boolean;
   showDistanceMarkers: boolean;
   distanceMarkerInterval: number;
@@ -172,6 +173,9 @@ export interface RouteMapAnimationConfig {
   showElevationCurveColoring: boolean;
   showSpeedColoring: boolean;
   speedColorIntensity: number;
+  showHrColoring: boolean;
+  hrColorIntensity: number;
+  hfmax: number;
   // Geo context layers
   showBorders: boolean;
   showRivers: boolean;
@@ -306,6 +310,7 @@ export const DEFAULT_ROUTEMAP_ANIMATION_CONFIG: RouteMapAnimationConfig = {
   mapMarkerSize: 8,
   mapMarkerColor: '#ffffff',
   showMarkerPulse: false,
+  markerIcon: 'dot' as MarkerIconType,
   showDirection: true,
   showDistanceMarkers: false,
   distanceMarkerInterval: 5,
@@ -319,6 +324,9 @@ export const DEFAULT_ROUTEMAP_ANIMATION_CONFIG: RouteMapAnimationConfig = {
   showElevationCurveColoring: false,
   showSpeedColoring: false,
   speedColorIntensity: 5,
+  showHrColoring: false,
+  hrColorIntensity: 5,
+  hfmax: 190,
   // Geo context layers
   showBorders: false,
   showRivers: false,
@@ -401,6 +409,7 @@ import { useChartAnimation, type PlaybackSpeed } from '../../composables/useChar
 import { useVideoExport } from '../../composables/useVideoExport'
 import { generateCombinedFrame, getLastKmAnchorPositions, getLastAnnotationChipPositions } from '../../utils/chartGenerators/routeMap/combinedFrame'
 import type { CombinedFrameOptions } from '../../utils/chartGenerators/routeMap/combinedFrame'
+import type { MarkerIconType } from '../../utils/chartGenerators/routeMap/markerIcons'
 import { getTitleCardOpacity } from '../../utils/titleCardGenerator'
 import { useWeatherLayer, getWeatherAtOffset } from '../../composables/useWeatherLayer'
 import ExportSettingsDialog from './ExportSettingsDialog.vue'
@@ -1074,10 +1083,13 @@ function buildFrameOptions(progress: number, overrides: Partial<CombinedFrameOpt
       glowIntensity: cfg.routeGlowIntensity,
       trailDash: cfg.routeTrailDash,
       trailOpacity: cfg.routeTrailOpacity,
-      elevationColoring: cfg.showElevationColoring && !cfg.showSpeedColoring,
+      elevationColoring: cfg.showElevationColoring && !cfg.showSpeedColoring && !cfg.showHrColoring,
       elevationColorIntensity: cfg.elevationColorIntensity,
-      speedColoring: cfg.showSpeedColoring,
+      speedColoring: cfg.showSpeedColoring && !cfg.showHrColoring,
       speedColorIntensity: cfg.speedColorIntensity,
+      hrColoring: cfg.showHrColoring,
+      hrColorIntensity: cfg.hrColorIntensity,
+      hfmax: cfg.hfmax,
       routeHalo: cfg.routeHalo,
       routeHaloOpacity: cfg.routeHaloOpacity,
     },
@@ -1085,6 +1097,7 @@ function buildFrameOptions(progress: number, overrides: Partial<CombinedFrameOpt
     mapMarkerSize: cfg.mapMarkerSize,
     mapMarkerColor: cfg.mapMarkerColor,
     showMarkerPulse: cfg.showMarkerPulse ?? false,
+    markerIcon: cfg.markerIcon ?? 'dot',
     showDirection: cfg.showDirection,
     showDistanceMarkers: cfg.showDistanceMarkers,
     distanceMarkerInterval: cfg.distanceMarkerInterval,

@@ -25,6 +25,7 @@ export interface RoutePoint {
   elevation: number  // Elevation (meters)
   distance: number   // Cumulative distance from start (km)
   time?: number      // Milliseconds since start of tour
+  hr?: number        // Heart rate (bpm), from GPX extensions
 }
 
 export interface ChartColors {

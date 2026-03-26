@@ -22,6 +22,7 @@ export interface GPXPoint {
   time?: number     // ms since start of tour (0 = first point)
   lat?: number      // Latitude (degrees) — preserved for route map visualization
   lon?: number      // Longitude (degrees) — preserved for route map visualization
+  hr?: number       // Heart rate (bpm), from GPX extensions
 }
 
 export interface DownsampleResult {

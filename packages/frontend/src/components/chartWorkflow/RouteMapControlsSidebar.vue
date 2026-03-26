@@ -417,16 +417,24 @@
               <label class="text-caption text-medium-emphasis d-block mb-1 mt-2">Kontur-Deckkraft: {{ Math.round(routeHaloOpacity * 100) }}%</label>
               <v-slider v-model="routeHaloOpacity" :min="0.05" :max="0.8" :step="0.05" density="compact" hide-details thumb-label />
             </template>
-            <v-checkbox v-model="showElevationColoring" label="Route nach Hoehe einfaerben" density="compact" hide-details color="primary" class="mt-2" :disabled="showSpeedColoring" />
-            <template v-if="showElevationColoring && !showSpeedColoring">
+            <v-checkbox v-model="showElevationColoring" label="Route nach Hoehe einfaerben" density="compact" hide-details color="primary" class="mt-2" :disabled="showSpeedColoring || showHrColoring" />
+            <template v-if="showElevationColoring && !showSpeedColoring && !showHrColoring">
               <label class="text-caption text-medium-emphasis d-block mb-1 mt-2">Intensitaet: {{ elevationColorIntensity }}</label>
               <v-slider v-model="elevationColorIntensity" :min="1" :max="8" :step="1" density="compact" hide-details thumb-label />
             </template>
-            <v-checkbox v-model="showSpeedColoring" label="Route nach Tempo einfaerben" density="compact" hide-details color="primary" class="mt-1" />
-            <template v-if="showSpeedColoring">
+            <v-checkbox v-model="showSpeedColoring" label="Route nach Tempo einfaerben" density="compact" hide-details color="primary" class="mt-1" :disabled="showHrColoring" />
+            <template v-if="showSpeedColoring && !showHrColoring">
               <label class="text-caption text-medium-emphasis d-block mb-1 mt-2">Intensitaet: {{ speedColorIntensity }}</label>
               <v-slider v-model="speedColorIntensity" :min="1" :max="8" :step="1" density="compact" hide-details thumb-label />
               <div class="text-caption text-medium-emphasis mt-1" style="font-size:10px">Blau = langsam · Gruen = mittel · Rot = schnell<br>Benoetigt Zeitdaten im GPX</div>
+            </template>
+            <v-checkbox v-model="showHrColoring" label="Route nach Herzfrequenz einfaerben" density="compact" hide-details color="primary" class="mt-1" />
+            <template v-if="showHrColoring">
+              <label class="text-caption text-medium-emphasis d-block mb-1 mt-2">Max. HF (bpm):</label>
+              <v-text-field v-model.number="hfmax" type="number" density="compact" hide-details variant="outlined" :min="100" :max="230" style="max-width:120px" />
+              <label class="text-caption text-medium-emphasis d-block mb-1 mt-2">Intensitaet: {{ hrColorIntensity }}</label>
+              <v-slider v-model="hrColorIntensity" :min="1" :max="8" :step="1" density="compact" hide-details thumb-label />
+              <div class="text-caption text-medium-emphasis mt-1" style="font-size:10px">Z1 &lt;60% · Z2 60-70% · Z3 70-80% · Z4 80-90% · Z5 &gt;90% HFmax<br>Blau · Gruen · Gelb · Orange · Rot</div>
             </template>
 
             <v-divider class="my-3" />
@@ -444,9 +452,14 @@
               </v-menu>
               <label class="text-caption text-medium-emphasis d-block mb-1 mt-2">Groesse: {{ mapMarkerSize }}px</label>
               <v-slider v-model="mapMarkerSize" :min="4" :max="16" :step="1" density="compact" hide-details thumb-label />
+              <label class="text-caption text-medium-emphasis d-block mb-1 mt-3">Icon</label>
+              <v-btn-toggle v-model="markerIcon" density="compact" divided mandatory class="w-100">
+                <v-btn value="dot"   size="small" class="flex-1-1">&#11044; Punkt</v-btn>
+                <v-btn value="arrow" size="small" class="flex-1-1">&#9650; Pfeil</v-btn>
+              </v-btn-toggle>
             </template>
             <v-checkbox v-model="showMarkerPulse" label="Pulse-Ringe" density="compact" hide-details color="primary" class="mt-1" />
-            <v-checkbox v-model="showDirection" label="Richtungspfeil" density="compact" hide-details color="primary" class="mt-1" />
+            <v-checkbox v-if="markerIcon === 'dot'" v-model="showDirection" label="Richtungspfeil" density="compact" hide-details color="primary" class="mt-1" />
             <v-checkbox v-model="showStartEndLabels" label="Start/Ziel Labels" density="compact" hide-details color="primary" class="mt-1" />
             <v-checkbox v-model="showDistanceMarkers" label="Kilometer-Markierungen" density="compact" hide-details color="primary" class="mt-1" />
             <v-text-field
@@ -1189,6 +1202,7 @@ const {
   mapMarkerSize,
   mapMarkerColor,
   showMarkerPulse,
+  markerIcon,
   showDirection,
   showDistanceMarkers,
   distanceMarkerInterval,
@@ -1203,6 +1217,9 @@ const {
   showElevationCurveColoring,
   showSpeedColoring,
   speedColorIntensity,
+  showHrColoring,
+  hrColorIntensity,
+  hfmax,
   // Geo Context Layers
   showBorders,
   showRivers,
