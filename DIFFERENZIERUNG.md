@@ -4,7 +4,7 @@ Relive ist stark in: automatischer 3D-Flyover, Strava-Integration, große Nutzer
 Relive ist schwach in: **Individualisierung, Kartografik, Creator-Tools, Datenkontrolle**.
 Genau da greifen wir an.
 
-Legende: 🟢 1 Tag · 🟡 2–3 Tage · 🔴 Stretch (Ende Woche) · ✅ Erledigt
+Legende: 🔴 Hoher Impact · 🟡 Mittlerer Impact · 🟢 Kleiner Impact / Nische · ✅ Erledigt
 
 ---
 
@@ -26,158 +26,179 @@ Legende: 🟢 1 Tag · 🟡 2–3 Tage · 🔴 Stretch (Ende Woche) · ✅ Erled
 
 ---
 
-## 🗺️ Karte & Geo-Layer
+## 🔴 Hoher Impact
 
-1. ✅ ~~**Wasserflächen** (Seen, Teiche) — `natural=water` aus Overpass, blau gefüllt~~
-2. ✅ ~~**Gletscher** — `natural=glacier`, hellblau/weiß, perfekt für Alpenrouten~~
-3. ✅ ~~**Weinberge / Obstgärten** — `landuse=vineyard|orchard`, eigene Farbe~~
-4. ✅ ~~**Wiesen / Felder** — `landuse=meadow|farmland`, dezentes Gelbgrün~~
-5. ✅ ~~**Bebauung / Siedlungsflächen** — `landuse=residential|commercial`, graubeige~~
-6. ✅ ~~**Farbschema für Landnutzung** — alle Flächen als kohärentes Paket (wie Topo-Karte)~~
-7. ✅ ~~**Schummerung** (Hillshade) — aus AWS Terrarium Höhendaten eine Schattenebene berechnen~~
-8. ✅ ~~**Topografischer Kartenstil** — vordefiniertes Preset das alle Geo-Layer zusammen aktiviert~~
-9. ✅ ~~**Straßen** — Hauptstraßen/Autobahnen aus Overpass, sehr dezent, nur als Orientierung~~
-10. ✅ ~~**Satellitenbild als Hintergrund** — optionale Kachel-Ebene hinter allem (schon Proxy vorhanden)~~
+_Direkte Differenzierung gegenüber Relive, Onboarding-Friction, virales Potenzial._
 
----
-
-## 🎨 Visuelle Anpassung (Relives größte Schwäche)
-
-11. ✅ ~~**Farbthemen / Presets** — 5–8 vorgefertigte Farbschemata (Dark, Light, Topo, Neon, Vintage)~~
-12. ✅ **Routenfarbe nach Herzfrequenz** — 5 Zonen (Z1–Z5, blau→rot) basierend auf % HFmax (konfigurierbar, Standard 190 bpm)
-13. ✅ ~~**Routenfarbe nach Tempo** — langsam = kalt, schnell = warm~~
-14. ✅ ~~**Routenfarbe nach Steigung** — grün = flach, rot = steil (`showElevationColoring` + `showSpeedColoring`)~~
-15. ✅ ~~**Strichstärke der Route** konfigurierbar — `routeWidth` Slider~~
-16. ✅ ~~**Gestrichelte Route** — `routeTrailDash` Pattern für die noch-nicht-gezeichnete Strecke~~
-17. 🟡 **Gradient entlang Route** — Farbe wechselt kontinuierlich von Start bis Ziel
-18. 🟡 **Hintergrundfarbe aus Bild extrahieren** — User lädt Foto hoch, App nimmt Hauptfarbe
-19. 🟡 **Schriftart wählbar** — System-Fonts + Google Fonts für Labels
-20. ✅ **Marker-Icon wählbar** — Punkt, Pfeil (Fahrrad/Läufer/Wanderer im Backlog)
+- 61. **One-Click Demo** — Beispiel-Route vorgeladen, kein Upload nötig → senkt Absprungrate drastisch
+- 31. **Exportformat wählbar** — 9:16 (Reels), 1:1 (Feed), 16:9 (YouTube) → ohne das ist das Video unbrauchbar für Social
+- ~~26. **Live-Stats animiert** — Zahlen zählen während Animation hoch (Distance, Gain, Time) → viralestsem Feature~~ ✅
+- 53. **FIT-File Support** — Garmin/Wahoo/Polar direkt einlesen → öffnet die größte Zielgruppe
+- 62. **Preset-Gallery** — 6 fertige Styles zum Anklicken → sofortiger WOW-Effekt ohne Konfiguration
+- 41. **Beliebige Text-Overlays** — User tippt Text, positioniert frei → größte Personalisierungslücke von Relive
+- 36. **Standbild-Export** — schönstes Frame als PNG → viele wollen kein Video, nur ein schönes Bild
+- 96. **"Made with [Appname]"** — opt-in Wasserzeichen → virales Wachstum, kostenloser Marketing-Kanal
+- 97. **Share-Button** → direkt zu Instagram/TikTok
+- 21. **Herzfrequenz-Kurve** neben Höhenprofil — wenn GPX-Daten vorhanden → Datenerweiterung die Relive nicht bietet
+- 22. **Tempo-Kurve** — Geschwindigkeit über Distanz → meistgefragte Statistik nach Höhe
 
 ---
 
-## 📊 Elevation & Statistiken (Relive zeigt kaum Daten)
+## 🟡 Mittlerer Impact
 
-21. 🟢 **Herzfrequenz-Kurve** neben Höhenprofil — wenn GPX-Daten vorhanden
-22. 🟢 **Tempo-Kurve** — Geschwindigkeit über Distanz als eigene Linie
-23. 🟢 **Watt-Kurve** (Power) — für Radfahrer mit PowerMeter
-24. 🟢 **Kadenz-Kurve** — für Radfahrer/Läufer
-25. 🟢 **Mehrere Kurven übereinandergelegt** — z.B. Höhe + HR gleichzeitig
-26. 🟡 **Live-Stats animiert** — Zahlen zählen während Animation hoch (Distance, Gain, Time)
-27. 🟡 **Segmentvergleich** — markiere ein Segment, zeige Vor/Zurück-Zeiten
-28. 🟡 **Höhenprofilvergleich** — zwei Routen im gleichen Chart vergleichen
-29. ✅ ~~**Max/Min Annotationen auto** — höchster/niedrigster Punkt, steilster Auf-/Abstieg auto-markiert (Momente-Feature)~~
-30. ✅ ~~**Pässe / Gipfel erkennen** — GPX-Hochpunkte als Peaks aus Overpass API mit Label~~
+_Klarer Mehrwert für aktive Nutzer, verbessert das Produkt spürbar._
 
----
+_(Visuelle Anpassung)_
+- 17. **Gradient entlang Route** — Farbe wechselt kontinuierlich von Start bis Ziel → sieht professionell aus
+- 19. **Schriftart wählbar** — System-Fonts + Google Fonts für Labels
 
-## 🎬 Animation & Export (Relive: nur ein festes Format)
+_(Elevation & Statistiken)_
+- 25. **Mehrere Kurven übereinandergelegt** — z.B. Höhe + HR gleichzeitig
+- 23. **Watt-Kurve** (Power) — für Radfahrer mit PowerMeter
+- 24. **Kadenz-Kurve** — für Radfahrer/Läufer
+- 80. **Gesamthöhenmeter prominent** — große Zahl im Overlay, nicht nur im Stats-Block
 
-31. 🟢 **Exportformat wählbar** — 9:16 (Reels), 1:1 (Feed), 16:9 (YouTube), 4:5 (Portrait)
-32. ✅ ~~**Animationsgeschwindigkeit** — `duration` Slider (1–30 Sek.), Easing wählbar~~
-33. 🟡 **Slow-Motion an Pässen** — automatisch langsamer werden bei steilen Segmenten
-34. 🟡 **Reverse-Animation** — Route rückwärts abspielen
-35. 🟡 **Loop-Modus** — Animation wiederholt sich nahtlos (gut für Social)
-36. 🟢 **Standbild-Export** — schönstes Frame als PNG/SVG exportieren
-37. 🟡 **GIF-Export** — für Plattformen ohne Video-Support
-38. 🔴 **Mehrere Routen in einem Video** — z.B. Hin- und Rückweg
-39. ✅ ~~**Intro-Dauer** konfigurierbar — wie lange Titel steht (schon teilweise vorhanden)~~
-40. ✅ ~~**Outro mit Gesamtstats** — letztes Frame zeigt alle Zahlen zusammengefasst und eine Funktion, das man beides tauschen kann intro <-> outro~~
+_(Animation & Export)_
+- 35. **Loop-Modus** — Animation wiederholt sich nahtlos → gut für Stories/GIFs
+- 37. **GIF-Export** — für Plattformen ohne Video-Support
+- 33. **Slow-Motion an Pässen** — automatisch langsamer bei steilen Segmenten
 
----
+_(Overlays & Text)_
+- 42. **Aktivitätstyp-Label** — "🚴 Radfahren", "🏃 Laufen", "🥾 Wandern" als Chip
+- 43. **Datum/Uhrzeit Overlay** — aus GPX-Timestamp automatisch
+- 45. **Logo/Wasserzeichen** — eigenes Bild hochladen als Overlay
+- 48. **Startzeit einblenden** — "Gestartet: 07:42 Uhr"
 
-## ✏️ Overlays & Text (Relive: kaum Custom-Text)
+_(Import & Integration)_
+- 54. **TCX-File Support** — älteres Garmin-Format
+- 55. **KML-File Support** — Google Maps Export
+- 56. **Komoot-Link einfügen** — URL einfügen, GPX automatisch laden
+- 58. **Mehrere GPX gleichzeitig** — ganzen Urlaub als Sammlung
+- 52. **Garmin Connect Import** — via FIT-File Parser
 
-41. 🟢 **Beliebige Text-Overlays** — User tippt Text, positioniert frei per Drag
-42. 🟢 **Aktivitätstyp-Label** — "🚴 Radfahren", "🏃 Laufen", "🥾 Wandern" als Chip
-43. 🟢 **Datum/Uhrzeit Overlay** — aus GPX-Timestamp automatisch
-44. ✅ ~~**Wetter-Overlay** — automatisch aus GPX-Timestamp + Open-Meteo API~~
-45. 🟢 **Logo/Wasserzeichen** — eigenes Bild hochladen als Overlay
-46. 🟡 **Strava-Segment-Namen** als Annotations einblenden
-47. ✅ ~~**Kilometermarker** — konfigurierbar (Intervall wählbar) + frei per Drag positionierbar~~
-48. 🟢 **Startzeit einblenden** — "Gestartet: 07:42 Uhr"
-49. 🟡 **Teammate-Tracking** — mehrere Routen gleichzeitig animiert (z.B. Gruppenausfahrt)
-50. ~~**Fortschrittsbalken** unten~~ — übersprungen
+_(UX & Onboarding)_
+- 67. **Keyboard Shortcuts** — Leertaste = Play/Pause, Pfeile = scrubben → macht die App professionell
+- 68. **Fullscreen-Vorschau** — F oder Button für Vollbild
+- 65. **Config als JSON exportieren/importieren** — Settings zwischen Projekten teilen
+- 66. **Vorschau-Thumbnails** für Farbthemen statt nur Text-Dropdown
+- 70. **"Zuletzt verwendet" Presets** — letzte 3 Configs merken
 
----
+_(Datenschutz)_
+- 73. **Bereich ausblenden** — User zieht Rechteck, dieser Bereich wird nicht animiert
 
-## 🔌 Import & Integration (Relives Kernvorteil — aber angreifbar)
+_(Sport-spezifisch)_
+- 76. **Aktivitätstyp-Preset** — "Radfahren" aktiviert andere Default-Layer als "Wandern"
+- 84. **Steigungsklassen-Legende** — Farbskala neben Karte
 
-51. 🔴 **Strava OAuth Import** — direkter Connect ohne GPX-Download
-52. 🟡 **Garmin Connect Import** — via FIT-File Parser
-53. 🟢 **FIT-File Support** — Garmin/Wahoo/Polar Dateien direkt einlesen
-54. 🟢 **TCX-File Support** — älteres Garmin-Format
-55. 🟢 **KML-File Support** — Google Maps Export
-56. 🟢 **Komoot-Link einfügen** — URL einfügen, GPX wird automatisch geladen
-57. 🟡 **Drag & Drop Upload** — Datei direkt auf die Seite ziehen
-58. 🟢 **Mehrere GPX gleichzeitig** — ganzen Urlaub als Sammlung hochladen
-59. 🔴 **Apple Health / Wahoo Integration**
-60. 🟡 **URL-Share einer Route** — Route in URL encodiert, direkt teilbar
+_(Marketing)_
+- 98. **Galerie öffentlicher Routen** — User können ihr Video freigeben
+- 60. **URL-Share einer Route** — Route in URL encodiert, direkt teilbar
 
 ---
 
-## 📱 UX & Onboarding (Relive: guter Onboarding-Flow)
+## 🟢 Kleiner Impact / Nische
 
-61. 🟢 **One-Click Demo** — Beispiel-Route vorgeladen, sofort spielen ohne Upload
-62. 🟢 **Preset-Gallery** — 6 fertige Styles zum Anklicken, sofort sieht man das Ergebnis
-63. 🟡 **Tour durch Features** — interaktiver Tooltip-Guide beim ersten Besuch
-64. ✅ ~~**Undo/Redo** für Konfigurationsänderationen~~
-65. 🟢 **Config als JSON exportieren/importieren** — Settings zwischen Projekten teilen
-66. 🟡 **Vorschau-Thumbnails** für Farbthemen statt nur Text-Dropdown
-67. 🟢 **Keyboard Shortcuts** — Leertaste = Play/Pause, Pfeile = vor/zurück scrubben
-68. 🟢 **Fullscreen-Vorschau** — F oder Button für Vollbild
-69. 🟡 **Mobile-optimierte Sidebar** — Sidebar als Bottom-Sheet auf kleinen Screens
-70. 🟢 **"Zuletzt verwendet" Presets** — letzte 3 Configs merken
+_Nice-to-have, sehr spezifisch, oder aufwendig für wenig Reichweite._
 
----
+_(Visuelle Anpassung)_
+- 18. **Hintergrundfarbe aus Bild extrahieren** — User lädt Foto hoch, App nimmt Hauptfarbe → Nische, manuell genauso schnell
 
-## 🔒 Datenschutz & Kontrolle (Relive: Daten gehen auf deren Server)
+_(Elevation & Statistiken)_
+- 27. **Segmentvergleich** — markiere ein Segment, zeige Vor/Zurück-Zeiten → Trainingsdaten-Nische
+- 28. **Höhenprofilvergleich** — zwei Routen im gleichen Chart vergleichen
 
-71. 🟢 **"Alle Daten bleiben lokal"** — prominent kommunizieren, kein Upload der GPX-Daten
-72. ✅ ~~**Route anonymisieren** — Start/Ziel automatisch unscharf machen (Radius konfigurierbar)~~
-73. 🟢 **Bereich ausblenden** — User zieht Rechteck auf Karte, dieser Bereich wird nicht animiert
-74. 🟡 **Offline-Modus** — gecachte Tiles, App läuft auch ohne Internet
-75. 🟢 **DSGVO-Banner prominent** — "Kein Account nötig, keine Daten gespeichert"
+_(Animation & Export)_
+- 34. **Reverse-Animation** — Route rückwärts abspielen → Gimmick
+- 38. **Mehrere Routen in einem Video** — z.B. Hin- und Rückweg → komplex, seltener Use-Case
 
----
+_(Overlays & Text)_
+- 46. **Strava-Segment-Namen** als Annotations → abhängig von Strava API
+- 49. **Teammate-Tracking** — mehrere Routen gleichzeitig animiert → komplex, seltener Use-Case
 
-## 🏔️ Sport-spezifische Features
+_(Import & Integration)_
+- 57. **Drag & Drop Upload** — Datei direkt auf die Seite ziehen → kleine UX-Verbesserung
+- 51. **Strava OAuth Import** → Strava kann Zugang jederzeit sperren, hohes Risiko
+- 59. **Apple Health / Wahoo Integration** → sehr komplex, sehr nischig
 
-76. 🟢 **Aktivitätstyp-Preset** — "Radfahren" aktiviert andere Default-Layer als "Wandern"
-77. 🟢 **Baumgrenze einzeichnen** — horizontale Linie bei ~2000m im Höhenprofil
-78. 🟢 **Schneegrenze** — analog zur Baumgrenze
-79. 🟡 **Strava-KOM Segmente** einzeichnen (via Strava API)
-80. 🟢 **Gesamthöhenmeter prominent** — große Zahl im Overlay, nicht nur im Stats-Block
-81. 🟢 **W/kg Anzeige** — wenn Power + Gewicht bekannt
-82. 🟢 **Ø-Herzfrequenz Zone** — farbiger Hintergrund hinter HR-Kurve nach Zone
-83. 🟡 **Höhenprofil gespiegelt** — Hinweg oben, Rückweg unten (für Rundtouren)
-84. 🟢 **Steigungsklassen-Legende** — Farbskala neben Karte
-85. 🟢 **Distanz bis zum Gipfel** — automatisch aus Peaks + Route berechnet
+_(UX & Onboarding)_
+- 63. **Tour durch Features** — interaktiver Tooltip-Guide beim ersten Besuch → low Retention-Impact
+- 69. **Mobile-optimierte Sidebar** — Bottom-Sheet auf kleinen Screens → Mobile ist nicht die Kernzielgruppe
 
----
+_(Datenschutz)_
+- 74. **Offline-Modus** — gecachte Tiles → komplex, wenig Mehrwert bei Karten-App
 
-## 💡 Kleine Quick-Wins die großen Eindruck machen
+_(Sport-spezifisch)_
+- 77. **Baumgrenze einzeichnen** — horizontale Linie bei ~2000m
+- 78. **Schneegrenze** — analog zur Baumgrenze
+- 79. **Strava-KOM Segmente** → API-abhängig
+- 81. **W/kg Anzeige** — wenn Power + Gewicht bekannt → sehr nischig
+- 82. **Ø-Herzfrequenz Zone** — farbiger Hintergrund hinter HR-Kurve
+- 83. **Höhenprofil gespiegelt** — Hinweg oben, Rückweg unten
+- 85. **Distanz bis zum Gipfel** — automatisch berechnet
 
-86. ✅ ~~**Puls-Animation am Marker** — der Punkt "atmet" während er sich bewegt~~
-87. ✅ ~~**Route erscheint mit Zeichnen-Effekt** — Linie wird sichtbar gezeichnet~~
-88. ✅ ~~**Schatten unter Route-Linie** — dezenter Drop-Shadow für Tiefe~~
-89. ✅ ~~**Kartenrand-Vignette** — `showMapFade` Gradient am unteren Kartenrand~~
-90. ✅ ~~**Start-Marker = grün, Ziel-Marker = rot** — klar unterscheidbar (`showStartEndLabels`)~~
-91. 🟢 **"Gerade hochgeladen"** Konfetti-Animation beim ersten Rendern
-92. 🟢 **Zeitstempel im Video** — läuft mit GPS-Zeit mit
-93. 🟡 **Kamera-Shake** — minimales Wackeln beim Chase-Mode für immersiveres Gefühl
-94. ✅ ~~**Dunkel/Hell-Modus** für die App selbst~~
-95. ✅ ~~**Ladebalken beim Overpass-Fetch** mit Schätzung "~3 Sekunden"~~
+_(Quick-Wins)_
+- 91. **Konfetti-Animation** beim ersten Rendern → Gimmick
+- 92. **Zeitstempel im Video** — läuft mit GPS-Zeit mit
+- 93. **Kamera-Shake** — minimales Wackeln beim Chase-Mode → Gimmick
+
+_(Marketing)_
+- 99. **Embed-Code** — fertige Animation als `<iframe>` einbetten
 
 ---
 
-## 📣 Marketing & Wachstum
+## ✅ Erledigt
 
-96. 🟢 **"Made with [Appname]"** Wasserzeichen optional einblenden (opt-in, nicht opt-out)
-97. 🟢 **Share-Button** der direkt zu Instagram/TikTok führt
-98. 🟡 **Galerie öffentlicher Routen** — User können ihr Video freigeben, andere sehen es
-99. 🟡 **Embed-Code** — fertige Animation als `<iframe>` einbetten
-100. ✅ ~~**Feedback-Button** direkt in der App — niedrigschwellig, geht an dich als Email~~
+_(Karte & Geo-Layer)_
+- 1. ~~**Wasserflächen** (Seen, Teiche) — `natural=water` aus Overpass~~
+- 2. ~~**Gletscher** — `natural=glacier`, hellblau/weiß~~
+- 3. ~~**Weinberge / Obstgärten** — `landuse=vineyard|orchard`~~
+- 4. ~~**Wiesen / Felder** — `landuse=meadow|farmland`~~
+- 5. ~~**Bebauung / Siedlungsflächen** — `landuse=residential|commercial`~~
+- 6. ~~**Farbschema für Landnutzung** — alle Flächen als kohärentes Paket~~
+- 7. ~~**Schummerung** (Hillshade) — aus AWS Terrarium Höhendaten~~
+- 8. ~~**Topografischer Kartenstil** — Preset das alle Geo-Layer zusammen aktiviert~~
+- 9. ~~**Straßen** — Hauptstraßen/Autobahnen aus Overpass~~
+- 10. ~~**Satellitenbild als Hintergrund** — Esri World Imagery~~
+
+_(Visuelle Anpassung)_
+- 11. ~~**Farbthemen / Presets** — 5–8 vorgefertigte Farbschemata~~
+- 12. ✅ **Routenfarbe nach Herzfrequenz** — 5 Zonen (Z1–Z5, blau→rot) basierend auf % HFmax
+- 13. ~~**Routenfarbe nach Tempo** — langsam = kalt, schnell = warm~~
+- 14. ~~**Routenfarbe nach Steigung** — grün = flach, rot = steil~~
+- 15. ~~**Strichstärke der Route** konfigurierbar~~
+- 16. ~~**Gestrichelte Route** — Trail-Pattern für die noch-nicht-gezeichnete Strecke~~
+- 20. ✅ **Marker-Icon wählbar** — Punkt, Pfeil (Fahrrad/Läufer/Wanderer im Backlog)
+
+_(Elevation & Statistiken)_
+- 29. ~~**Max/Min Annotationen auto** — höchster/niedrigster Punkt, steilster Auf-/Abstieg~~
+- 30. ~~**Pässe / Gipfel erkennen** — GPX-Hochpunkte als Peaks aus Overpass~~
+
+_(Animation & Export)_
+- 32. ~~**Animationsgeschwindigkeit** — Duration Slider, Easing wählbar~~
+- 39. ~~**Intro-Dauer** konfigurierbar~~
+- 40. ~~**Outro mit Gesamtstats** — letztes Frame zeigt alle Zahlen~~
+
+_(Overlays & Text)_
+- 44. ~~**Wetter-Overlay** — automatisch aus GPX-Timestamp + Open-Meteo~~
+- 47. ~~**Kilometermarker** — Intervall wählbar + frei per Drag positionierbar~~
+
+_(UX & Onboarding)_
+- 64. ~~**Undo/Redo** für Konfigurationsänderungen~~
+
+_(Datenschutz)_
+- 72. ~~**Route anonymisieren** — Start/Ziel automatisch unscharf machen~~
+
+_(Quick-Wins)_
+- 86. ~~**Puls-Animation am Marker** — der Punkt "atmet" während er sich bewegt~~
+- 87. ~~**Route erscheint mit Zeichnen-Effekt** — Linie wird sichtbar gezeichnet~~
+- 88. ~~**Schatten unter Route-Linie** — dezenter Drop-Shadow für Tiefe~~
+- 89. ~~**Kartenrand-Vignette** — `showMapFade` Gradient am unteren Kartenrand~~
+- 90. ~~**Start-Marker = grün, Ziel-Marker = rot**~~
+- 94. ~~**Dunkel/Hell-Modus** für die App selbst~~
+- 95. ~~**Ladebalken beim Overpass-Fetch**~~
+
+_(Marketing)_
+- 100. ~~**Feedback-Button** direkt in der App~~
 
 ---
 
@@ -187,32 +208,14 @@ Legende: 🟢 1 Tag · 🟡 2–3 Tage · 🔴 Stretch (Ende Woche) · ✅ Erled
 - ✅ ~~**Pan-Zoom (Kamerafahrt)** — Höhenprofil zoomt ins steilste Segment rein und wieder raus~~
 - ✅ ~~**Effort-Animationsmodus** — variable Strichstärke + Farbverlauf + Glow je nach Steigung~~
 - ✅ ~~**Hintergrundbild** — eigenes Foto als Hintergrund mit Blur, Helligkeit, Kontrast, Overlay~~
-- ✅ ~~**Nordpfeil** — automatisch ausgerichtet (`showNorthArrow`)~~
-- ✅ ~~**Maßstabsleiste** — geografisch korrekt berechnet (`showScaleBar`)~~
-- ✅ ~~**Höhenlinien (Konturen)** — aus AWS Terrarium Tiles, konfigurierbar~~
-- ✅ ~~**Wälder** — `natural=wood` + `landuse=forest` aus Overpass~~
-- ✅ ~~**Fahrtrichtungspfeil** — Pfeil am Marker dreht sich mit Route (`showDirection`)~~
-- ✅ ~~**Start/Ziel-Labels** — A/B Punkte einblendbar (`showStartEndLabels`)~~
+- ✅ ~~**Nordpfeil** — automatisch ausgerichtet~~
+- ✅ ~~**Maßstabsleiste** — geografisch korrekt berechnet~~
+- ✅ ~~**Höhenlinien (Konturen)** — aus AWS Terrarium Tiles~~
+- ✅ ~~**Wälder** — `natural=wood` + `landuse=forest`~~
+- ✅ ~~**Fahrtrichtungspfeil** — Pfeil am Marker dreht sich mit Route~~
+- ✅ ~~**Start/Ziel-Labels** — A/B Punkte einblendbar~~
 - ✅ ~~**Flüsse** — aus Overpass mit Glow-Effekt und variabler Strichstärke~~
 - ✅ ~~**Ortsgrenzen** — gestrichelte Polygon-Umrisse~~
 - ✅ ~~**Momente (Annotations)** — frei positionierbare Chips mit Leader-Line, Ghost-Preview~~
 - ✅ ~~**Route-Kontur (Halo)** — halbtransparente Outline unter der Route~~
 - ✅ ~~**Gradient/Time-based Animationsmodus** — Route animiert nach Steigung oder GPS-Zeit~~
-
----
-
-## Prioritäten — nächste Schritte
-
-| # | Feature | Status | Warum |
-|---|---------|--------|-------|
-| 1 | ~~Wasserflächen (Seen)~~ | ✅ | — |
-| 2 | Farbthemen / Presets | 🟢 | Größter WOW-Effekt für neue User |
-| 3 | One-Click Demo Route | 🟢 | Senkt Onboarding-Friction drastisch |
-| 4 | FIT-File Support | 🟢 | Öffnet Garmin-Zielgruppe |
-| 5 | Marker-Icon wählbar | ✅ | Kleine Sache, große Personalisierung |
-| 6 | ~~Schummerung (Hillshade)~~ | ✅ | — |
-| 7 | ~~Outro mit Gesamtstats~~ | ✅ | — |
-| 8 | ~~Route anonymisieren~~ | ✅ | — |
-| 9 | ~~Satellitenbild als Hintergrund~~ | ✅ | — |
-| 10 | Keyboard Shortcuts | 🟢 | Macht die App sofort professioneller |
-| 11 | "Alle Daten bleiben lokal" kommunizieren | 🟢 | Killer-Argument gegen Relive |

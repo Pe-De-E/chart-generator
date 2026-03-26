@@ -501,6 +501,36 @@ export function useRouteMapConfig(
     set: (value: number) => updateConfig({ statsY: value }),
   })
 
+  const statsShowDistance = computed({
+    get: () => getConfig().statsShowDistance ?? true,
+    set: (value: boolean) => updateConfig({ statsShowDistance: value }),
+  })
+
+  const statsShowElevGain = computed({
+    get: () => getConfig().statsShowElevGain ?? true,
+    set: (value: boolean) => updateConfig({ statsShowElevGain: value }),
+  })
+
+  const statsShowCurrentElev = computed({
+    get: () => getConfig().statsShowCurrentElev ?? true,
+    set: (value: boolean) => updateConfig({ statsShowCurrentElev: value }),
+  })
+
+  const statsShowTime = computed({
+    get: () => getConfig().statsShowTime ?? true,
+    set: (value: boolean) => updateConfig({ statsShowTime: value }),
+  })
+
+  const statsShowSpeed = computed({
+    get: () => getConfig().statsShowSpeed ?? false,
+    set: (value: boolean) => updateConfig({ statsShowSpeed: value }),
+  })
+
+  const statsShowHr = computed({
+    get: () => getConfig().statsShowHr ?? false,
+    set: (value: boolean) => updateConfig({ statsShowHr: value }),
+  })
+
   // --- Map Visual Enhancements ---
 
   // --- Roads ---
@@ -663,6 +693,12 @@ export function useRouteMapConfig(
     statsOverlayColor,
     statsX,
     statsY,
+    statsShowDistance,
+    statsShowElevGain,
+    statsShowCurrentElev,
+    statsShowTime,
+    statsShowSpeed,
+    statsShowHr,
     // Roads
     showRoads,
     roadOpacity,

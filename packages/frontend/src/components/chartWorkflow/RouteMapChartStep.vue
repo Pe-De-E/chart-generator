@@ -229,6 +229,12 @@ export interface RouteMapAnimationConfig {
   statsOverlayColor: string;
   statsX: number;   // 0-1 normalized horizontal position
   statsY: number;   // 0-1 normalized vertical position within map area
+  statsShowDistance: boolean;
+  statsShowElevGain: boolean;
+  statsShowCurrentElev: boolean;
+  statsShowTime: boolean;
+  statsShowSpeed: boolean;
+  statsShowHr: boolean;
   // Annotations — text chips shown at specific progress points
   annotations?: import('../../utils/chartGenerators/elevationChart/types').Annotation[];
   // Roads
@@ -373,6 +379,12 @@ export const DEFAULT_ROUTEMAP_ANIMATION_CONFIG: RouteMapAnimationConfig = {
   statsOverlayColor: '#ffffff',
   statsX: 1.0,
   statsY: 1.0,
+  statsShowDistance: true,
+  statsShowElevGain: true,
+  statsShowCurrentElev: true,
+  statsShowTime: true,
+  statsShowSpeed: false,
+  statsShowHr: false,
   annotations: [],
   // Roads
   showRoads: false,
@@ -1168,6 +1180,12 @@ function buildFrameOptions(progress: number, overrides: Partial<CombinedFrameOpt
     statsOverlayColor: cfg.statsOverlayColor,
     statsX: cfg.statsX ?? 1.0,
     statsY: cfg.statsY ?? 1.0,
+    statsShowDistance: cfg.statsShowDistance ?? true,
+    statsShowElevGain: cfg.statsShowElevGain ?? true,
+    statsShowCurrentElev: cfg.statsShowCurrentElev ?? true,
+    statsShowTime: cfg.statsShowTime ?? true,
+    statsShowSpeed: cfg.statsShowSpeed ?? false,
+    statsShowHr: cfg.statsShowHr ?? false,
     annotations: cfg.annotations ?? [],
     // Map visual enhancements
     showNorthArrow: cfg.showNorthArrow ?? true,

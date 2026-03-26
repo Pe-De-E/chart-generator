@@ -195,11 +195,17 @@ export interface CombinedFrameOptions {
     y?: number          // 0-1 normalized vertical position
   }
 
-  // Stats overlay (distance, elevation gain, current elevation, time)
+  // Stats overlay (distance, elevation gain, current elevation, time, speed, HR)
   showStatsOverlay?: boolean
   statsOverlayColor?: string
   statsX?: number   // 0-1, normalized horizontal position (0=left, 1=right)
   statsY?: number   // 0-1, normalized vertical position within map area (0=top, 1=bottom)
+  statsShowDistance?: boolean
+  statsShowElevGain?: boolean
+  statsShowCurrentElev?: boolean
+  statsShowTime?: boolean
+  statsShowSpeed?: boolean
+  statsShowHr?: boolean
   annotations?: Annotation[]   // Text chips shown at specific progress points
 
   // Per-km label offsets (dx/dy in SVG coords from the route anchor point)
@@ -241,6 +247,12 @@ export const DEFAULT_COMBINED_FRAME_OPTIONS: Partial<CombinedFrameOptions> = {
   showNorthArrow: true,
   showScaleBar: true,
   showMapFade: true,
+  statsShowDistance: true,
+  statsShowElevGain: true,
+  statsShowCurrentElev: true,
+  statsShowTime: true,
+  statsShowSpeed: false,
+  statsShowHr: false,
 }
 
 /** Stores the SVG dot-anchor position for each km value after the last render. */
@@ -644,9 +656,9 @@ function calculateCurrentStats(
   routePoints: RoutePoint[],
   chartData: Array<{ value: number }>,
   effectiveProgress: number,
-): { distance: number; elevGain: number; currentElev: number; elapsedMs: number | null } {
+): { distance: number; elevGain: number; currentElev: number; elapsedMs: number | null; currentSpeedKmh: number | null; currentHr: number | null } {
   if (routePoints.length === 0 || chartData.length === 0) {
-    return { distance: 0, elevGain: 0, currentElev: 0, elapsedMs: null }
+    return { distance: 0, elevGain: 0, currentElev: 0, elapsedMs: null, currentSpeedKmh: null, currentHr: null }
   }
 
   // Distance + time: interpolate from routePoints
@@ -663,6 +675,31 @@ function calculateCurrentStats(
     elapsedMs = t0 + (t1 - t0) * rpFrac
   }
 
+  // Current speed: smoothed average over a 5-segment window around current index
+  let currentSpeedKmh: number | null = null
+  if (routePoints[rpI].time != null) {
+    const windowHalf = 2
+    const speedStart = Math.max(0, rpI - windowHalf)
+    const speedEnd = Math.min(routePoints.length - 2, rpI + windowHalf)
+    let speedSum = 0, speedCount = 0
+    for (let i = speedStart; i <= speedEnd; i++) {
+      const dt = (routePoints[i + 1].time ?? 0) - (routePoints[i].time ?? 0)
+      if (dt > 500) {
+        speedSum += ((routePoints[i + 1].distance - routePoints[i].distance) / dt) * 3_600_000
+        speedCount++
+      }
+    }
+    if (speedCount > 0) currentSpeedKmh = speedSum / speedCount
+  }
+
+  // Current HR: interpolate between adjacent routePoints
+  let currentHr: number | null = null
+  const hr0 = routePoints[rpI].hr
+  const hr1 = routePoints[rpI + 1].hr
+  if (hr0 != null && hr1 != null) {
+    currentHr = Math.round(hr0 + (hr1 - hr0) * rpFrac)
+  }
+
   // Current elevation: interpolate from chartData
   const cdIdx = effectiveProgress * (chartData.length - 1)
   const cdI = Math.min(Math.floor(cdIdx), chartData.length - 2)
@@ -677,7 +714,7 @@ function calculateCurrentStats(
     if (diff > 0) elevGain += diff
   }
 
-  return { distance, elevGain, currentElev, elapsedMs }
+  return { distance, elevGain, currentElev, elapsedMs, currentSpeedKmh, currentHr }
 }
 
 function formatElapsedTime(ms: number): string {
@@ -696,32 +733,47 @@ function formatElapsedTime(ms: number): string {
  * statsX/statsY are 0-1 values: 0=top/left edge flush, 1=bottom/right edge flush.
  */
 function generateStatsOverlay(
-  stats: { distance: number; elevGain: number; currentElev: number; elapsedMs: number | null },
+  stats: { distance: number; elevGain: number; currentElev: number; elapsedMs: number | null; currentSpeedKmh: number | null; currentHr: number | null },
   width: number,
   mapHeight: number,
   color: string,
   statsX: number,
   statsY: number,
+  show: { distance: boolean; elevGain: boolean; currentElev: boolean; time: boolean; speed: boolean; hr: boolean },
 ): string {
-  const fontSize = 32
-  const rowHeight = 48
-  const paddingX = 20
-  const paddingY = 16
-  const boxWidth = 270
+  const iconSize = 22
+  const valueSize = 36
+  const rowHeight = 52
+  const paddingX = 18
+  const paddingY = 14
+  const iconValueGap = 36   // px between icon baseline and value start
+  const boxWidth = 290
 
-  const rows: Array<{ icon: string; value: string }> = [
-    {
+  const rows: Array<{ icon: string; value: string }> = []
+
+  if (show.distance) {
+    rows.push({
       icon: '↔',
-      value: stats.distance >= 100
-        ? `${Math.round(stats.distance)} km`
-        : `${stats.distance.toFixed(1)} km`,
-    },
-    { icon: '↑', value: `+${Math.round(stats.elevGain)} m` },
-    { icon: '▲', value: `${Math.round(stats.currentElev)} m` },
-  ]
-  if (stats.elapsedMs !== null) {
+      value: stats.distance >= 100 ? `${Math.round(stats.distance)} km` : `${stats.distance.toFixed(1)} km`,
+    })
+  }
+  if (show.elevGain) {
+    rows.push({ icon: '↑', value: `+${Math.round(stats.elevGain)} m` })
+  }
+  if (show.currentElev) {
+    rows.push({ icon: '▲', value: `${Math.round(stats.currentElev)} m` })
+  }
+  if (show.time && stats.elapsedMs !== null) {
     rows.push({ icon: '⏱', value: formatElapsedTime(stats.elapsedMs) })
   }
+  if (show.speed && stats.currentSpeedKmh !== null) {
+    rows.push({ icon: '⚡', value: `${stats.currentSpeedKmh.toFixed(1)} km/h` })
+  }
+  if (show.hr && stats.currentHr !== null) {
+    rows.push({ icon: '♥', value: `${stats.currentHr} bpm` })
+  }
+
+  if (rows.length === 0) return ''
 
   const boxHeight = rows.length * rowHeight + 2 * paddingY
 
@@ -730,16 +782,22 @@ function generateStatsOverlay(
   const boxX = Math.round(statsX * maxX)
   const boxY = Math.round(statsY * maxY)
 
+  const bg = `<rect x="${boxX}" y="${boxY}" width="${boxWidth}" height="${boxHeight}" rx="14" fill="rgba(0,0,0,0.55)"/>`
+
   const textLines = rows.map((row, i) => {
-    const x = boxX + paddingX
-    const y = Math.round(boxY + paddingY + rowHeight * i + fontSize * 0.78)
-    return `<text x="${x}" y="${y}" fill="${color}" font-size="${fontSize}" font-weight="bold"
+    const baseY = Math.round(boxY + paddingY + rowHeight * i + valueSize * 0.82)
+    const iconX = boxX + paddingX
+    const valueX = iconX + iconValueGap
+    const icon = `<text x="${iconX}" y="${baseY}" fill="${color}" font-size="${iconSize}" opacity="0.65"
+      font-family="system-ui, sans-serif">${row.icon}</text>`
+    const value = `<text x="${valueX}" y="${baseY}" fill="${color}" font-size="${valueSize}" font-weight="bold"
       font-family="system-ui, sans-serif"
-      stroke="rgba(0,0,0,0.75)" stroke-width="5" paint-order="stroke fill"
-      stroke-linejoin="round">${row.icon}  ${row.value}</text>`
+      stroke="rgba(0,0,0,0.4)" stroke-width="3" paint-order="stroke fill"
+      stroke-linejoin="round">${row.value}</text>`
+    return `${icon}\n    ${value}`
   }).join('\n    ')
 
-  return textLines
+  return `${bg}\n    ${textLines}`
 }
 
 /**
@@ -1071,6 +1129,12 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
     statsOverlayColor = '#ffffff',
     statsX = 1.0,
     statsY = 1.0,
+    statsShowDistance = true,
+    statsShowElevGain = true,
+    statsShowCurrentElev = true,
+    statsShowTime = true,
+    statsShowSpeed = false,
+    statsShowHr = false,
     annotations = [],
     // Map visual enhancements
     showNorthArrow = true,
@@ -1522,7 +1586,14 @@ export function generateCombinedFrame(options: CombinedFrameOptions): string {
   let statsHtml = ''
   if (showStatsOverlay && routePoints.length > 1 && chartData.length > 1) {
     const stats = calculateCurrentStats(routePoints, chartData, effectiveProgress)
-    statsHtml = generateStatsOverlay(stats, width, mapHeight, statsOverlayColor, statsX, statsY)
+    statsHtml = generateStatsOverlay(stats, width, mapHeight, statsOverlayColor, statsX, statsY, {
+      distance: statsShowDistance,
+      elevGain: statsShowElevGain,
+      currentElev: statsShowCurrentElev,
+      time: statsShowTime,
+      speed: statsShowSpeed,
+      hr: statsShowHr,
+    })
   }
 
   // ── Annotations ──
