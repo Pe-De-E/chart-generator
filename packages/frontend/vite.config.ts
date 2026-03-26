@@ -22,6 +22,8 @@ export default defineConfig({
         target: 'https://overpass-api.de/api',
         changeOrigin: true,
         rewrite: (path: string) => path.replace(/^\/overpass/, ''),
+        proxyTimeout: 30000,
+        timeout: 30000,
       },
       '/satellite-tiles': {
         target: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile',

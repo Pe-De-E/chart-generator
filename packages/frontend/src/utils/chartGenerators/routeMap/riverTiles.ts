@@ -17,6 +17,8 @@ import {
   clipPolylineToViewport,
   type Point2D,
 } from './geoFeatures'
+// ALL Overpass fetches MUST go through this queue — see overpassQueue.ts for why.
+import { enqueueOverpassRequest } from './overpassQueue'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -47,6 +49,9 @@ const OVERPASS_URL = '/overpass/interpreter'
 /**
  * Query the Overpass API for river and canal ways within the given bounds.
  * Uses `out geom` to include geometry inline (no separate node download).
+ *
+ * Goes through `enqueueOverpassRequest` — do NOT call fetch() directly here.
+ * See overpassQueue.ts for why: concurrent layer loads trigger 504 → 429 loops.
  */
 async function fetchRiverGeometries(bounds: RouteBounds): Promise<OverpassElement[]> {
   const { minLat, maxLon, maxLat, minLon } = bounds
@@ -56,18 +61,18 @@ async function fetchRiverGeometries(bounds: RouteBounds): Promise<OverpassElemen
     `way[waterway~"^(river|canal|stream)$"];\n` +
     `out geom;`
 
-  const response = await fetch(OVERPASS_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: `data=${encodeURIComponent(query)}`,
+  const body = `data=${encodeURIComponent(query)}`
+
+  return enqueueOverpassRequest(async () => {
+    const response = await fetch(OVERPASS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    })
+    if (!response.ok) throw new Error(`Overpass river fetch failed: ${response.status}`)
+    const data = await response.json()
+    return (data.elements || []) as OverpassElement[]
   })
-
-  if (!response.ok) {
-    throw new Error(`Overpass API failed: ${response.status}`)
-  }
-
-  const data = await response.json()
-  return (data.elements || []) as OverpassElement[]
 }
 
 // ── SVG Rendering ─────────────────────────────────────────────────────────────

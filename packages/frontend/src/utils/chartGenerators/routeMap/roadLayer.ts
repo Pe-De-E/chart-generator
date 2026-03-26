@@ -19,6 +19,8 @@
 
 import type { RouteBounds, ProjectionParams } from './projection'
 import { projectGeoCoord, smoothPathD } from './geoFeatures'
+// ALL Overpass fetches MUST go through this queue — see overpassQueue.ts for why.
+import { enqueueOverpassRequest } from './overpassQueue'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -62,18 +64,18 @@ async function fetchRoadGeometries(bounds: RouteBounds): Promise<OverpassElement
     `way[highway~"^(motorway|trunk|primary|secondary)$"];\n` +
     `out geom;`
 
-  const response = await fetch(OVERPASS_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: `data=${encodeURIComponent(query)}`,
+  // Enqueue through the shared rate-limiter — do NOT call fetch() directly.
+  // See overpassQueue.ts: concurrent requests from multiple layers → 504 → 429 loop.
+  return enqueueOverpassRequest(async () => {
+    const response = await fetch(OVERPASS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `data=${encodeURIComponent(query)}`,
+    })
+    if (!response.ok) throw new Error(`Overpass road fetch failed: ${response.status}`)
+    const data = await response.json()
+    return (data.elements || []) as OverpassElement[]
   })
-
-  if (!response.ok) {
-    throw new Error(`Overpass API failed: ${response.status}`)
-  }
-
-  const data = await response.json()
-  return (data.elements || []) as OverpassElement[]
 }
 
 // ── SVG Rendering ─────────────────────────────────────────────────────────────

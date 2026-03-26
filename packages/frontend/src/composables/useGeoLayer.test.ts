@@ -154,6 +154,31 @@ describe('useGeoLayer', () => {
     expect(isLoading.value).toBe(false)
   })
 
+  it('retries after a failed fetch when inputs are unchanged (lastKey reset on error)', async () => {
+    // Simulates the Overpass 504→queue-fix scenario: first call fails (504), then succeeds.
+    // Without lastKey reset, the second watcher fire (same inputs) would short-circuit.
+    generate = vi.fn()
+      .mockRejectedValueOnce(new Error('504'))
+      .mockResolvedValueOnce('<svg>retry</svg>')
+
+    const { routeBounds, projectionParams, config, layerSvg, error } = makeLayer(generate)
+    routeBounds.value = BOUNDS
+    projectionParams.value = PARAMS
+    await flushPromises()
+
+    expect(error.value).toBe('504')
+    expect(layerSvg.value).toBe('')
+
+    // Trigger a re-watch with the same values — e.g. a spurious config ref change.
+    // After the lastKey reset, this MUST cause a retry.
+    config.value = { ...CFG }
+    await flushPromises()
+
+    expect(generate).toHaveBeenCalledTimes(2)
+    expect(layerSvg.value).toBe('<svg>retry</svg>')
+    expect(error.value).toBeNull()
+  })
+
   // ── 5. Spurious reference change does NOT trigger a new fetch ────────────────
   //
   // Regression: Pattern-B config computeds (forest, water, road …) return a new

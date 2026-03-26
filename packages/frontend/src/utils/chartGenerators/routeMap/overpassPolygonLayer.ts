@@ -8,6 +8,8 @@
 
 import type { RouteBounds, ProjectionParams } from './projection'
 import { projectGeoCoord, smoothPathD, type Point2D } from './geoFeatures'
+// ALL Overpass fetches MUST go through this queue — see overpassQueue.ts for why.
+import { enqueueOverpassRequest } from './overpassQueue'
 
 // ── Shared Overpass types ─────────────────────────────────────────────────────
 
@@ -105,15 +107,18 @@ export async function fetchOverpassElements(
     `(\n${filters.map(f => `  ${f};`).join('\n')}\n);\n` +
     `out geom;`
 
-  const response = await fetch(OVERPASS_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: `data=${encodeURIComponent(query)}`,
+  // Enqueue through the shared rate-limiter — do NOT call fetch() directly.
+  // See overpassQueue.ts: concurrent requests from multiple layers → 504 → 429 loop.
+  const elements = await enqueueOverpassRequest(async () => {
+    const response = await fetch(OVERPASS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `data=${encodeURIComponent(query)}`,
+    })
+    if (!response.ok) throw new Error(`Overpass fetch failed: ${response.status}`)
+    const data = await response.json()
+    return (data.elements || []) as OverpassElement[]
   })
-
-  if (!response.ok) throw new Error(`Overpass fetch failed: ${response.status}`)
-  const data = await response.json()
-  const elements = (data.elements || []) as OverpassElement[]
   elementsCache.set(cacheKey, elements)
   setSessionElements(cacheKey, elements)
   return elements

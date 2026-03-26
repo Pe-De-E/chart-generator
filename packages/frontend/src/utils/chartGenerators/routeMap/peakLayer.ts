@@ -11,6 +11,8 @@
 
 import type { RouteBounds, ProjectionParams } from './projection'
 import { projectGeoCoord, labelOverlapsRoute } from './geoFeatures'
+// ALL Overpass fetches MUST go through this queue — see overpassQueue.ts for why.
+import { enqueueOverpassRequest } from './overpassQueue'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -44,26 +46,27 @@ async function fetchPeaks(bounds: RouteBounds): Promise<OSMPeak[]> {
     `node[natural=peak];\n` +
     `out body;`
 
-  const response = await fetch(OVERPASS_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: `data=${encodeURIComponent(query)}`,
+  // Enqueue through the shared rate-limiter — do NOT call fetch() directly.
+  // See overpassQueue.ts: concurrent requests from multiple layers → 504 → 429 loop.
+  return enqueueOverpassRequest(async () => {
+    const response = await fetch(OVERPASS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `data=${encodeURIComponent(query)}`,
+    })
+    if (!response.ok) throw new Error(`Overpass peak fetch failed: ${response.status}`)
+    const data = await response.json()
+    const elements = (data.elements || []) as Array<{
+      id: number; lat: number; lon: number; tags?: Record<string, string>
+    }>
+    return elements.map(el => ({
+      id: el.id,
+      lat: el.lat,
+      lon: el.lon,
+      name: el.tags?.name || el.tags?.['name:de'] || '',
+      ele: el.tags?.ele ? (parseFloat(el.tags.ele) || 0) : 0,
+    }))
   })
-
-  if (!response.ok) throw new Error(`Overpass peak fetch failed: ${response.status}`)
-
-  const data = await response.json()
-  const elements = (data.elements || []) as Array<{
-    id: number; lat: number; lon: number; tags?: Record<string, string>
-  }>
-
-  return elements.map(el => ({
-    id: el.id,
-    lat: el.lat,
-    lon: el.lon,
-    name: el.tags?.name || el.tags?.['name:de'] || '',
-    ele: el.tags?.ele ? (parseFloat(el.tags.ele) || 0) : 0,
-  }))
 }
 
 // ── Peak Selection ────────────────────────────────────────────────────────────

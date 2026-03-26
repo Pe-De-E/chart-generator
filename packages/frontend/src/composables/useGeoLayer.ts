@@ -88,6 +88,10 @@ export function useGeoLayer<TConfig>(
           error.value = e instanceof Error ? e.message : 'Geo layer generation failed'
           layerSvg.value = ''
           console.warn('Geo layer generation failed:', e)
+          // Reset lastKey so the next watcher fire retries the fetch.
+          // Without this, a failed request (e.g. 504 from Overpass) permanently
+          // blocks the layer — the key matches so the guard short-circuits forever.
+          lastKey = ''
         }
       } finally {
         if (thisGen === generation) {
