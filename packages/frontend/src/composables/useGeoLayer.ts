@@ -46,16 +46,28 @@ export function useGeoLayer<TConfig>(
   const error = ref<string | null>(null)
 
   let generation = 0
+  let lastKey = ''
+  let lastExtraRefs: unknown[] = []
 
   watch(
     [routeBounds, projectionParams, config, viewWidth, viewHeight, ...extraDeps],
-    async ([bounds, params, cfg]) => {
-      const thisGen = ++generation
-
+    async ([bounds, params, cfg, w, h, ...extra]) => {
       if (!bounds || !params || !cfg) {
         layerSvg.value = ''
+        lastKey = ''
         return
       }
+
+      // Only start a new fetch when the actual values changed, not just object references.
+      // This prevents spurious watcher fires (from new object refs with identical data)
+      // from incrementing the generation counter and discarding valid in-flight fetches.
+      const key = JSON.stringify([bounds, params, cfg, w, h])
+      const extraChanged = extra.some((val, i) => val !== lastExtraRefs[i])
+      if (key === lastKey && !extraChanged) return
+      lastKey = key
+      lastExtraRefs = extra as unknown[]
+
+      const thisGen = ++generation
 
       isLoading.value = true
       error.value = null
