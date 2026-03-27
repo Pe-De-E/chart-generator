@@ -20,9 +20,12 @@
  *   useGeoLayer(generate, ..., [routePoints])
  */
 
-import { ref, watch } from 'vue'
+import { ref, watch, onUnmounted } from 'vue'
 import type { Ref } from 'vue'
 import type { RouteBounds, ProjectionParams } from '../utils/chartGenerators/routeMap/projection'
+
+/** Delay before automatically retrying a failed geo-layer fetch (ms). */
+const AUTO_RETRY_MS = 3000
 
 type GeoGenerator<TConfig> = (
   bounds: RouteBounds,
@@ -45,13 +48,25 @@ export function useGeoLayer<TConfig>(
   const isLoading = ref(false)
   const error = ref<string | null>(null)
 
+  // Internal retry signal: incrementing it re-fires the watcher after a failed fetch.
+  // This avoids requiring the user to manually toggle the layer off/on to retry.
+  const _retrySignal = ref(0)
+  let _retryTimer: ReturnType<typeof setTimeout> | null = null
+
+  onUnmounted(() => {
+    if (_retryTimer) clearTimeout(_retryTimer)
+  })
+
   let generation = 0
   let lastKey = ''
   let lastExtraRefs: unknown[] = []
 
   watch(
-    [routeBounds, projectionParams, config, viewWidth, viewHeight, ...extraDeps],
-    async ([bounds, params, cfg, w, h, ...extra]) => {
+    [routeBounds, projectionParams, config, viewWidth, viewHeight, _retrySignal, ...extraDeps],
+    async ([bounds, params, cfg, w, h, , ...extra]) => {
+      // Cancel any pending auto-retry — a real watcher trigger just fired.
+      if (_retryTimer) { clearTimeout(_retryTimer); _retryTimer = null }
+
       if (!bounds || !params || !cfg) {
         layerSvg.value = ''
         lastKey = ''
@@ -92,6 +107,10 @@ export function useGeoLayer<TConfig>(
           // Without this, a failed request (e.g. 504 from Overpass) permanently
           // blocks the layer — the key matches so the guard short-circuits forever.
           lastKey = ''
+          // Auto-retry after AUTO_RETRY_MS: incrementing _retrySignal re-fires the watcher.
+          // Since lastKey was just cleared, the key check passes and the fetch is retried
+          // without the user needing to manually toggle the layer off and on.
+          _retryTimer = setTimeout(() => { _retrySignal.value++ }, AUTO_RETRY_MS)
         }
       } finally {
         if (thisGen === generation) {

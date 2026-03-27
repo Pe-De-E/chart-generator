@@ -179,6 +179,31 @@ describe('useGeoLayer', () => {
     expect(error.value).toBeNull()
   })
 
+  it('auto-retries after AUTO_RETRY_MS without requiring a manual toggle', async () => {
+    vi.useFakeTimers()
+    generate = vi.fn()
+      .mockRejectedValueOnce(new Error('504'))
+      .mockResolvedValueOnce('<svg>auto</svg>')
+
+    const { routeBounds, projectionParams, layerSvg, error } = makeLayer(generate)
+    routeBounds.value = BOUNDS
+    projectionParams.value = PARAMS
+    await flushPromises()
+
+    expect(error.value).toBe('504')
+    expect(generate).toHaveBeenCalledTimes(1)
+
+    // Advance timers — auto-retry fires, no user interaction needed
+    vi.advanceTimersByTime(3500)
+    await flushPromises()
+
+    expect(generate).toHaveBeenCalledTimes(2)
+    expect(layerSvg.value).toBe('<svg>auto</svg>')
+    expect(error.value).toBeNull()
+
+    vi.useRealTimers()
+  })
+
   // ── 5. Spurious reference change does NOT trigger a new fetch ────────────────
   //
   // Regression: Pattern-B config computeds (forest, water, road …) return a new
