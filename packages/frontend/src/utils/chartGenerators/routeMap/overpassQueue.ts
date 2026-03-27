@@ -41,6 +41,17 @@
 /** Maximum number of simultaneous Overpass requests (overpass-api.de allows 2 per IP). */
 const MAX_CONCURRENT = 2
 
+/**
+ * Overpass endpoints tried in order.
+ * kumi.systems is a CORS-enabled community mirror — used as fallback when the
+ * primary returns 5xx or times out.  Do NOT remove the fallback: without it a
+ * single slow/overloaded server response makes the layer permanently invisible.
+ */
+const OVERPASS_ENDPOINTS = [
+  '/overpass/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+]
+
 let _activeCount = 0
 const _queue: Array<() => void> = []
 
@@ -56,11 +67,9 @@ function _drain() {
  * Enqueue an async Overpass fetch.
  * Up to MAX_CONCURRENT requests run simultaneously; the rest wait in line.
  *
- * Usage:
- *   const data = await enqueueOverpassRequest(() =>
- *     fetch('/overpass/interpreter', { method: 'POST', body: '...' })
- *       .then(r => r.json())
- *   )
+ * Prefer `enqueueOverpassPost` for standard POST queries — it handles the
+ * endpoint fallback automatically.  Use this lower-level function only when
+ * you need full control over the request (e.g. custom headers).
  */
 export function enqueueOverpassRequest<T>(fn: () => Promise<T>): Promise<T> {
   return new Promise<T>((resolve, reject) => {
@@ -75,5 +84,39 @@ export function enqueueOverpassRequest<T>(fn: () => Promise<T>): Promise<T> {
       }
     })
     _drain()
+  })
+}
+
+/**
+ * The standard way to POST an Overpass QL query.
+ *
+ * Wraps `enqueueOverpassRequest` and automatically tries each endpoint in
+ * OVERPASS_ENDPOINTS order, falling back on 5xx or network errors.
+ * Returns the parsed JSON response body.
+ *
+ * Usage:
+ *   const data = await enqueueOverpassPost(`data=${encodeURIComponent(query)}`)
+ *   const elements = data.elements || []
+ */
+export function enqueueOverpassPost(body: string): Promise<{ elements?: unknown[] }> {
+  return enqueueOverpassRequest(async () => {
+    let lastError: Error = new Error('No Overpass endpoints available')
+    for (const url of OVERPASS_ENDPOINTS) {
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body,
+        })
+        if (!response.ok) {
+          lastError = new Error(`Overpass ${response.status} from ${url}`)
+          continue
+        }
+        return await response.json() as { elements?: unknown[] }
+      } catch (e) {
+        lastError = e instanceof Error ? e : new Error(String(e))
+      }
+    }
+    throw lastError
   })
 }
