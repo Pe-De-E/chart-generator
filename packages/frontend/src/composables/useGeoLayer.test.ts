@@ -194,7 +194,7 @@ describe('useGeoLayer', () => {
     expect(generate).toHaveBeenCalledTimes(1)
 
     // Advance timers — auto-retry fires, no user interaction needed
-    vi.advanceTimersByTime(3500)
+    vi.advanceTimersByTime(11_000)
     await flushPromises()
 
     expect(generate).toHaveBeenCalledTimes(2)

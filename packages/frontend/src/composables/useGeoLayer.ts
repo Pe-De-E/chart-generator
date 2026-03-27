@@ -24,8 +24,10 @@ import { ref, watch, onUnmounted } from 'vue'
 import type { Ref } from 'vue'
 import type { RouteBounds, ProjectionParams } from '../utils/chartGenerators/routeMap/projection'
 
-/** Delay before automatically retrying a failed geo-layer fetch (ms). */
-const AUTO_RETRY_MS = 3000
+/** Delay before automatically retrying a failed geo-layer fetch (ms).
+ *  Must be clearly longer than a normal Overpass fetch (2–8 s) so the retry
+ *  doesn't fire while the original request is still being processed server-side. */
+const AUTO_RETRY_MS = 10_000
 
 type GeoGenerator<TConfig> = (
   bounds: RouteBounds,
