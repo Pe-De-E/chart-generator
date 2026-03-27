@@ -52,13 +52,11 @@ export interface PolygonLayerStyle {
 
 // ── Fetch ─────────────────────────────────────────────────────────────────────
 
-// Bump version when the fetch/cache logic changes to bust stale sessionStorage entries.
-// v1 → v2: guard against caching error responses that lack an `elements` key.
-const ELEMENTS_SESSION_PREFIX = 'overpass-elements-v2:'
-
 /**
- * Module-level elements cache keyed by filters + bounds.
- * Shared across all layers so that color-only changes never re-fetch.
+ * Module-level in-memory elements cache keyed by filters + bounds.
+ * Shared across all layers so that color-only changes never re-fetch within a session.
+ * Intentionally NOT persisted to sessionStorage — that layer added complexity and
+ * caused repeated bugs where error/empty responses were cached across page reloads.
  */
 const elementsCache = new Map<string, OverpassElement[]>()
 
@@ -70,19 +68,6 @@ function buildElementsCacheKey(filters: string[], bounds: RouteBounds): string {
   )
 }
 
-function getSessionElements(key: string): OverpassElement[] | null {
-  try {
-    const raw = sessionStorage.getItem(ELEMENTS_SESSION_PREFIX + key)
-    return raw ? (JSON.parse(raw) as OverpassElement[]) : null
-  } catch { return null }
-}
-
-function setSessionElements(key: string, elements: OverpassElement[]): void {
-  try {
-    sessionStorage.setItem(ELEMENTS_SESSION_PREFIX + key, JSON.stringify(elements))
-  } catch { /* quota exceeded or unavailable */ }
-}
-
 /** POST a single Overpass query for the given filters within bbox. */
 export async function fetchOverpassElements(
   filters: string[],
@@ -90,16 +75,8 @@ export async function fetchOverpassElements(
 ): Promise<OverpassElement[]> {
   const cacheKey = buildElementsCacheKey(filters, bounds)
 
-  // 1. In-memory (fastest)
   const inMemory = elementsCache.get(cacheKey)
   if (inMemory) return inMemory
-
-  // 2. sessionStorage (survives page reloads — avoids re-fetching on every HMR reload)
-  const sessionHit = getSessionElements(cacheKey)
-  if (sessionHit) {
-    elementsCache.set(cacheKey, sessionHit)
-    return sessionHit
-  }
 
   const { minLat, maxLon, maxLat, minLon } = bounds
   const bbox = `${minLat.toFixed(5)},${minLon.toFixed(5)},${maxLat.toFixed(5)},${maxLon.toFixed(5)}`
@@ -114,15 +91,13 @@ export async function fetchOverpassElements(
 
   // Guard: a valid Overpass response always has an `elements` array (possibly empty).
   // If it's missing, the server returned an error body (e.g. {"remark":"Too busy"}).
-  // Throw instead of caching [] — the layer will auto-retry rather than permanently
-  // appearing empty because an error response was mistakenly stored in the cache.
+  // Throw so useGeoLayer retries instead of caching an empty result.
   if (!Array.isArray(data.elements)) {
     throw new Error(`Overpass response missing elements key — possible server error`)
   }
 
   const elements = data.elements as OverpassElement[]
   elementsCache.set(cacheKey, elements)
-  setSessionElements(cacheKey, elements)
   return elements
 }
 

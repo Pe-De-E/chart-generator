@@ -217,13 +217,13 @@ function computeLabelCandidates(pts: Point2D[], vw: number, vh: number, count = 
 
 // ── Cache & Export ────────────────────────────────────────────────────────────
 
-// SVG cache — keyed WITHOUT offsets (offsets only affect label positions, not geometry)
+// SVG cache — keyed WITHOUT offsets (offsets only affect label positions, not geometry).
+// In-memory only — sessionStorage caching was removed because stale/error responses
+// persisted across reloads and caused layers to stay permanently empty.
 const riverSvgCache = new Map<string, string>()
-const RIVER_SVG_SESSION_PREFIX = 'river-svg-v1:'
 
 // Element cache — keyed by padded bounds; avoids repeat Overpass fetches on offset change
 const riverElementsCache = new Map<string, OverpassElement[]>()
-const RIVER_ELEMENTS_SESSION_PREFIX = 'river-elements-v2:'
 
 // Module state read by useRiverTiles / RouteMapChartStep for click cycling
 let _lastDetectedNames: string[] = []
@@ -241,31 +241,12 @@ function buildElementsCacheKey(bounds: RouteBounds): string {
   return `${bounds.minLat.toFixed(4)},${bounds.maxLat.toFixed(4)},${bounds.minLon.toFixed(4)},${bounds.maxLon.toFixed(4)}`
 }
 
-function getSessionSvg(key: string): string | null {
-  try { return sessionStorage.getItem(RIVER_SVG_SESSION_PREFIX + key) } catch { return null }
-}
-function setSessionSvg(key: string, svg: string): void {
-  try { sessionStorage.setItem(RIVER_SVG_SESSION_PREFIX + key, svg) } catch { /* quota */ }
-}
-function getSessionElements(key: string): OverpassElement[] | null {
-  try {
-    const raw = sessionStorage.getItem(RIVER_ELEMENTS_SESSION_PREFIX + key)
-    return raw ? JSON.parse(raw) as OverpassElement[] : null
-  } catch { return null }
-}
-function setSessionElements(key: string, elements: OverpassElement[]): void {
-  try { sessionStorage.setItem(RIVER_ELEMENTS_SESSION_PREFIX + key, JSON.stringify(elements)) } catch { /* quota */ }
-}
-
 async function fetchCachedElements(paddedBounds: RouteBounds): Promise<OverpassElement[]> {
   const key = buildElementsCacheKey(paddedBounds)
   const mem = riverElementsCache.get(key)
   if (mem) return mem
-  const session = getSessionElements(key)
-  if (session) { riverElementsCache.set(key, session); return session }
   const elements = await fetchRiverGeometries(paddedBounds)
   riverElementsCache.set(key, elements)
-  setSessionElements(key, elements)
   return elements
 }
 
@@ -298,24 +279,17 @@ export async function generateRiverLayer(
   const svgKey = buildSvgCacheKey(routeBounds, config, viewWidth, viewHeight)
 
   if (!hasCustomOffsets) {
-    // Try SVG cache first (standard path — no user-defined offsets)
     const inMemory = riverSvgCache.get(svgKey)
     if (inMemory !== undefined)
       return inMemory.replace(/opacity="[\d.]+"/, `opacity="${config.opacity.toFixed(2)}"`)
-    const sessionHit = getSessionSvg(svgKey)
-    if (sessionHit) {
-      riverSvgCache.set(svgKey, sessionHit)
-      return sessionHit.replace(/opacity="[\d.]+"/, `opacity="${config.opacity.toFixed(2)}"`)
-    }
   }
 
-  // Fetch elements (cached separately — no Overpass call if already loaded)
+  // Fetch elements (in-memory cached — no Overpass call if already loaded this session)
   const elements = await fetchCachedElements(paddedBounds)
   const svg = renderRiverSvg(elements, projectionParams, config, viewWidth, viewHeight)
 
   if (!hasCustomOffsets) {
     riverSvgCache.set(svgKey, svg)
-    setSessionSvg(svgKey, svg)
   }
   return svg
 }
