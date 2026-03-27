@@ -65,7 +65,10 @@ async function fetchRoadGeometries(bounds: RouteBounds): Promise<OverpassElement
   // Enqueue through the shared rate-limiter with automatic endpoint fallback.
   // See overpassQueue.ts: concurrent requests from multiple layers → 504 → 429 loop.
   const data = await enqueueOverpassPost(`data=${encodeURIComponent(query)}`)
-  return (data.elements || []) as OverpassElement[]
+  if (!Array.isArray(data.elements)) {
+    throw new Error(`Overpass response missing elements key — possible server error`)
+  }
+  return data.elements as OverpassElement[]
 }
 
 // ── SVG Rendering ─────────────────────────────────────────────────────────────

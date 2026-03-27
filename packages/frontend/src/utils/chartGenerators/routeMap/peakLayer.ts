@@ -47,7 +47,10 @@ async function fetchPeaks(bounds: RouteBounds): Promise<OSMPeak[]> {
   // Enqueue through the shared rate-limiter with automatic endpoint fallback.
   // See overpassQueue.ts: concurrent requests from multiple layers → 504 → 429 loop.
   const data = await enqueueOverpassPost(`data=${encodeURIComponent(query)}`)
-  const elements = (data.elements || []) as Array<{
+  if (!Array.isArray(data.elements)) {
+    throw new Error(`Overpass response missing elements key — possible server error`)
+  }
+  const elements = data.elements as Array<{
     id: number; lat: number; lon: number; tags?: Record<string, string>
   }>
   return elements.map(el => ({

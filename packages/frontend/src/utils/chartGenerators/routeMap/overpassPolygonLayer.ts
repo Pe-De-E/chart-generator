@@ -52,7 +52,9 @@ export interface PolygonLayerStyle {
 
 // ── Fetch ─────────────────────────────────────────────────────────────────────
 
-const ELEMENTS_SESSION_PREFIX = 'overpass-elements-v1:'
+// Bump version when the fetch/cache logic changes to bust stale sessionStorage entries.
+// v1 → v2: guard against caching error responses that lack an `elements` key.
+const ELEMENTS_SESSION_PREFIX = 'overpass-elements-v2:'
 
 /**
  * Module-level elements cache keyed by filters + bounds.
@@ -109,7 +111,16 @@ export async function fetchOverpassElements(
   // Enqueue through the shared rate-limiter with automatic endpoint fallback.
   // See overpassQueue.ts: concurrent requests from multiple layers → 504 → 429 loop.
   const data = await enqueueOverpassPost(`data=${encodeURIComponent(query)}`)
-  const elements = (data.elements || []) as OverpassElement[]
+
+  // Guard: a valid Overpass response always has an `elements` array (possibly empty).
+  // If it's missing, the server returned an error body (e.g. {"remark":"Too busy"}).
+  // Throw instead of caching [] — the layer will auto-retry rather than permanently
+  // appearing empty because an error response was mistakenly stored in the cache.
+  if (!Array.isArray(data.elements)) {
+    throw new Error(`Overpass response missing elements key — possible server error`)
+  }
+
+  const elements = data.elements as OverpassElement[]
   elementsCache.set(cacheKey, elements)
   setSessionElements(cacheKey, elements)
   return elements

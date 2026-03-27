@@ -61,7 +61,10 @@ async function fetchRiverGeometries(bounds: RouteBounds): Promise<OverpassElemen
     `out geom;`
 
   const data = await enqueueOverpassPost(`data=${encodeURIComponent(query)}`)
-  return (data.elements || []) as OverpassElement[]
+  if (!Array.isArray(data.elements)) {
+    throw new Error(`Overpass response missing elements key — possible server error`)
+  }
+  return data.elements as OverpassElement[]
 }
 
 // ── SVG Rendering ─────────────────────────────────────────────────────────────
