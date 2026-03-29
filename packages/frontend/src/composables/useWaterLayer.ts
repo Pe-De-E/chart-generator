@@ -7,11 +7,12 @@ export function useWaterLayer(
   routeBounds: Ref<RouteBounds | null>,
   projectionParams: Ref<ProjectionParams | null>,
   config: Ref<WaterConfig | null>,
+  enabled: Ref<boolean>,
   viewWidth: Ref<number>,
   viewHeight: Ref<number>,
 ) {
   const { layerSvg: waterSvg, isLoading, error } = useGeoLayer(
-    generateWaterLayer, routeBounds, projectionParams, config, viewWidth, viewHeight,
+    generateWaterLayer, routeBounds, projectionParams, config, viewWidth, viewHeight, [], enabled,
   )
   return { waterSvg, isLoading, error }
 }

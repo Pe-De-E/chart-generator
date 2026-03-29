@@ -46,11 +46,14 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
-import { useAuth } from '../composables/useAuth'
+import { useAuthStore } from '../stores/useAuthStore'
 
 const router = useRouter()
-const { currentUser, isAuthenticated, isLoading, logout } = useAuth()
+const authStore = useAuthStore()
+const { currentUser, isAuthenticated, isLoading } = storeToRefs(authStore)
+const { logout } = authStore
 
 const userDisplayName = computed(() => {
   if (currentUser.value?.firstName || currentUser.value?.lastName) {

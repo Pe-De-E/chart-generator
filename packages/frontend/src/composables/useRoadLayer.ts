@@ -7,11 +7,12 @@ export function useRoadLayer(
   routeBounds: Ref<RouteBounds | null>,
   projectionParams: Ref<ProjectionParams | null>,
   config: Ref<RoadConfig | null>,
+  enabled: Ref<boolean>,
   viewWidth: Ref<number>,
   viewHeight: Ref<number>,
 ) {
   const { layerSvg: roadSvg, isLoading, error } = useGeoLayer(
-    generateRoadLayer, routeBounds, projectionParams, config, viewWidth, viewHeight,
+    generateRoadLayer, routeBounds, projectionParams, config, viewWidth, viewHeight, [], enabled,
   )
   return { roadSvg, isLoading, error }
 }

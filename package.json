@@ -1,6 +1,6 @@
 {
   "name": "chart-generator",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "scripts": {
     "dev": "concurrently \"pnpm --filter @chart-generator/frontend dev\" \"pnpm --filter @chart-generator/backend dev\"",

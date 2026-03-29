@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { ref } from 'vue'
 import { createVuetify } from 'vuetify'
+import { createPinia } from 'pinia'
 import ElevationChartStep from './ElevationChartStep.vue'
 import { DEFAULT_ELEVATION_ANIMATION_CONFIG } from './ElevationChartStep.vue'
 import type { ElevationAnimationConfig } from './ElevationChartStep.vue'
@@ -116,7 +117,7 @@ function createWrapper(props: Record<string, unknown> = {}) {
   return mount(ElevationChartStep, {
     props: { ...defaultProps, ...props },
     global: {
-      plugins: [vuetify],
+      plugins: [vuetify, createPinia()],
       stubs: {
         'v-navigation-drawer': {
           template: '<div class="v-navigation-drawer"><slot /></div>',

@@ -129,23 +129,13 @@
           <div class="visualization-wrapper">
             <RouteMapChartStep
               v-if="visualizationMode === 'route-map'"
-              v-model:chart-title="chartTitle"
-              :animation-config="routeMapConfig"
-              :route-points="routePoints"
-              :chart-data="chartDataForAnimation"
-              :time-array="timeArray"
-              :gpx-start-time="gpxStartTime"
-              :can-undo="canUndo"
-              :can-redo="canRedo"
-              @update:animation-config="handleRouteMapConfigUpdate"
               @back="currentStep = 1"
               @save="saveChart"
-              @undo="undoRouteMapConfig"
-              @redo="redoRouteMapConfig"
             />
             <TerrainChartStep
               v-if="visualizationMode === 'terrain'"
-              v-model:chart-title="chartTitle"
+              :chart-title="routeMapStore.chartTitle"
+              @update:chart-title="routeMapStore.chartTitle = $event"
               v-model:animation-config="terrainConfig"
               :route-points="routePoints"
               :chart-data="chartDataForAnimation"
@@ -161,13 +151,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, watchEffect } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import StepNavigation from './StepNavigation.vue'
-import RouteMapChartStep, {
-  type RouteMapAnimationConfig,
-  DEFAULT_ROUTEMAP_ANIMATION_CONFIG,
-} from './chartWorkflow/RouteMapChartStep.vue'
+import RouteMapChartStep from './chartWorkflow/RouteMapChartStep.vue'
+import { DEFAULT_ROUTEMAP_ANIMATION_CONFIG } from '../types/routeMapConfig'
+import { useRouteMapStore } from '../stores/useRouteMapStore'
 import TerrainChartStep, {
   DEFAULT_TERRAIN_ANIMATION_CONFIG,
 } from './chartWorkflow/TerrainChartStep.vue'
@@ -214,70 +203,15 @@ const routePoints = ref<RoutePoint[]>([])
 const { tableHeaders, tableItems, parseGPX, resetData } = useCSVParser()
 
 // Chart configs (preserved independently on mode switch)
-const chartTitle = ref('Route Map')
-const routeMapConfig = ref<RouteMapAnimationConfig>({ ...DEFAULT_ROUTEMAP_ANIMATION_CONFIG })
 const terrainConfig = ref<TerrainAnimationConfig>({ ...DEFAULT_TERRAIN_ANIMATION_CONFIG })
 
-// ── Route map undo/redo (snapshot-before-burst, max 50) ──
-const routeMapPast = ref<RouteMapAnimationConfig[]>([])
-const routeMapFuture = ref<RouteMapAnimationConfig[]>([])
-let _rmSnapshot: RouteMapAnimationConfig | null = null
-let _rmHasSnapshot = ref(false)
-let _rmTimer: ReturnType<typeof setTimeout> | null = null
-
-const canUndo = computed(() => routeMapPast.value.length > 0 || _rmHasSnapshot.value)
-const canRedo = computed(() => routeMapFuture.value.length > 0)
-
-function cloneConfig(config: RouteMapAnimationConfig): RouteMapAnimationConfig {
-  return JSON.parse(JSON.stringify(config))
-}
-
-function handleRouteMapConfigUpdate(newConfig: RouteMapAnimationConfig) {
-  if (!_rmSnapshot) {
-    _rmSnapshot = cloneConfig(routeMapConfig.value)
-    _rmHasSnapshot.value = true
-  }
-  routeMapConfig.value = newConfig
-  routeMapFuture.value = []
-  if (_rmTimer) clearTimeout(_rmTimer)
-  _rmTimer = setTimeout(() => {
-    if (_rmSnapshot) {
-      routeMapPast.value = [...routeMapPast.value.slice(-49), _rmSnapshot]
-      _rmSnapshot = null
-      _rmHasSnapshot.value = false
-    }
-    _rmTimer = null
-  }, 800)
-}
-
-function undoRouteMapConfig() {
-  if (_rmTimer) { clearTimeout(_rmTimer); _rmTimer = null }
-  if (_rmSnapshot) {
-    routeMapFuture.value = [cloneConfig(routeMapConfig.value), ...routeMapFuture.value]
-    routeMapConfig.value = _rmSnapshot
-    _rmSnapshot = null
-    _rmHasSnapshot.value = false
-    return
-  }
-  if (routeMapPast.value.length === 0) return
-  const prev = routeMapPast.value[routeMapPast.value.length - 1]
-  routeMapPast.value = routeMapPast.value.slice(0, -1)
-  routeMapFuture.value = [cloneConfig(routeMapConfig.value), ...routeMapFuture.value]
-  routeMapConfig.value = prev
-}
-
-function redoRouteMapConfig() {
-  if (routeMapFuture.value.length === 0) return
-  routeMapPast.value = [...routeMapPast.value, cloneConfig(routeMapConfig.value)]
-  routeMapConfig.value = routeMapFuture.value[0]
-  routeMapFuture.value = routeMapFuture.value.slice(1)
-}
+const routeMapStore = useRouteMapStore()
 
 function handleUndoRedoKey(e: KeyboardEvent) {
   const ctrl = e.ctrlKey || e.metaKey
   if (!ctrl) return
-  if (e.key === 'z' && !e.shiftKey) { e.preventDefault(); undoRouteMapConfig() }
-  if ((e.key === 'z' && e.shiftKey) || e.key === 'y') { e.preventDefault(); redoRouteMapConfig() }
+  if (e.key === 'z' && !e.shiftKey) { e.preventDefault(); routeMapStore.undoConfig() }
+  if ((e.key === 'z' && e.shiftKey) || e.key === 'y') { e.preventDefault(); routeMapStore.redoConfig() }
 }
 
 // Chart data for animation (distance → elevation)
@@ -311,6 +245,14 @@ const timeArray = computed<number[] | undefined>(() => {
   }
 
   return undefined
+})
+
+// Sync derived GPX data → store so child components read from store directly
+watchEffect(() => {
+  routeMapStore.routePoints = routePoints.value
+  routeMapStore.chartData = chartDataForAnimation.value
+  routeMapStore.timeArray = timeArray.value
+  routeMapStore.gpxStartTime = gpxStartTime.value
 })
 
 // Downsampling info
@@ -348,8 +290,8 @@ const stepValidations = computed(() => ({
     ],
   },
   2: {
-    isValid: !!chartTitle.value.trim(),
-    missingTodos: !chartTitle.value.trim() ? ['Chart-Titel eingeben'] : [],
+    isValid: !!routeMapStore.chartTitle.trim(),
+    missingTodos: !routeMapStore.chartTitle.trim() ? ['Chart-Titel eingeben'] : [],
   },
 }))
 
@@ -384,21 +326,15 @@ function resetWizard() {
   routePoints.value = []
   resetData()
   visualizationMode.value = 'route-map'
-  routeMapConfig.value = { ...DEFAULT_ROUTEMAP_ANIMATION_CONFIG }
+  routeMapStore.resetConfig()
+  routeMapStore.chartTitle = 'Route Map'
   terrainConfig.value = { ...DEFAULT_TERRAIN_ANIMATION_CONFIG }
-  chartTitle.value = 'Route Map'
-  // Clear undo/redo history
-  routeMapPast.value = []
-  routeMapFuture.value = []
-  _rmSnapshot = null
-  _rmHasSnapshot.value = false
-  if (_rmTimer) { clearTimeout(_rmTimer); _rmTimer = null }
 }
 
 async function saveChart() {
   try {
     const type = visualizationMode.value === 'route-map' ? 'route-map' : 'terrain-3d'
-    const animationConfig = visualizationMode.value === 'route-map' ? routeMapConfig.value : terrainConfig.value
+    const animationConfig = visualizationMode.value === 'route-map' ? routeMapStore.routeMapConfig : terrainConfig.value
     const chartConfig = {
       animationConfig,
       routePoints: routePoints.value,
@@ -406,7 +342,7 @@ async function saveChart() {
 
     if (loadedChartId.value) {
       await chartService.updateChart(loadedChartId.value, {
-        title: chartTitle.value,
+        title: routeMapStore.chartTitle,
         type,
         data: { tableItems: tableItems.value, routePoints: routePoints.value },
         config: chartConfig,
@@ -415,7 +351,7 @@ async function saveChart() {
       alert('Chart erfolgreich aktualisiert!')
     } else {
       const chart = await chartService.createChart({
-        title: chartTitle.value,
+        title: routeMapStore.chartTitle,
         type,
         data: { tableItems: tableItems.value, routePoints: routePoints.value },
         config: chartConfig,
@@ -464,7 +400,7 @@ async function loadChartData(chartId: string) {
   try {
     const chart = await chartService.getChartById(chartId)
     loadedChartId.value = chart.id
-    chartTitle.value = chart.title
+    routeMapStore.chartTitle = chart.title
 
     // Set mode based on saved chart type
     if (chart.type === 'terrain-3d') {
@@ -496,7 +432,7 @@ async function loadChartData(chartId: string) {
       if (chart.type === 'terrain-3d') {
         terrainConfig.value = { ...DEFAULT_TERRAIN_ANIMATION_CONFIG, ...savedConfig.animationConfig }
       } else {
-        routeMapConfig.value = { ...DEFAULT_ROUTEMAP_ANIMATION_CONFIG, ...savedConfig.animationConfig }
+        routeMapStore.setConfig({ ...DEFAULT_ROUTEMAP_ANIMATION_CONFIG, ...savedConfig.animationConfig }, true)
       }
     }
 

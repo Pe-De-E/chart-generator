@@ -49,7 +49,7 @@ const MAX_CONCURRENT = 2
  */
 const OVERPASS_ENDPOINTS = [
   '/overpass/interpreter',
-  'https://overpass.kumi.systems/api/interpreter',
+  '/overpass-kumi/interpreter',
 ]
 
 let _activeCount = 0

@@ -180,9 +180,10 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useRouter, useRoute } from 'vue-router'
 import { useTheme } from 'vuetify'
-import { useAuth } from '../composables/useAuth'
+import { useAuthStore } from '../stores/useAuthStore'
 import FeedbackDialog from './FeedbackDialog.vue'
 
 const emit = defineEmits<{
@@ -192,7 +193,9 @@ const emit = defineEmits<{
 const router = useRouter()
 const route = useRoute()
 const theme = useTheme()
-const { currentUser, isAuthenticated, isAdmin, logout } = useAuth()
+const authStore = useAuthStore()
+const { currentUser, isAuthenticated, isAdmin } = storeToRefs(authStore)
+const { logout } = authStore
 
 const isCollapsed = ref(route.name === 'Landing')
 const showFeedbackDialog = ref(false)

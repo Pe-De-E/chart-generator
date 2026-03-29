@@ -4,7 +4,7 @@
  */
 
 import { computed } from 'vue'
-import type { RouteMapAnimationConfig } from '../components/chartWorkflow/RouteMapChartStep.vue'
+import type { RouteMapAnimationConfig } from '../types/routeMapConfig'
 import { useElevationConfig } from './useElevationConfig'
 import type { MarkerIconType } from '../utils/chartGenerators/routeMap/markerIcons'
 import type { Annotation, AnnotationType } from '../utils/chartGenerators/elevationChart/types'

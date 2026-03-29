@@ -71,12 +71,15 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useRouter, useRoute } from 'vue-router'
-import { useAuth } from '../../composables/useAuth'
+import { useAuthStore } from '../../stores/useAuthStore'
 
 const router = useRouter()
 const route = useRoute()
-const { login, isLoading, error } = useAuth()
+const authStore = useAuthStore()
+const { isLoading, error } = storeToRefs(authStore)
+const { login } = authStore
 
 // Check if user was redirected due to session expiry
 const sessionExpired = computed(() => route.query.expired === 'true')

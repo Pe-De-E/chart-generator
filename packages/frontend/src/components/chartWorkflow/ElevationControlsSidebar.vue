@@ -74,7 +74,7 @@
       <!-- Playback in collapsed mode -->
       <v-tooltip location="left" :text="isPlaying ? 'Pause' : 'Abspielen'">
         <template v-slot:activator="{ props }">
-          <v-btn v-bind="props" :icon="isPlaying ? 'mdi-pause' : 'mdi-play'" variant="flat" color="primary" @click="$emit('toggle-playback')" />
+          <v-btn v-bind="props" :icon="isPlaying ? 'mdi-pause' : 'mdi-play'" variant="flat" color="primary" @click="animationStore.togglePlayback()" />
         </template>
       </v-tooltip>
 
@@ -893,14 +893,14 @@
             variant="flat"
             color="primary"
             size="small"
-            @click="$emit('toggle-playback')"
+            @click="animationStore.togglePlayback()"
           />
           <v-btn
             icon="mdi-replay"
             variant="text"
             size="x-small"
-            @click="$emit('reset-animation')"
-            :disabled="animationProgress === 0"
+            @click="animationStore.resetAnimation()"
+            :disabled="animationStore.progress === 0"
           />
           <v-slider
             :model-value="sliderProgress"
@@ -911,7 +911,7 @@
             color="primary"
             track-color="grey-lighten-2"
             class="mx-2"
-            @update:model-value="$emit('slider-change', $event)"
+            @update:model-value="animationStore.onSliderChange($event)"
           />
           <span class="text-caption text-no-wrap" style="font-family: monospace; font-size: 11px;">
             {{ formattedTime }}
@@ -927,7 +927,7 @@
                 v-for="speed in speedOptions"
                 :key="speed"
                 :active="playbackSpeed === speed"
-                @click="$emit('set-speed', speed)"
+                @click="animationStore.setSpeed(speed)"
               >
                 <v-list-item-title>{{ speed }}x</v-list-item-title>
               </v-list-item>
@@ -971,8 +971,10 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue'
+import { storeToRefs } from 'pinia'
 import type { PropType } from 'vue'
 import type { PlaybackSpeed } from '../../composables/useChartAnimation'
+import { useAnimationStore } from '../../stores/useAnimationStore'
 import { useElevationConfig } from '../../composables/useElevationConfig'
 import { useElevationThemes } from '../../composables/useElevationThemes'
 import { uploadService } from '../../services/upload.service'
@@ -998,26 +1000,6 @@ const props = defineProps({
     type: Array as PropType<number[]>,
     default: undefined,
   },
-  isPlaying: {
-    type: Boolean,
-    required: true,
-  },
-  playbackSpeed: {
-    type: Number,
-    required: true,
-  },
-  formattedTime: {
-    type: String,
-    required: true,
-  },
-  animationProgress: {
-    type: Number,
-    required: true,
-  },
-  sliderProgress: {
-    type: Number,
-    required: true,
-  },
   videoExportSupported: {
     type: Boolean,
     required: true,
@@ -1038,12 +1020,13 @@ const emit = defineEmits<{
   'update:collapsed': [value: boolean]
   'back': []
   'save': []
-  'toggle-playback': []
-  'reset-animation': []
-  'set-speed': [speed: PlaybackSpeed]
-  'slider-change': [value: number]
   'open-export-settings': []
 }>()
+
+// --- Animation store ---
+
+const animationStore = useAnimationStore()
+const { isPlaying, playbackSpeed, formattedTime, sliderProgress } = storeToRefs(animationStore)
 
 // --- Internal state ---
 

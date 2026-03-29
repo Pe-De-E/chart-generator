@@ -13,13 +13,13 @@
               @mousedown="onPreviewMousedown"
             ></div>
             <div
-              v-if="animationConfig.showStatsOverlay"
+              v-if="routeMapStore.routeMapConfig.showStatsOverlay"
               class="stats-drag-handle"
               :style="dragHandleStyle"
               @mousedown.prevent="onStatsDragStart"
             />
             <div
-              v-if="animationConfig.showWeatherOverlay"
+              v-if="routeMapStore.routeMapConfig.showWeatherOverlay"
               class="stats-drag-handle"
               :style="weatherDragHandleStyle"
               @mousedown.prevent="onWeatherDragStart"
@@ -32,52 +32,18 @@
     <!-- Right Sidebar for Controls -->
     <RouteMapControlsSidebar
       v-model:collapsed="controlsCollapsed"
-      :animation-config="animationConfig"
-      :chart-title="chartTitle"
-      :chart-data="chartData"
-      :time-array="timeArray"
-      :is-playing="isPlaying"
-      :playback-speed="playbackSpeed"
-      :formatted-time="formattedTime"
-      :animation-progress="animationProgress"
-      :slider-progress="sliderProgress"
       :video-export-supported="videoExport.isSupported.value"
       :video-exporting="videoExport.isExporting.value"
-      :satellite-loading="satelliteLoading"
-      :hillshade-loading="hillshadeLoading"
-      :contour-loading="contourLoading"
-      :river-loading="riverLoading"
-      :detected-river-names="detectedRiverNames"
-      :peak-loading="peakLoading"
-      :place-boundary-loading="placeBoundaryLoading"
-      :forest-loading="forestLoading"
-      :vineyard-loading="vineyardLoading"
-      :meadow-loading="meadowLoading"
-      :water-loading="waterLoading"
-      :land-cover-loading="landCoverLoading"
-      :road-loading="roadLoading"
-      :weather-loading="weatherLoading"
-      :weather-hours-count="weatherHours?.length ?? 0"
-      :can-undo="canUndo"
-      :can-redo="canRedo"
-      @update:animation-config="$emit('update:animationConfig', $event)"
-      @update:chart-title="$emit('update:chartTitle', $event)"
       @back="$emit('back')"
       @save="$emit('save')"
-      @toggle-playback="togglePlayback"
-      @reset-animation="resetAnimation"
-      @set-speed="setSpeed"
-      @slider-change="onSliderChange"
       @open-export-settings="openExportSettings"
-      @undo="$emit('undo')"
-      @redo="$emit('redo')"
     />
 
     <!-- Export Settings Dialog -->
     <ExportSettingsDialog
       v-model="showExportSettingsDialog"
-      :animation-duration="animationConfig.duration"
-      :chart-title="chartTitle"
+      :animation-duration="routeMapStore.routeMapConfig.duration"
+      :chart-title="routeMapStore.chartTitle"
       @start-export="startVideoExport"
     />
 
@@ -94,334 +60,20 @@
 </template>
 
 <script lang="ts">
-// Background type re-export
-export type BackgroundType = 'solid' | 'gradient' | 'mesh' | 'grid' | 'dots' | 'image';
-
-// RouteMap animation config — extends elevation config with map-specific fields
-export interface RouteMapAnimationConfig {
-  // Shared with elevation
-  duration: number;
-  easing: 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out';
-  showMarker: boolean;
-  markerSize: number;
-  curveEndpoint: number;
-  curveColor: string;
-  titleColor: string;
-  showAreaFill: boolean;
-  backgroundColor: string;
-  backgroundType: BackgroundType;
-  gradientColor: string;
-  meshColor1: string;
-  meshColor2: string;
-  meshColor3: string;
-  patternColor: string;
-  patternOpacity: number;
-  showElevationLabels: boolean;
-  elevationLabelColor: string;
-  showDistanceLabels: boolean;
-  distanceLabelColor: string;
-  imageOptions?: {
-    imageId: string;
-    imageUrl: string;
-    position: 'cover' | 'contain' | 'center' | 'stretch';
-    blur: number;
-    brightness: number;
-    contrast: number;
-    overlayColor: string;
-    overlayOpacity: number;
-  };
-  animationMode: 'uniform' | 'time-based' | 'gradient' | 'effort';
-  gradientSensitivity: number;
-  effortConfig: {
-    variableStroke: boolean;
-    variableStrokeIntensity: number;
-    colorGradient: boolean;
-    colorGradientIntensity: number;
-    glowAura: boolean;
-    glowAuraIntensity: number;
-  };
-  panZoomEnabled: boolean;
-  panZoomZoomLevel: number;
-  panZoomZoomOutStart: number;
-  // Map-specific
-  mapCameraMode: 'overview' | 'chase';
-  mapChaseZoomLevel: number;
-  mapChaseZoomOutStart: number;
-  mapChaseRotateWithRoute: boolean;
-  routeColor: string;
-  routeWidth: number;
-  routeGlow: boolean;
-  routeGlowColor: string;
-  routeGlowIntensity: number;
-  routeTrailDash: string;
-  routeTrailOpacity: number;
-  showMapMarker: boolean;
-  mapMarkerSize: number;
-  mapMarkerColor: string;
-  showMarkerPulse: boolean;
-  markerIcon: MarkerIconType;
-  showDirection: boolean;
-  showDistanceMarkers: boolean;
-  distanceMarkerInterval: number;
-  showStartEndLabels: boolean;
-  mapHeightRatio: number;
-  showMapSection: boolean;
-  showDivider: boolean;
-  dividerColor: string;
-  showElevationColoring: boolean;
-  elevationColorIntensity: number;
-  showElevationCurveColoring: boolean;
-  showSpeedColoring: boolean;
-  speedColorIntensity: number;
-  showHrColoring: boolean;
-  hrColorIntensity: number;
-  hfmax: number;
-  // Geo context layers
-  showBorders: boolean;
-  showRivers: boolean;
-  showCities: boolean;
-  borderOpacity: number;
-  riverOpacity: number;
-  riverLabelOffsets?: Record<string, number>;
-  cityOpacity: number;
-  showPeaks: boolean;
-  peakOpacity: number;
-  showPlaceBoundaries: boolean;
-  placeBoundaryOpacity: number;
-  showForests: boolean;
-  forestOpacity: number;
-  forestColor?: string;
-  showWater: boolean;
-  waterOpacity: number;
-  waterColor?: string;
-  showGlaciers: boolean;
-  glacierOpacity: number;
-  glacierColor?: string;
-  showUrban: boolean;
-  urbanOpacity: number;
-  urbanColor?: string;
-  showVineyards: boolean;
-  vineyardOpacity: number;
-  vineyardColor?: string;
-  showMeadows: boolean;
-  meadowOpacity: number;
-  meadowColor?: string;
-  // Privacy
-  anonymizeStart: boolean;
-  anonymizeEnd: boolean;
-  anonymizeRadiusM: number;
-  // Satellite imagery
-  showSatellite: boolean;
-  satelliteOpacity: number;
-  // Hillshade
-  showHillshade: boolean;
-  hillshadeOpacity: number;
-  hillshadeStrength: number;
-  // Contour lines
-  showContours: boolean;
-  contourColor: string;
-  contourOpacity: number;
-  contourInterval: number;
-  contourMajorInterval: number;
-  contourShowLabels: boolean;
-  // Stats overlay
-  showStatsOverlay: boolean;
-  statsOverlayColor: string;
-  statsX: number;   // 0-1 normalized horizontal position
-  statsY: number;   // 0-1 normalized vertical position within map area
-  statsShowDistance: boolean;
-  statsShowElevGain: boolean;
-  statsShowCurrentElev: boolean;
-  statsShowTime: boolean;
-  statsShowSpeed: boolean;
-  statsShowHr: boolean;
-  // Annotations — text chips shown at specific progress points
-  annotations?: import('../../utils/chartGenerators/elevationChart/types').Annotation[];
-  // Roads
-  showRoads: boolean;
-  roadOpacity: number;
-  // Map visual enhancements
-  showNorthArrow: boolean;
-  showScaleBar: boolean;
-  showMapFade: boolean;
-  // Intro / Outro duration + stats card
-  introDurationSec: number;
-  outroDurationSec: number;
-  showOutroStats: boolean;  // show stats card on outro (or intro when swapped)
-  swapIntroOutro: boolean;  // swap: stats first, title last
-  // Weather overlay
-  showWeatherOverlay: boolean;
-  weatherTemp: string;        // e.g. "18°C"
-  weatherCondition: string;   // e.g. "☀️ Sonnig"
-  weatherOverlayColor: string;
-  weatherX: number;           // 0-1 normalized horizontal position
-  weatherY: number;           // 0-1 normalized vertical position
-  // Route halo/outline
-  routeHalo: boolean;
-  routeHaloOpacity: number;
-  // Per-km label drag offsets (dx/dy in SVG coords from route anchor)
-  kmLabelOffsets?: Record<number, { dx: number; dy: number }>;
-  // Per-annotation chip positions (absolute SVG x/y for chip center)
-  annotationPositions?: Record<string, { x: number; y: number }>;
-}
-
-export const DEFAULT_ROUTEMAP_ANIMATION_CONFIG: RouteMapAnimationConfig = {
-  // Shared defaults
-  duration: 8,
-  easing: 'ease-in-out',
-  showMarker: true,
-  markerSize: 6,
-  curveEndpoint: 30,
-  showAreaFill: true,
-  showElevationLabels: false,
-  elevationLabelColor: '#ffffffb3',
-  showDistanceLabels: false,
-  distanceLabelColor: '#ffffffb3',
-  curveColor: '#ffffff',
-  titleColor: '#ffffff',
-  backgroundColor: '#1a1a2e',
-  backgroundType: 'solid',
-  gradientColor: '#302b63',
-  meshColor1: '#667eea',
-  meshColor2: '#764ba2',
-  meshColor3: '#f093fb',
-  patternColor: '#ffffff',
-  patternOpacity: 0.1,
-  animationMode: 'uniform',
-  gradientSensitivity: 3,
-  effortConfig: {
-    variableStroke: true,
-    variableStrokeIntensity: 5,
-    colorGradient: true,
-    colorGradientIntensity: 5,
-    glowAura: true,
-    glowAuraIntensity: 5,
-  },
-  panZoomEnabled: false,
-  panZoomZoomLevel: 3,
-  panZoomZoomOutStart: 0.75,
-  // Map-specific defaults
-  mapCameraMode: 'overview',
-  mapChaseZoomLevel: 3,
-  mapChaseZoomOutStart: 0.85,
-  mapChaseRotateWithRoute: false,
-  routeColor: '#ffffff',
-  routeWidth: 4,
-  routeGlow: true,
-  routeGlowColor: '#ffffff',
-  routeGlowIntensity: 4,
-  routeTrailDash: '8 12',
-  routeTrailOpacity: 0.2,
-  showMapMarker: true,
-  mapMarkerSize: 8,
-  mapMarkerColor: '#ffffff',
-  showMarkerPulse: false,
-  markerIcon: 'dot' as MarkerIconType,
-  showDirection: true,
-  showDistanceMarkers: false,
-  distanceMarkerInterval: 5,
-  showStartEndLabels: false,
-  mapHeightRatio: 0.6,
-  showMapSection: true,
-  showDivider: false,
-  dividerColor: '#ffffff33',
-  showElevationColoring: false,
-  elevationColorIntensity: 5,
-  showElevationCurveColoring: false,
-  showSpeedColoring: false,
-  speedColorIntensity: 5,
-  showHrColoring: false,
-  hrColorIntensity: 5,
-  hfmax: 190,
-  // Geo context layers
-  showBorders: false,
-  showRivers: false,
-  showCities: false,
-  borderOpacity: 0.35,
-  riverOpacity: 0.40,
-  cityOpacity: 0.50,
-  showPeaks: false,
-  peakOpacity: 0.70,
-  showPlaceBoundaries: false,
-  placeBoundaryOpacity: 0.50,
-  showForests: false,
-  forestOpacity: 0.60,
-  showWater: false,
-  waterOpacity: 0.70,
-  showGlaciers: false,
-  glacierOpacity: 0.65,
-  showUrban: false,
-  urbanOpacity: 0.45,
-  showVineyards: false,
-  vineyardOpacity: 0.55,
-  showMeadows: false,
-  meadowOpacity: 0.50,
-  // Privacy
-  anonymizeStart: false,
-  anonymizeEnd: false,
-  anonymizeRadiusM: 300,
-  // Satellite imagery
-  showSatellite: false,
-  satelliteOpacity: 0.85,
-  // Hillshade
-  showHillshade: false,
-  hillshadeOpacity: 0.35,
-  hillshadeStrength: 0.03,
-  // Contour lines
-  showContours: false,
-  contourColor: '#8B7355',
-  contourOpacity: 0.25,
-  contourInterval: 100,
-  contourMajorInterval: 500,
-  contourShowLabels: false,
-  // Stats overlay
-  showStatsOverlay: false,
-  statsOverlayColor: '#ffffff',
-  statsX: 1.0,
-  statsY: 1.0,
-  statsShowDistance: true,
-  statsShowElevGain: true,
-  statsShowCurrentElev: true,
-  statsShowTime: true,
-  statsShowSpeed: false,
-  statsShowHr: false,
-  annotations: [],
-  // Roads
-  showRoads: false,
-  roadOpacity: 0.30,
-  // Map visual enhancements
-  showNorthArrow: true,
-  showScaleBar: true,
-  showMapFade: true,
-  // Intro / Outro duration + stats card
-  introDurationSec: 1,
-  outroDurationSec: 1.5,
-  showOutroStats: false,
-  swapIntroOutro: false,
-  // Weather overlay
-  showWeatherOverlay: false,
-  weatherTemp: '',
-  weatherCondition: '',
-  weatherOverlayColor: '#ffffff',
-  weatherX: 0.0,
-  weatherY: 0.5,
-  // Route halo/outline
-  routeHalo: false,
-  routeHaloOpacity: 0.25,
-};
+// Re-export from canonical types file so existing imports keep working
+export type { BackgroundType, RouteMapAnimationConfig } from '../../types/routeMapConfig'
+export { DEFAULT_ROUTEMAP_ANIMATION_CONFIG } from '../../types/routeMapConfig'
 </script>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
-import type { PropType } from 'vue'
-import type { RoutePoint } from '@chart-generator/shared'
+import { ref, computed, watch, watchEffect, onUnmounted } from 'vue'
 import type { AnimationOptions } from '@chart-generator/shared'
 import { DEFAULT_ANIMATION_OPTIONS } from '@chart-generator/shared'
-import { useChartAnimation, type PlaybackSpeed } from '../../composables/useChartAnimation'
+import { useChartAnimation } from '../../composables/useChartAnimation'
+import { useRouteMapStore } from '../../stores/useRouteMapStore'
 import { useVideoExport } from '../../composables/useVideoExport'
 import { generateCombinedFrame, getLastKmAnchorPositions, getLastAnnotationChipPositions } from '../../utils/chartGenerators/routeMap/combinedFrame'
 import type { CombinedFrameOptions } from '../../utils/chartGenerators/routeMap/combinedFrame'
-import type { MarkerIconType } from '../../utils/chartGenerators/routeMap/markerIcons'
 import { getTitleCardOpacity } from '../../utils/titleCardGenerator'
 import { useWeatherLayer, getWeatherAtOffset } from '../../composables/useWeatherLayer'
 import ExportSettingsDialog from './ExportSettingsDialog.vue'
@@ -454,9 +106,9 @@ import { useHillshadeLayer } from '../../composables/useHillshadeLayer'
 import type { HillshadeConfig } from '../../utils/chartGenerators/routeMap/hillshadeLayer'
 import { useSatelliteLayer } from '../../composables/useSatelliteLayer'
 import type { SatelliteConfig } from '../../utils/chartGenerators/routeMap/satelliteLayer'
+import { useAnimationStore } from '../../stores/useAnimationStore'
 
-// Slider progress state
-const sliderProgress = ref(0)
+const routeMapStore = useRouteMapStore()
 
 // Video export dialogs
 const showExportDialog = ref(false)
@@ -465,48 +117,9 @@ const showExportSettingsDialog = ref(false)
 // Controls sidebar collapsed state
 const controlsCollapsed = ref(false)
 
-const props = defineProps({
-  chartTitle: {
-    type: String,
-    required: true,
-  },
-  routePoints: {
-    type: Array as PropType<RoutePoint[]>,
-    default: () => [],
-  },
-  chartData: {
-    type: Array as PropType<Array<{ label: string; value: number }>>,
-    default: () => [],
-  },
-  animationConfig: {
-    type: Object as PropType<RouteMapAnimationConfig>,
-    default: () => ({ ...DEFAULT_ROUTEMAP_ANIMATION_CONFIG }),
-  },
-  timeArray: {
-    type: Array as PropType<number[]>,
-    default: undefined,
-  },
-  gpxStartTime: {
-    type: Number as PropType<number | null>,
-    default: null,
-  },
-  canUndo: {
-    type: Boolean,
-    default: false,
-  },
-  canRedo: {
-    type: Boolean,
-    default: false,
-  },
-})
-
 const emit = defineEmits<{
   back: []
   save: []
-  'update:chartTitle': [value: string]
-  'update:animationConfig': [value: RouteMapAnimationConfig]
-  'undo': []
-  'redo': []
 }>()
 
 // ── Stats overlay drag ──
@@ -519,12 +132,12 @@ const isDragging = ref(false)
 const dragOffset = ref({ x: 0, y: 0 })
 
 const statsBoxHeightSvg = computed(() => {
-  const rows = 3 + (props.timeArray && props.timeArray.length > 0 ? 1 : 0)
+  const rows = 3 + (routeMapStore.timeArray && routeMapStore.timeArray.length > 0 ? 1 : 0)
   return rows * STATS_ROW_HEIGHT + STATS_PADDING_Y
 })
 
 const effectiveMapHeightSvg = computed(() => {
-  const cfg = props.animationConfig
+  const cfg = routeMapStore.routeMapConfig
   if (!(cfg.showMapSection ?? true)) return 0
   return (cfg.showElevationChart ?? true)
     ? 1920 * (cfg.mapHeightRatio ?? 0.6)
@@ -537,8 +150,8 @@ const dragHandleStyle = computed(() => {
   const scale = rect.width / 1080
   const maxX = (1080 - STATS_BOX_WIDTH_SVG) * scale
   const maxY = (effectiveMapHeightSvg.value - statsBoxHeightSvg.value) * scale
-  const boxX = (props.animationConfig.statsX ?? 1.0) * maxX
-  const boxY = (props.animationConfig.statsY ?? 1.0) * maxY
+  const boxX = (routeMapStore.routeMapConfig.statsX ?? 1.0) * maxX
+  const boxY = (routeMapStore.routeMapConfig.statsY ?? 1.0) * maxY
   return {
     left: `${boxX}px`,
     top: `${boxY}px`,
@@ -555,8 +168,8 @@ function onStatsDragStart(e: MouseEvent) {
   const scale = rect.width / 1080
   const maxX = (1080 - STATS_BOX_WIDTH_SVG) * scale
   const maxY = (effectiveMapHeightSvg.value - statsBoxHeightSvg.value) * scale
-  const currentLeftPx = (props.animationConfig.statsX ?? 1.0) * maxX
-  const currentTopPx = (props.animationConfig.statsY ?? 1.0) * maxY
+  const currentLeftPx = (routeMapStore.routeMapConfig.statsX ?? 1.0) * maxX
+  const currentTopPx = (routeMapStore.routeMapConfig.statsY ?? 1.0) * maxY
   dragOffset.value = {
     x: e.clientX - rect.left - currentLeftPx,
     y: e.clientY - rect.top - currentTopPx,
@@ -575,7 +188,7 @@ function onStatsDragMove(e: MouseEvent) {
   const newTopPx = e.clientY - rect.top - dragOffset.value.y
   const newStatsX = Math.max(0, Math.min(1, newLeftPx / maxX))
   const newStatsY = Math.max(0, Math.min(1, newTopPx / maxY))
-  emit('update:animationConfig', { ...props.animationConfig, statsX: newStatsX, statsY: newStatsY })
+  routeMapStore.updateConfig({ statsX: newStatsX, statsY: newStatsY })
 }
 
 function onStatsDragEnd() {
@@ -596,8 +209,8 @@ const weatherDragHandleStyle = computed(() => {
   const scale = rect.width / 1080
   const maxX  = (1080 - WEATHER_CHIP_W_SVG) * scale
   const maxY  = (1920 - WEATHER_CHIP_H_SVG) * scale
-  const boxX  = (props.animationConfig.weatherX ?? 0.0) * maxX
-  const boxY  = (props.animationConfig.weatherY ?? 0.5) * maxY
+  const boxX  = (routeMapStore.routeMapConfig.weatherX ?? 0.0) * maxX
+  const boxY  = (routeMapStore.routeMapConfig.weatherY ?? 0.5) * maxY
   return {
     left:   `${boxX}px`,
     top:    `${boxY}px`,
@@ -614,8 +227,8 @@ function onWeatherDragStart(e: MouseEvent) {
   const scale = rect.width / 1080
   const maxX  = (1080 - WEATHER_CHIP_W_SVG) * scale
   const maxY  = (1920 - WEATHER_CHIP_H_SVG) * scale
-  const curX  = (props.animationConfig.weatherX ?? 0.0) * maxX
-  const curY  = (props.animationConfig.weatherY ?? 0.5) * maxY
+  const curX  = (routeMapStore.routeMapConfig.weatherX ?? 0.0) * maxX
+  const curY  = (routeMapStore.routeMapConfig.weatherY ?? 0.5) * maxY
   dragOffset.value = { x: e.clientX - rect.left - curX, y: e.clientY - rect.top - curY }
   document.addEventListener('mousemove', onWeatherDragMove)
   document.addEventListener('mouseup', onWeatherDragEnd)
@@ -629,7 +242,7 @@ function onWeatherDragMove(e: MouseEvent) {
   const maxY  = (1920 - WEATHER_CHIP_H_SVG) * scale
   const newX  = Math.max(0, Math.min(1, (e.clientX - rect.left - dragOffset.value.x) / maxX))
   const newY  = Math.max(0, Math.min(1, (e.clientY - rect.top  - dragOffset.value.y) / maxY))
-  emit('update:animationConfig', { ...props.animationConfig, weatherX: newX, weatherY: newY })
+  routeMapStore.updateConfig({ weatherX: newX, weatherY: newY })
 }
 
 function onWeatherDragEnd() {
@@ -662,10 +275,7 @@ function onPreviewMousedown(e: MouseEvent) {
       hasMoved = true
       const dx = (ev.clientX - rect.left) / scale - anchor.x
       const dy = (ev.clientY - rect.top) / scale - anchor.y
-      emit('update:animationConfig', {
-        ...props.animationConfig,
-        kmLabelOffsets: { ...props.animationConfig.kmLabelOffsets, [km]: { dx, dy } },
-      })
+      routeMapStore.updateConfig({ kmLabelOffsets: { ...routeMapStore.routeMapConfig.kmLabelOffsets, [km]: { dx, dy } } })
     }
     const onUp = () => {
       document.removeEventListener('mousemove', onMove)
@@ -694,10 +304,7 @@ function onPreviewMousedown(e: MouseEvent) {
       hasMoved = true
       const newX = startChipX + (ev.clientX - startClientX) / scale
       const newY = startChipY + (ev.clientY - startClientY) / scale
-      emit('update:animationConfig', {
-        ...props.animationConfig,
-        annotationPositions: { ...props.animationConfig.annotationPositions, [annotationId]: { x: newX, y: newY } },
-      })
+      routeMapStore.updateConfig({ annotationPositions: { ...routeMapStore.routeMapConfig.annotationPositions, [annotationId]: { x: newX, y: newY } } })
     }
     const onUp = () => {
       document.removeEventListener('mousemove', onMove)
@@ -718,23 +325,20 @@ function onPreviewClick(e: MouseEvent) {
   const candidates = getLastRiverLabelCandidates()[name]
   if (!candidates || candidates.length < 2) return
 
-  const offsets = props.animationConfig.riverLabelOffsets ?? {}
+  const offsets = routeMapStore.routeMapConfig.riverLabelOffsets ?? {}
   const currentT = offsets[name] ?? candidates[0]
   const currentIdx = candidates.findIndex(t => Math.abs(t - currentT) < 0.01)
   const nextIdx = ((currentIdx < 0 ? 0 : currentIdx) + 1) % candidates.length
-  emit('update:animationConfig', {
-    ...props.animationConfig,
-    riverLabelOffsets: { ...offsets, [name]: candidates[nextIdx] },
-  })
+  routeMapStore.updateConfig({ riverLabelOffsets: { ...offsets, [name]: candidates[nextIdx] } })
 }
 
 // ── Contour lines (async terrain tile fetch + d3-contour) ──
 const contourRouteBounds = computed(() => {
-  if (props.routePoints.length < 2) return null
-  return calculateRouteBounds(props.routePoints)
+  if (routeMapStore.routePoints.length < 2) return null
+  return calculateRouteBounds(routeMapStore.routePoints)
 })
 const contourMapHeight = computed(() => {
-  const cfg = props.animationConfig
+  const cfg = routeMapStore.routeMapConfig
   if (!(cfg.showMapSection ?? true)) return 0
   return (cfg.showElevationChart ?? true)
     ? Math.round(1920 * cfg.mapHeightRatio)
@@ -750,11 +354,11 @@ const contourProjParams = computed(() => {
 
 // ── Satellite layer (async tile fetch + OffscreenCanvas) ──
 const satelliteConfig = computed<SatelliteConfig | null>(() => {
-  const cfg = props.animationConfig
+  const cfg = routeMapStore.routeMapConfig
   if (!cfg.showSatellite) return null
   return { opacity: cfg.satelliteOpacity }
 })
-const { satelliteSvg, isLoading: satelliteLoading } = useSatelliteLayer(
+const { satelliteSvg, isLoading: satelliteLoading, error: satelliteError } = useSatelliteLayer(
   contourRouteBounds,
   contourProjParams,
   satelliteConfig,
@@ -764,14 +368,14 @@ const { satelliteSvg, isLoading: satelliteLoading } = useSatelliteLayer(
 
 // ── Hillshade layer (async terrain tile fetch + OffscreenCanvas) ──
 const hillshadeConfig = computed<HillshadeConfig | null>(() => {
-  const cfg = props.animationConfig
+  const cfg = routeMapStore.routeMapConfig
   if (!cfg.showHillshade) return null
   return {
     opacity: cfg.hillshadeOpacity,
     strength: cfg.hillshadeStrength,
   }
 })
-const { hillshadeSvg, isLoading: hillshadeLoading } = useHillshadeLayer(
+const { hillshadeSvg, isLoading: hillshadeLoading, error: hillshadeError } = useHillshadeLayer(
   contourRouteBounds,
   contourProjParams,
   hillshadeConfig,
@@ -779,7 +383,7 @@ const { hillshadeSvg, isLoading: hillshadeLoading } = useHillshadeLayer(
   contourMapHeight,
 )
 const contourConfig = computed<ContourConfig | null>(() => {
-  const cfg = props.animationConfig
+  const cfg = routeMapStore.routeMapConfig
   if (!cfg.showContours) return null
   return {
     interval: cfg.contourInterval,
@@ -791,7 +395,7 @@ const contourConfig = computed<ContourConfig | null>(() => {
     showLabels: cfg.contourShowLabels,
   }
 })
-const { contourSvg, isLoading: contourLoading } = useContourLines(
+const { contourSvg, isLoading: contourLoading, error: contourError } = useContourLines(
   contourRouteBounds,
   contourProjParams,
   contourConfig,
@@ -801,7 +405,7 @@ const { contourSvg, isLoading: contourLoading } = useContourLines(
 
 // ── River vector tiles (async fetch from OpenFreeMap) ──
 const riverConfig = computed<RiverConfig | null>(() => {
-  const cfg = props.animationConfig
+  const cfg = routeMapStore.routeMapConfig
   if (!cfg.showRivers) return null
   return {
     color: '#4a90d9',
@@ -810,7 +414,7 @@ const riverConfig = computed<RiverConfig | null>(() => {
     riverLabelOffsets: cfg.riverLabelOffsets,
   }
 })
-const { riverSvg, detectedNames: detectedRiverNames, isLoading: riverLoading } = useRiverTiles(
+const { riverSvg, detectedNames: detectedRiverNames, isLoading: riverLoading, error: riverError } = useRiverTiles(
   contourRouteBounds,
   contourProjParams,
   riverConfig,
@@ -822,121 +426,107 @@ const { riverSvg, detectedNames: detectedRiverNames, isLoading: riverLoading } =
 // Returns null when disabled so useGeoLayer clears layerSvg immediately.
 // Re-enabling hits the module-level peakSvgCache so the fetch is instant.
 const peakConfig = computed<PeakConfig | null>(() => {
-  if (!props.animationConfig.showPeaks) return null
+  if (!routeMapStore.routeMapConfig.showPeaks) return null
   return {
     color: '#ffffff',
-    opacity: props.animationConfig.peakOpacity,
+    opacity: routeMapStore.routeMapConfig.peakOpacity,
   }
 })
-const { peakSvg, isLoading: peakLoading } = usePeakLayer(
+const { peakSvg, isLoading: peakLoading, error: peakError } = usePeakLayer(
   contourRouteBounds,
   contourProjParams,
   peakConfig,
   computed(() => 1080),
   contourMapHeight,
-  computed(() => props.routePoints),
+  computed(() => routeMapStore.routePoints),
 )
 
 // ── Place boundary polygons (async fetch from Overpass API) ──
 const placeBoundaryConfig = computed<PlaceBoundaryConfig>(() => ({
-  color: '#ffffff',
-  opacity: props.animationConfig.placeBoundaryOpacity,
+  color: '#ffffff', opacity: routeMapStore.routeMapConfig.placeBoundaryOpacity,
 }))
-const { placeBoundarySvg, isLoading: placeBoundaryLoading } = usePlaceBoundaries(
+const { placeBoundarySvg, isLoading: placeBoundaryLoading, error: placeBoundaryError } = usePlaceBoundaries(
   contourRouteBounds,
   contourProjParams,
   placeBoundaryConfig,
+  computed(() => routeMapStore.routeMapConfig.showPlaceBoundaries),
   computed(() => 1080),
   contourMapHeight,
 )
 
 // ── Forest layer (async fetch from Overpass API) ──
-// Always compute (never null) so the SVG is preloaded; visibility gated in buildFrameOptions.
-const forestConfig = computed<ForestConfig>(() => ({
-  color: props.animationConfig.forestColor ?? '#4a8c3f',
-  opacity: props.animationConfig.forestOpacity,
-}))
-const { forestSvg, isLoading: forestLoading } = useForestLayer(
-  contourRouteBounds,
-  contourProjParams,
-  forestConfig,
-  computed(() => 1080),
-  contourMapHeight,
+const forestConfig = computed<ForestConfig>(() => {
+  const cfg = routeMapStore.routeMapConfig
+  return { color: cfg.forestColor ?? '#4a8c3f', opacity: cfg.forestOpacity }
+})
+const { forestSvg, isLoading: forestLoading, error: forestError } = useForestLayer(
+  contourRouteBounds, contourProjParams, forestConfig,
+  computed(() => routeMapStore.routeMapConfig.showForests),
+  computed(() => 1080), contourMapHeight,
 )
 
 // ── Water bodies (async fetch from Overpass API) ──
-const waterConfig = computed<WaterConfig>(() => ({
-  color: props.animationConfig.waterColor ?? '#4a90d9',
-  opacity: props.animationConfig.waterOpacity,
-}))
-const { waterSvg, isLoading: waterLoading } = useWaterLayer(
-  contourRouteBounds,
-  contourProjParams,
-  waterConfig,
-  computed(() => 1080),
-  contourMapHeight,
+const waterConfig = computed<WaterConfig>(() => {
+  const cfg = routeMapStore.routeMapConfig
+  return { color: cfg.waterColor ?? '#4a90d9', opacity: cfg.waterOpacity }
+})
+const { waterSvg, isLoading: waterLoading, error: waterError } = useWaterLayer(
+  contourRouteBounds, contourProjParams, waterConfig,
+  computed(() => routeMapStore.routeMapConfig.showWater),
+  computed(() => 1080), contourMapHeight,
 )
 
 // ── Land cover layer: glaciers + urban areas (async, Overpass API) ──
-const landCoverConfig = computed<LandCoverConfig>(() => ({
-  showGlaciers: props.animationConfig.showGlaciers,
-  glacierOpacity: props.animationConfig.glacierOpacity,
-  glacierColor: props.animationConfig.glacierColor,
-  showUrban: props.animationConfig.showUrban,
-  urbanOpacity: props.animationConfig.urbanOpacity,
-  urbanColor: props.animationConfig.urbanColor,
-}))
-const { landCoverSvg, isLoading: landCoverLoading } = useLandCoverLayer(
-  contourRouteBounds,
-  contourProjParams,
-  landCoverConfig,
-  computed(() => 1080),
-  contourMapHeight,
+const landCoverConfig = computed<LandCoverConfig>(() => {
+  const cfg = routeMapStore.routeMapConfig
+  return {
+    showGlaciers: cfg.showGlaciers, glacierOpacity: cfg.glacierOpacity, glacierColor: cfg.glacierColor,
+    showUrban: cfg.showUrban, urbanOpacity: cfg.urbanOpacity, urbanColor: cfg.urbanColor,
+  }
+})
+const { landCoverSvg, isLoading: landCoverLoading, error: landCoverError } = useLandCoverLayer(
+  contourRouteBounds, contourProjParams, landCoverConfig,
+  computed(() => routeMapStore.routeMapConfig.showGlaciers || routeMapStore.routeMapConfig.showUrban),
+  computed(() => 1080), contourMapHeight,
 )
 
 // ── Vineyard & orchard layer (async fetch from Overpass API) ──
-const vineyardConfig = computed<VineyardConfig>(() => ({
-  color: props.animationConfig.vineyardColor ?? '#c8a04a',
-  opacity: props.animationConfig.vineyardOpacity,
-}))
-const { vineyardSvg, isLoading: vineyardLoading } = useVineyardLayer(
-  contourRouteBounds,
-  contourProjParams,
-  vineyardConfig,
-  computed(() => 1080),
-  contourMapHeight,
+const vineyardConfig = computed<VineyardConfig>(() => {
+  const cfg = routeMapStore.routeMapConfig
+  return { color: cfg.vineyardColor ?? '#c8a04a', opacity: cfg.vineyardOpacity }
+})
+const { vineyardSvg, isLoading: vineyardLoading, error: vineyardError } = useVineyardLayer(
+  contourRouteBounds, contourProjParams, vineyardConfig,
+  computed(() => routeMapStore.routeMapConfig.showVineyards),
+  computed(() => 1080), contourMapHeight,
 )
 
 // ── Meadow & farmland layer (async fetch from Overpass API) ──
-const meadowConfig = computed<MeadowConfig>(() => ({
-  color: props.animationConfig.meadowColor ?? '#b5c97a',
-  opacity: props.animationConfig.meadowOpacity,
-}))
-const { meadowSvg, isLoading: meadowLoading } = useMeadowLayer(
-  contourRouteBounds,
-  contourProjParams,
-  meadowConfig,
-  computed(() => 1080),
-  contourMapHeight,
+const meadowConfig = computed<MeadowConfig>(() => {
+  const cfg = routeMapStore.routeMapConfig
+  return { color: cfg.meadowColor ?? '#b5c97a', opacity: cfg.meadowOpacity }
+})
+const { meadowSvg, isLoading: meadowLoading, error: meadowError } = useMeadowLayer(
+  contourRouteBounds, contourProjParams, meadowConfig,
+  computed(() => routeMapStore.routeMapConfig.showMeadows),
+  computed(() => 1080), contourMapHeight,
 )
 
 // ── Road layer (async fetch from Overpass API) ──
-const roadConfig = computed<RoadConfig>(() => ({
-  color: '#ffffff',
-  opacity: props.animationConfig.roadOpacity,
-}))
-const { roadSvg, isLoading: roadLoading } = useRoadLayer(
-  contourRouteBounds,
-  contourProjParams,
-  roadConfig,
-  computed(() => 1080),
-  contourMapHeight,
+const roadConfig = computed<RoadConfig>(() => {
+  const cfg = routeMapStore.routeMapConfig
+  return { color: '#ffffff', opacity: cfg.roadOpacity }
+})
+const { roadSvg, isLoading: roadLoading, error: roadError } = useRoadLayer(
+  contourRouteBounds, contourProjParams, roadConfig,
+  computed(() => routeMapStore.routeMapConfig.showRoads),
+  computed(() => 1080), contourMapHeight,
 )
 
 // Animation phases: Intro (optional) → Chart animation → Outro (full image)
-const hasTitleCard = computed(() => !!props.chartTitle.trim())
-const showOutroStats = computed(() => props.animationConfig.showOutroStats ?? false)
-const swapIntroOutro = computed(() => props.animationConfig.swapIntroOutro ?? false)
+const hasTitleCard = computed(() => !!routeMapStore.chartTitle.trim())
+const showOutroStats = computed(() => routeMapStore.routeMapConfig.showOutroStats ?? false)
+const swapIntroOutro = computed(() => routeMapStore.routeMapConfig.swapIntroOutro ?? false)
 
 // What content appears in each phase (depends on swap toggle)
 // Normal: intro = title card, outro = stats card
@@ -950,25 +540,25 @@ const hasOutroContent = computed(() =>
 
 // Total route stats (computed once for outro stats card)
 const totalRouteStats = computed(() => {
-  if (props.routePoints.length < 2 || props.chartData.length < 2) {
+  if (routeMapStore.routePoints.length < 2 || routeMapStore.chartData.length < 2) {
     return { distance: 0, elevGain: 0, elevLoss: 0, totalTimeMs: null as number | null }
   }
-  const totalDistance = props.routePoints[props.routePoints.length - 1].distance
+  const totalDistance = routeMapStore.routePoints[routeMapStore.routePoints.length - 1].distance
   let elevGain = 0, elevLoss = 0
-  for (let i = 1; i < props.chartData.length; i++) {
-    const diff = props.chartData[i].value - props.chartData[i - 1].value
+  for (let i = 1; i < routeMapStore.chartData.length; i++) {
+    const diff = routeMapStore.chartData[i].value - routeMapStore.chartData[i - 1].value
     if (diff > 0) elevGain += diff
     else elevLoss += diff
   }
-  const lastTime = props.routePoints[props.routePoints.length - 1].time
+  const lastTime = routeMapStore.routePoints[routeMapStore.routePoints.length - 1].time
   return { distance: totalDistance, elevGain, elevLoss, totalTimeMs: lastTime ?? null }
 })
 
-const chartDurationMs = computed(() => props.animationConfig.duration * 1000)
+const chartDurationMs = computed(() => routeMapStore.routeMapConfig.duration * 1000)
 const introDurationMs = computed(() =>
-  hasIntroContent.value ? (props.animationConfig.introDurationSec ?? 1) * 1000 : 0
+  hasIntroContent.value ? (routeMapStore.routeMapConfig.introDurationSec ?? 1) * 1000 : 0
 )
-const outroDurationMs = computed(() => (props.animationConfig.outroDurationSec ?? 1.5) * 1000)
+const outroDurationMs = computed(() => (routeMapStore.routeMapConfig.outroDurationSec ?? 1.5) * 1000)
 const totalDurationMs = computed(() =>
   chartDurationMs.value + introDurationMs.value + outroDurationMs.value
 )
@@ -985,20 +575,20 @@ const animEnd = computed(() =>
 function buildOutroOverlayOptions(opacity: number): CombinedFrameOptions['outroOverlay'] {
   if (!showOutroStats.value) return undefined
   return {
-    title: props.chartTitle || undefined,
+    title: routeMapStore.chartTitle || undefined,
     totalDistance: totalRouteStats.value.distance,
     totalElevGain: totalRouteStats.value.elevGain,
     totalElevLoss: totalRouteStats.value.elevLoss,
     totalTimeMs: totalRouteStats.value.totalTimeMs,
     opacity,
-    color: props.animationConfig.titleColor || '#ffffff',
+    color: routeMapStore.routeMapConfig.titleColor || '#ffffff',
   }
 }
 
 // ── Weather auto-detection ──
-const weatherStartLat  = computed(() => props.routePoints[0]?.lat  ?? null)
-const weatherStartLon  = computed(() => props.routePoints[0]?.lon  ?? null)
-const weatherStartTime = computed(() => props.gpxStartTime ?? null)
+const weatherStartLat  = computed(() => routeMapStore.routePoints[0]?.lat  ?? null)
+const weatherStartLon  = computed(() => routeMapStore.routePoints[0]?.lon  ?? null)
+const weatherStartTime = computed(() => routeMapStore.gpxStartTime ?? null)
 const weatherDurationMs = computed(() => totalRouteStats.value.totalTimeMs ?? 0)
 
 const { weatherHours, isLoading: weatherLoading } = useWeatherLayer(
@@ -1011,7 +601,7 @@ const { weatherHours, isLoading: weatherLoading } = useWeatherLayer(
 // Returns the elapsed ms into the activity for a given chart animation progress (0-1).
 // Uses actual GPS time data when available, falls back to linear interpolation.
 function getElapsedMsAtProgress(progress: number): number {
-  const points = props.routePoints
+  const points = routeMapStore.routePoints
   if (points.length === 0) return 0
   const idx = Math.round(progress * (points.length - 1))
   const pt  = points[Math.min(idx, points.length - 1)]
@@ -1026,21 +616,21 @@ const animationSettings = computed<AnimationOptions>(() => ({
   enabled: true,
   durationMs: totalDurationMs.value,
   fps: 30,
-  easing: props.animationConfig.easing,
-  showMarker: props.animationConfig.showMarker,
-  markerSize: props.animationConfig.markerSize,
+  easing: routeMapStore.routeMapConfig.easing,
+  showMarker: routeMapStore.routeMapConfig.showMarker,
+  markerSize: routeMapStore.routeMapConfig.markerSize,
   markerColor: '#ffffff',
-  curveEndpoint: props.animationConfig.curveEndpoint,
+  curveEndpoint: routeMapStore.routeMapConfig.curveEndpoint,
 }))
 
 // Minimal chart options for useChartAnimation (it needs ChartOptions shape)
 const chartOptions = computed(() => ({
-  data: props.chartData.map(d => ({ label: d.label, value: d.value })),
+  data: routeMapStore.chartData.map(d => ({ label: d.label, value: d.value })),
   colors: {
-    primary: props.animationConfig.curveColor,
-    background: props.animationConfig.backgroundColor,
+    primary: routeMapStore.routeMapConfig.curveColor,
+    background: routeMapStore.routeMapConfig.backgroundColor,
   },
-  title: props.chartTitle,
+  title: routeMapStore.chartTitle,
   silhouetteMode: true,
   animation: animationSettings.value,
 }))
@@ -1056,14 +646,32 @@ const {
   reset: resetAnimation,
 } = animation
 
+// Animation store — registers controls and syncs state
+const animationStore = useAnimationStore()
+animationStore.registerControls({
+  toggle: togglePlayback,
+  seekTo: p => animation.seekTo(p),
+  setSpeed: s => animation.setSpeed(s),
+  reset: resetAnimation,
+})
+onUnmounted(() => animationStore.unregisterControls())
+
+watch(animationProgress, (newVal) => {
+  animationStore.progress = newVal
+  if (isPlaying.value) animationStore.sliderProgress = newVal * 100
+})
+watch(isPlaying, (v) => { animationStore.isPlaying = v })
+watch(playbackSpeed, (s) => { animationStore.playbackSpeed = s })
+watch(formattedTime, (t) => { animationStore.formattedTime = t })
+
 /**
  * Build CombinedFrameOptions from the current config + progress.
  */
 function buildFrameOptions(progress: number, overrides: Partial<CombinedFrameOptions> = {}): CombinedFrameOptions {
-  const cfg = props.animationConfig
+  const cfg = routeMapStore.routeMapConfig
   return {
-    routePoints: props.routePoints,
-    chartData: props.chartData,
+    routePoints: routeMapStore.routePoints,
+    chartData: routeMapStore.chartData,
     progress,
     width: 1080,
     height: 1920,
@@ -1128,7 +736,7 @@ function buildFrameOptions(progress: number, overrides: Partial<CombinedFrameOpt
     distanceLabelColor: cfg.distanceLabelColor,
     // Animation
     animationMode: cfg.animationMode,
-    timeArray: props.timeArray,
+    timeArray: routeMapStore.timeArray,
     gradientSensitivity: cfg.gradientSensitivity,
     effortConfig: cfg.effortConfig,
     // Pan-zoom for elevation section
@@ -1234,12 +842,12 @@ function buildFrameOptions(progress: number, overrides: Partial<CombinedFrameOpt
 
 // Generate animation SVG
 const animationSvg = computed(() => {
-  if (props.chartData.length === 0 && props.routePoints.length === 0) return ''
+  if (routeMapStore.chartData.length === 0 && routeMapStore.routePoints.length === 0) return ''
 
   const progress = animationProgress.value
 
   const swap = swapIntroOutro.value
-  const titleColor = props.animationConfig.titleColor || '#ffffff'
+  const titleColor = routeMapStore.routeMapConfig.titleColor || '#ffffff'
 
   // Phase 1: Intro card — title (normal) or stats (swapped)
   if (hasIntroContent.value && progress <= titleEnd.value) {
@@ -1259,7 +867,7 @@ const animationSvg = computed(() => {
       // Title card on clean background
       return generateCombinedFrame(buildFrameOptions(0, {
         sceneOpacity: 1,
-        titleOverlay: { text: props.chartTitle, opacity: cardOpacity, color: titleColor },
+        titleOverlay: { text: routeMapStore.chartTitle, opacity: cardOpacity, color: titleColor },
         showElevationMarker: false,
         showMapMarker: false,
         showElevationLabels: false,
@@ -1291,7 +899,7 @@ const animationSvg = computed(() => {
     return generateCombinedFrame(buildFrameOptions(1, {
       showElevationMarker: false,
       showMapMarker: false,
-      titleOverlay: { text: props.chartTitle, opacity: getTitleCardOpacity(outroProgress), color: titleColor },
+      titleOverlay: { text: routeMapStore.chartTitle, opacity: getTitleCardOpacity(outroProgress), color: titleColor },
     }))
   }
   // Stats card (or plain outro) on completed route
@@ -1303,19 +911,6 @@ const animationSvg = computed(() => {
   }))
 })
 
-// Sync slider with animation progress
-watch(animationProgress, (newVal) => {
-  if (!isPlaying.value) return
-  sliderProgress.value = newVal * 100
-})
-
-function onSliderChange(value: number) {
-  animation.seekTo(value / 100)
-}
-
-function setSpeed(speed: PlaybackSpeed) {
-  animation.setSpeed(speed)
-}
 
 // Video export
 const videoExport = useVideoExport()
@@ -1329,23 +924,23 @@ async function startVideoExport(settings: ExportSettings) {
 
   const [width, height] = settings.resolution.split('x').map(Number)
 
-  const hasTitle = !!props.chartTitle.trim()
-  const exportShowOutroStats = props.animationConfig.showOutroStats ?? false
-  const exportSwap = props.animationConfig.swapIntroOutro ?? false
+  const hasTitle = !!routeMapStore.chartTitle.trim()
+  const exportShowOutroStats = routeMapStore.routeMapConfig.showOutroStats ?? false
+  const exportSwap = routeMapStore.routeMapConfig.swapIntroOutro ?? false
   const exportHasIntroContent = exportSwap ? exportShowOutroStats : hasTitle
-  const exportTitleMs = exportHasIntroContent ? (props.animationConfig.introDurationSec ?? 1) * 1000 : 0
-  const chartMs = props.animationConfig.duration * 1000
-  const outroMs = (props.animationConfig.outroDurationSec ?? 1.5) * 1000
+  const exportTitleMs = exportHasIntroContent ? (routeMapStore.routeMapConfig.introDurationSec ?? 1) * 1000 : 0
+  const chartMs = routeMapStore.routeMapConfig.duration * 1000
+  const outroMs = (routeMapStore.routeMapConfig.outroDurationSec ?? 1.5) * 1000
   const totalMs = exportTitleMs + chartMs + outroMs
   const exportTitleEnd = exportTitleMs / totalMs
   const exportAnimEnd = (exportTitleMs + chartMs) / totalMs
-  const exportTitleColor = props.animationConfig.titleColor || '#ffffff'
+  const exportTitleColor = routeMapStore.routeMapConfig.titleColor || '#ffffff'
 
   const exportStats = totalRouteStats.value
   function exportOutroOverlay(opacity: number): CombinedFrameOptions['outroOverlay'] {
     if (!exportShowOutroStats) return undefined
     return {
-      title: props.chartTitle || undefined,
+      title: routeMapStore.chartTitle || undefined,
       totalDistance: exportStats.distance,
       totalElevGain: exportStats.elevGain,
       totalElevLoss: exportStats.elevLoss,
@@ -1361,7 +956,7 @@ async function startVideoExport(settings: ExportSettings) {
     fps: settings.fps,
     quality: settings.quality,
     durationMs: totalMs,
-    filename: `${props.chartTitle || 'route-map'}-reel.mp4`,
+    filename: `${routeMapStore.chartTitle || 'route-map'}-reel.mp4`,
     renderFrame: (progress: number) => {
       // Phase 1: Intro card
       if (exportHasIntroContent && progress <= exportTitleEnd) {
@@ -1380,7 +975,7 @@ async function startVideoExport(settings: ExportSettings) {
         } else {
           return generateCombinedFrame(buildFrameOptions(0, {
             sceneOpacity: 1,
-            titleOverlay: { text: props.chartTitle, opacity: cardOpacity, color: exportTitleColor },
+            titleOverlay: { text: routeMapStore.chartTitle, opacity: cardOpacity, color: exportTitleColor },
             showElevationMarker: false,
             showMapMarker: false,
             showElevationLabels: false,
@@ -1412,7 +1007,7 @@ async function startVideoExport(settings: ExportSettings) {
         return generateCombinedFrame(buildFrameOptions(1, {
           showElevationMarker: false,
           showMapMarker: false,
-          titleOverlay: { text: props.chartTitle, opacity: getTitleCardOpacity(outroProgress), color: exportTitleColor },
+          titleOverlay: { text: routeMapStore.chartTitle, opacity: getTitleCardOpacity(outroProgress), color: exportTitleColor },
           showAllAnnotations: false,
         }))
       }
@@ -1433,6 +1028,29 @@ function closeExportDialog() {
   }
   showExportDialog.value = false
 }
+
+// Sync geo loading states + errors → store so sidebar reads from store directly
+watchEffect(() => {
+  routeMapStore.satelliteLoading = satelliteLoading.value
+  routeMapStore.hillshadeLoading = hillshadeLoading.value
+  routeMapStore.contourLoading = contourLoading.value
+  routeMapStore.riverLoading = riverLoading.value
+  routeMapStore.detectedRiverNames = detectedRiverNames.value
+  routeMapStore.peakLoading = peakLoading.value
+  routeMapStore.placeBoundaryLoading = placeBoundaryLoading.value
+  routeMapStore.forestLoading = forestLoading.value
+  routeMapStore.vineyardLoading = vineyardLoading.value
+  routeMapStore.meadowLoading = meadowLoading.value
+  routeMapStore.waterLoading = waterLoading.value
+  routeMapStore.landCoverLoading = landCoverLoading.value
+  routeMapStore.roadLoading = roadLoading.value
+  routeMapStore.weatherLoading = weatherLoading.value
+  routeMapStore.weatherHoursCount = weatherHours.value?.length ?? 0
+  routeMapStore.geoLayerError = satelliteError.value ?? hillshadeError.value ?? contourError.value
+    ?? riverError.value ?? peakError.value ?? placeBoundaryError.value ?? forestError.value
+    ?? waterError.value ?? landCoverError.value ?? vineyardError.value ?? meadowError.value
+    ?? roadError.value ?? null
+})
 </script>
 
 <style scoped>

@@ -7,11 +7,12 @@ export function usePlaceBoundaries(
   routeBounds: Ref<RouteBounds | null>,
   projectionParams: Ref<ProjectionParams | null>,
   config: Ref<PlaceBoundaryConfig | null>,
+  enabled: Ref<boolean>,
   viewWidth: Ref<number>,
   viewHeight: Ref<number>,
 ) {
   const { layerSvg: placeBoundarySvg, isLoading, error } = useGeoLayer(
-    generatePlaceBoundaryLayer, routeBounds, projectionParams, config, viewWidth, viewHeight,
+    generatePlaceBoundaryLayer, routeBounds, projectionParams, config, viewWidth, viewHeight, [], enabled,
   )
   return { placeBoundarySvg, isLoading, error }
 }

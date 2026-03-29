@@ -81,7 +81,7 @@
       <!-- Playback in collapsed mode -->
       <v-tooltip location="left" :text="isPlaying ? 'Pause' : 'Abspielen'">
         <template v-slot:activator="{ props }">
-          <v-btn v-bind="props" :icon="isPlaying ? 'mdi-pause' : 'mdi-play'" variant="flat" color="primary" @click="$emit('toggle-playback')" />
+          <v-btn v-bind="props" :icon="isPlaying ? 'mdi-pause' : 'mdi-play'" variant="flat" color="primary" @click="animationStore.togglePlayback()" />
         </template>
       </v-tooltip>
 
@@ -110,8 +110,7 @@
       <!-- Chart Name (above tabs) -->
       <div class="chart-name-section">
         <v-text-field
-          :model-value="chartTitle"
-          @update:model-value="$emit('update:chartTitle', $event)"
+          v-model="chartTitle"
           label="Chart-Name"
           variant="outlined"
           density="compact"
@@ -121,11 +120,23 @@
         />
         <div class="d-flex ga-1 mt-2">
           <v-btn icon="mdi-undo" size="small" variant="tonal"
-            :disabled="!canUndo" @click="$emit('undo')" />
+            :disabled="!canUndo" @click="routeMapStore.undoConfig()" />
           <v-btn icon="mdi-redo" size="small" variant="tonal"
-            :disabled="!canRedo" @click="$emit('redo')" />
+            :disabled="!canRedo" @click="routeMapStore.redoConfig()" />
         </div>
       </div>
+
+      <!-- Geo layer error banner -->
+      <v-alert
+        v-if="geoLayerError"
+        type="warning"
+        density="compact"
+        variant="tonal"
+        class="mx-2 mb-2 text-caption"
+        icon="mdi-wifi-alert"
+      >
+        Geo-Daten konnten nicht geladen werden · wird erneut versucht…
+      </v-alert>
 
       <!-- Tab Navigation -->
       <v-tabs v-model="activeTab" grow density="compact" color="primary" class="sidebar-tabs">
@@ -928,14 +939,14 @@
             variant="flat"
             color="primary"
             size="small"
-            @click="$emit('toggle-playback')"
+            @click="animationStore.togglePlayback()"
           />
           <v-btn
             icon="mdi-replay"
             variant="text"
             size="x-small"
-            @click="$emit('reset-animation')"
-            :disabled="animationProgress === 0"
+            @click="animationStore.resetAnimation()"
+            :disabled="animationStore.progress === 0"
           />
           <v-slider
             :model-value="sliderProgress"
@@ -946,7 +957,7 @@
             color="primary"
             track-color="grey-lighten-2"
             class="mx-2"
-            @update:model-value="$emit('slider-change', $event)"
+            @update:model-value="animationStore.onSliderChange($event)"
           />
           <span class="text-caption text-no-wrap" style="font-family: monospace; font-size: 11px;">
             {{ formattedTime }}
@@ -962,7 +973,7 @@
                 v-for="speed in speedOptions"
                 :key="speed"
                 :active="playbackSpeed === speed"
-                @click="$emit('set-speed', speed)"
+                @click="animationStore.setSpeed(speed)"
               >
                 <v-list-item-title>{{ speed }}x</v-list-item-title>
               </v-list-item>
@@ -1005,50 +1016,20 @@
 
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted } from 'vue'
-import type { PropType } from 'vue'
+import { storeToRefs } from 'pinia'
 import type { PlaybackSpeed } from '../../composables/useChartAnimation'
+import { useAnimationStore } from '../../stores/useAnimationStore'
+import { useRouteMapStore } from '../../stores/useRouteMapStore'
 import { useRouteMapConfig } from '../../composables/useRouteMapConfig'
 import { useLoadingProgress } from '../../composables/useLoadingProgress'
 import { useElevationThemes } from '../../composables/useElevationThemes'
 import { uploadService } from '../../services/upload.service'
-import type { RouteMapAnimationConfig } from './RouteMapChartStep.vue'
+import type { RouteMapAnimationConfig } from '../../types/routeMapConfig'
 import SaveThemeDialog from './SaveThemeDialog.vue'
 import type { Annotation, AnnotationType } from '../../utils/chartGenerators/elevationChart/types'
 import { detectAnnotations } from '../../utils/chartGenerators/elevationChart/annotationDetection'
 
 const props = defineProps({
-  animationConfig: {
-    type: Object as PropType<RouteMapAnimationConfig>,
-    required: true,
-  },
-  chartTitle: {
-    type: String,
-    required: true,
-  },
-  timeArray: {
-    type: Array as PropType<number[]>,
-    default: undefined,
-  },
-  isPlaying: {
-    type: Boolean,
-    required: true,
-  },
-  playbackSpeed: {
-    type: Number,
-    required: true,
-  },
-  formattedTime: {
-    type: String,
-    required: true,
-  },
-  animationProgress: {
-    type: Number,
-    required: true,
-  },
-  sliderProgress: {
-    type: Number,
-    required: true,
-  },
   videoExportSupported: {
     type: Boolean,
     required: true,
@@ -1061,94 +1042,19 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  satelliteLoading: {
-    type: Boolean,
-    default: false,
-  },
-  hillshadeLoading: {
-    type: Boolean,
-    default: false,
-  },
-  contourLoading: {
-    type: Boolean,
-    default: false,
-  },
-  riverLoading: {
-    type: Boolean,
-    default: false,
-  },
-  detectedRiverNames: {
-    type: Array as () => string[],
-    default: () => [],
-  },
-  peakLoading: {
-    type: Boolean,
-    default: false,
-  },
-  placeBoundaryLoading: {
-    type: Boolean,
-    default: false,
-  },
-  forestLoading: {
-    type: Boolean,
-    default: false,
-  },
-  vineyardLoading: {
-    type: Boolean,
-    default: false,
-  },
-  meadowLoading: {
-    type: Boolean,
-    default: false,
-  },
-  waterLoading: {
-    type: Boolean,
-    default: false,
-  },
-  landCoverLoading: {
-    type: Boolean,
-    default: false,
-  },
-  roadLoading: {
-    type: Boolean,
-    default: false,
-  },
-  weatherLoading: {
-    type: Boolean,
-    default: false,
-  },
-  weatherHoursCount: {
-    type: Number,
-    default: 0,
-  },
-  chartData: {
-    type: Array as PropType<Array<{ label: string; value: number }>>,
-    default: () => [],
-  },
-  canUndo: {
-    type: Boolean,
-    default: false,
-  },
-  canRedo: {
-    type: Boolean,
-    default: false,
-  },
 })
 
 const emit = defineEmits<{
-  'update:animationConfig': [value: RouteMapAnimationConfig]
-  'update:chartTitle': [value: string]
   'update:collapsed': [value: boolean]
   'back': []
   'save': []
-  'toggle-playback': []
-  'reset-animation': []
-  'set-speed': [speed: PlaybackSpeed]
-  'slider-change': [value: number]
   'open-export-settings': []
-  'undo': []
-  'redo': []
 }>()
+
+// --- Animation store ---
+
+const animationStore = useAnimationStore()
+const { isPlaying, playbackSpeed, formattedTime, sliderProgress } = storeToRefs(animationStore)
 
 // --- Internal state ---
 
@@ -1168,11 +1074,19 @@ const newAnnotationText = ref('')
 const editingId = ref<string | null>(null)
 const editingText = ref('')
 
-// --- Config composable ---
+// --- Route map store ---
 
-function updateAnimationConfig(partial: Partial<RouteMapAnimationConfig>) {
-  emit('update:animationConfig', { ...props.animationConfig, ...partial })
-}
+const routeMapStore = useRouteMapStore()
+
+const {
+  canUndo, canRedo, geoLayerError,
+  chartTitle, chartData, timeArray,
+  satelliteLoading, hillshadeLoading, contourLoading, riverLoading, detectedRiverNames,
+  peakLoading, placeBoundaryLoading, forestLoading, vineyardLoading, meadowLoading,
+  waterLoading, landCoverLoading, roadLoading, weatherLoading, weatherHoursCount,
+} = storeToRefs(routeMapStore)
+
+// --- Config composable ---
 
 const {
   // Shared elevation fields
@@ -1318,23 +1232,23 @@ const {
   weatherOverlayColor,
   applyPreset,
 } = useRouteMapConfig(
-  () => props.animationConfig,
-  updateAnimationConfig,
+  () => routeMapStore.routeMapConfig,
+  (partial) => routeMapStore.updateConfig(partial),
 )
 
 // --- Loading Progress ---
-const riverLP         = useLoadingProgress(() => props.riverLoading,         3000)
-const placeBoundaryLP = useLoadingProgress(() => props.placeBoundaryLoading, 3000)
-const forestLP        = useLoadingProgress(() => props.forestLoading,        3500)
-const vineyardLP      = useLoadingProgress(() => props.vineyardLoading,      3000)
-const meadowLP        = useLoadingProgress(() => props.meadowLoading,        3000)
-const waterLP         = useLoadingProgress(() => props.waterLoading,         3000)
-const landCoverLP     = useLoadingProgress(() => props.landCoverLoading,     3000)
-const roadLP          = useLoadingProgress(() => props.roadLoading,          3000)
-const peakLP          = useLoadingProgress(() => props.peakLoading,          3000)
-const satelliteLP     = useLoadingProgress(() => props.satelliteLoading,     4000)
-const hillshadeLP     = useLoadingProgress(() => props.hillshadeLoading,     4000)
-const contourLP       = useLoadingProgress(() => props.contourLoading,       5000)
+const riverLP         = useLoadingProgress(() => riverLoading.value,         3000)
+const placeBoundaryLP = useLoadingProgress(() => placeBoundaryLoading.value, 3000)
+const forestLP        = useLoadingProgress(() => forestLoading.value,        3500)
+const vineyardLP      = useLoadingProgress(() => vineyardLoading.value,      3000)
+const meadowLP        = useLoadingProgress(() => meadowLoading.value,        3000)
+const waterLP         = useLoadingProgress(() => waterLoading.value,         3000)
+const landCoverLP     = useLoadingProgress(() => landCoverLoading.value,     3000)
+const roadLP          = useLoadingProgress(() => roadLoading.value,          3000)
+const peakLP          = useLoadingProgress(() => peakLoading.value,          3000)
+const satelliteLP     = useLoadingProgress(() => satelliteLoading.value,     4000)
+const hillshadeLP     = useLoadingProgress(() => hillshadeLoading.value,     4000)
+const contourLP       = useLoadingProgress(() => contourLoading.value,       5000)
 
 // --- Land Use Color Schemes ---
 
@@ -1371,7 +1285,7 @@ const colorSchemes: { id: string; label: string; colors: LandUseColors }[] = [
 ]
 
 const activeColorScheme = computed(() => {
-  const cfg = props.animationConfig
+  const cfg = routeMapStore.routeMapConfig
   return colorSchemes.find(s =>
     s.colors.forest === (cfg.forestColor ?? '#4a8c3f') &&
     s.colors.water === (cfg.waterColor ?? '#4a90d9') &&
@@ -1385,7 +1299,7 @@ const activeColorScheme = computed(() => {
 function applyLandUseColorScheme(schemeId: string) {
   const scheme = colorSchemes.find(s => s.id === schemeId)
   if (!scheme) return
-  updateAnimationConfig({
+  routeMapStore.updateConfig({
     forestColor: scheme.colors.forest,
     waterColor: scheme.colors.water,
     meadowColor: scheme.colors.meadow,
@@ -1398,7 +1312,7 @@ function applyLandUseColorScheme(schemeId: string) {
 // --- Topo Preset ---
 
 function applyTopoPreset() {
-  updateAnimationConfig({
+  routeMapStore.updateConfig({
     showBorders: true,
     borderOpacity: 0.35,
     showRivers: true,
@@ -1508,10 +1422,10 @@ const ROUTE_MAP_PRESETS: RouteMapPreset[] = [
 // --- Annotation helpers ---
 
 async function runDetection() {
-  if (props.chartData.length === 0) return
+  if (chartData.value.length === 0) return
   isDetecting.value = true
   await nextTick()
-  const detected = detectAnnotations(props.chartData)
+  const detected = detectAnnotations(chartData.value)
   const existingByType = new Map(
     (annotations.value ?? []).filter(a => a.isAutoGenerated).map(a => [a.type, a])
   )
@@ -1588,7 +1502,7 @@ function applyTheme(themeId: string) {
   if (!theme) return
   selectedThemeId.value = themeId
   const { tokens } = theme
-  updateAnimationConfig({
+  routeMapStore.updateConfig({
     duration: tokens.animation.duration,
     easing: tokens.animation.easing,
     curveColor: tokens.curve.color,
@@ -1608,7 +1522,7 @@ function applyTheme(themeId: string) {
 }
 
 async function handleSaveTheme(name: string, description: string) {
-  const cfg = props.animationConfig
+  const cfg = routeMapStore.routeMapConfig
   let preview = cfg.backgroundColor
   if (cfg.backgroundType === 'gradient') {
     preview = `linear-gradient(180deg, ${cfg.backgroundColor} 0%, ${cfg.gradientColor} 100%)`
@@ -1652,7 +1566,7 @@ async function handleImageUpload(files: File[] | File | null) {
   try {
     const uploadedImage = await uploadService.uploadImage(file)
     const imageUrl = uploadService.getImageUrl(uploadedImage)
-    updateAnimationConfig({
+    routeMapStore.updateConfig({
       backgroundType: 'image',
       imageOptions: {
         imageId: uploadedImage.id,
@@ -1674,7 +1588,7 @@ async function handleImageUpload(files: File[] | File | null) {
 }
 
 function removeBackgroundImage() {
-  updateAnimationConfig({
+  routeMapStore.updateConfig({
     backgroundType: 'solid',
     imageOptions: undefined,
   })

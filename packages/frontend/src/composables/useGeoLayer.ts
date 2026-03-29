@@ -18,6 +18,12 @@
  * wrap the generator in a closure and list the extra ref in `extraDeps`:
  *   const generate = (...args) => generatePeakLayer(...args, routePoints.value)
  *   useGeoLayer(generate, ..., [routePoints])
+ *
+ * For layers controlled by a boolean toggle (e.g. showForests), pass an
+ * `enabled` ref as the last argument instead of encoding enabled/disabled
+ * into the config type (via | null).  When enabled becomes false the SVG is
+ * cleared and no fetch is issued; when it becomes true the fetch runs:
+ *   useGeoLayer(generate, ..., [], enabled)
  */
 
 import { ref, watch, onUnmounted } from 'vue'
@@ -45,6 +51,7 @@ export function useGeoLayer<TConfig>(
   viewWidth: Ref<number>,
   viewHeight: Ref<number>,
   extraDeps: Ref<unknown>[] = [],
+  enabled?: Ref<boolean>,
 ) {
   const layerSvg = ref('')
   const isLoading = ref(false)
@@ -63,13 +70,19 @@ export function useGeoLayer<TConfig>(
   let lastKey = ''
   let lastExtraRefs: unknown[] = []
 
+  // Combine extraDeps and enabled into one variadic source array so a single
+  // watcher fires for all dependencies.  enabled (if present) sits at the end
+  // of `extra` in the destructure, but we read it directly via enabled?.value
+  // so we don't need to index into the array.
+  const allDeps = enabled ? [...extraDeps, enabled as Ref<unknown>] : extraDeps
+
   watch(
-    [routeBounds, projectionParams, config, viewWidth, viewHeight, _retrySignal, ...extraDeps],
+    [routeBounds, projectionParams, config, viewWidth, viewHeight, _retrySignal, ...allDeps],
     async ([bounds, params, cfg, w, h, , ...extra]) => {
       // Cancel any pending auto-retry — a real watcher trigger just fired.
       if (_retryTimer) { clearTimeout(_retryTimer); _retryTimer = null }
 
-      if (!bounds || !params || !cfg) {
+      if (!bounds || !params || !cfg || enabled?.value === false) {
         layerSvg.value = ''
         lastKey = ''
         return
@@ -109,10 +122,10 @@ export function useGeoLayer<TConfig>(
           // Without this, a failed request (e.g. 504 from Overpass) permanently
           // blocks the layer — the key matches so the guard short-circuits forever.
           lastKey = ''
-          // Auto-retry after AUTO_RETRY_MS: incrementing _retrySignal re-fires the watcher.
-          // Since lastKey was just cleared, the key check passes and the fetch is retried
-          // without the user needing to manually toggle the layer off and on.
-          _retryTimer = setTimeout(() => { _retrySignal.value++ }, AUTO_RETRY_MS)
+          // Auto-retry: use a longer backoff for 429 (rate-limit) so we don't extend
+          // the rate-limit window by hammering the API every 10 s.
+          const is429 = error.value?.includes('429') ?? false
+          _retryTimer = setTimeout(() => { _retrySignal.value++ }, is429 ? 60_000 : AUTO_RETRY_MS)
         }
       } finally {
         if (thisGen === generation) {

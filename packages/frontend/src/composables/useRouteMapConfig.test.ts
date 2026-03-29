@@ -7,8 +7,8 @@
 
 import { describe, it, expect, vi } from 'vitest'
 import { useRouteMapConfig } from './useRouteMapConfig'
-import type { RouteMapAnimationConfig } from '../components/chartWorkflow/RouteMapChartStep.vue'
-import { DEFAULT_ROUTEMAP_ANIMATION_CONFIG } from '../components/chartWorkflow/RouteMapChartStep.vue'
+import type { RouteMapAnimationConfig } from '../types/routeMapConfig'
+import { DEFAULT_ROUTEMAP_ANIMATION_CONFIG } from '../types/routeMapConfig'
 
 // ── Test harness ──────────────────────────────────────────────────────────────
 

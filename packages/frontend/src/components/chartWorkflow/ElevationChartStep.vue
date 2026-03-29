@@ -22,21 +22,12 @@
       :chart-title="chartTitle"
       :chart-data="chartData"
       :time-array="timeArray"
-      :is-playing="isPlaying"
-      :playback-speed="playbackSpeed"
-      :formatted-time="formattedTime"
-      :animation-progress="animationProgress"
-      :slider-progress="sliderProgress"
       :video-export-supported="videoExport.isSupported.value"
       :video-exporting="videoExport.isExporting.value"
       @update:animation-config="$emit('update:animationConfig', $event)"
       @update:chart-title="$emit('update:chartTitle', $event)"
       @back="$emit('back')"
       @save="$emit('save')"
-      @toggle-playback="togglePlayback"
-      @reset-animation="resetAnimation"
-      @set-speed="setSpeed"
-      @slider-change="onSliderChange"
       @open-export-settings="openExportSettings"
     />
 
@@ -162,7 +153,7 @@ export const DEFAULT_ELEVATION_ANIMATION_CONFIG: ElevationAnimationConfig = {
 </script>
 
 <script setup lang="ts">
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, onUnmounted } from "vue";
 import type { PropType } from "vue";
 import type { ChartColors } from "../../composables/useChartConfig";
 import type {
@@ -171,7 +162,7 @@ import type {
 } from "../../utils/chartGenerators/types";
 import type { ChartOptions, AnimationOptions } from "@chart-generator/shared";
 import { DEFAULT_ANIMATION_OPTIONS } from "@chart-generator/shared";
-import { useChartAnimation, type PlaybackSpeed } from "../../composables/useChartAnimation";
+import { useChartAnimation } from "../../composables/useChartAnimation";
 import { useVideoExport } from "../../composables/useVideoExport";
 import { generateElevationFrame } from "../../utils/chartGenerators/elevationChart/elevationChart";
 import { getTitleCardOpacity, TITLE_CARD_DURATION_MS, TRANSITION_DURATION_MS } from "../../utils/titleCardGenerator";
@@ -180,12 +171,10 @@ import ExportSettingsDialog from "./ExportSettingsDialog.vue";
 import type { ExportSettings } from "./ExportSettingsDialog.vue";
 import VideoExportProgressDialog from "./VideoExportProgressDialog.vue";
 import ElevationControlsSidebar from "./ElevationControlsSidebar.vue";
+import { useAnimationStore } from "../../stores/useAnimationStore";
 
 // Layout mode (kept for compatibility, always silhouette now)
 const layoutMode = ref<'silhouette' | 'free'>('silhouette');
-
-// Slider progress state
-const sliderProgress = ref(0);
 
 // Video export dialogs
 const showExportDialog = ref(false);
@@ -312,6 +301,24 @@ const {
   reset: resetAnimation,
 } = animation;
 
+// Animation store — registers controls and syncs state
+const animationStore = useAnimationStore();
+animationStore.registerControls({
+  toggle: togglePlayback,
+  seekTo: p => animation.seekTo(p),
+  setSpeed: s => animation.setSpeed(s),
+  reset: resetAnimation,
+});
+onUnmounted(() => animationStore.unregisterControls());
+
+watch(animationProgress, (newVal) => {
+  animationStore.progress = newVal;
+  if (isPlaying.value) animationStore.sliderProgress = newVal * 100;
+});
+watch(isPlaying, (v) => { animationStore.isPlaying = v; });
+watch(playbackSpeed, (s) => { animationStore.playbackSpeed = s; });
+watch(formattedTime, (t) => { animationStore.formattedTime = t; });
+
 // Shared FrameOptions for the intro phases (title + transition)
 function buildIntroFrameOptions(overrides: Record<string, unknown> = {}) {
   return {
@@ -435,19 +442,6 @@ const silhouetteSvg = computed(() => {
   return animationSvg.value || '';
 });
 
-// Sync slider with animation progress
-watch(animationProgress, (newVal) => {
-  if (!isPlaying.value) return;
-  sliderProgress.value = newVal * 100;
-});
-
-function onSliderChange(value: number) {
-  animation.seekTo(value / 100);
-}
-
-function setSpeed(speed: PlaybackSpeed) {
-  animation.setSpeed(speed);
-}
 
 // Video export
 const videoExport = useVideoExport();

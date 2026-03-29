@@ -7,11 +7,12 @@ export function useVineyardLayer(
   routeBounds: Ref<RouteBounds | null>,
   projectionParams: Ref<ProjectionParams | null>,
   config: Ref<VineyardConfig | null>,
+  enabled: Ref<boolean>,
   viewWidth: Ref<number>,
   viewHeight: Ref<number>,
 ) {
   const { layerSvg: vineyardSvg, isLoading, error } = useGeoLayer(
-    generateVineyardLayer, routeBounds, projectionParams, config, viewWidth, viewHeight,
+    generateVineyardLayer, routeBounds, projectionParams, config, viewWidth, viewHeight, [], enabled,
   )
   return { vineyardSvg, isLoading, error }
 }

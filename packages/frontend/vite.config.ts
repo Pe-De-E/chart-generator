@@ -25,6 +25,13 @@ export default defineConfig({
         proxyTimeout: 30000,
         timeout: 30000,
       },
+      '/overpass-kumi': {
+        target: 'https://overpass.kumi.systems/api',
+        changeOrigin: true,
+        rewrite: (path: string) => path.replace(/^\/overpass-kumi/, ''),
+        proxyTimeout: 30000,
+        timeout: 30000,
+      },
       '/satellite-tiles': {
         target: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile',
         changeOrigin: true,

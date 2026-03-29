@@ -14,6 +14,9 @@
  *  6. A genuine value change DOES trigger a new fetch
  *  7. Rapid changes keep only the latest result (stale-fetch guard)
  *  8. extraDeps reference change triggers a new fetch
+ *  9. enabled=false suppresses the fetch and clears the SVG
+ * 10. enabled false→true triggers a fetch; enabled true→false clears the SVG
+ * 11. Layers without enabled behave identically to before (backwards-compat)
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -347,5 +350,120 @@ describe('useGeoLayer', () => {
 
     expect(generate).toHaveBeenCalledTimes(2)
     expect(layerSvg.value).toBe('<svg>e2</svg>')
+  })
+
+  // ── 9–11. enabled flag ───────────────────────────────────────────────────────
+  //
+  // These tests protect the structural pattern introduced to avoid encoding
+  // "layer disabled" as `config = null`.  Passing a boolean `enabled` ref is
+  // now the canonical way to gate Overpass fetches — DO NOT revert to null
+  // guards in config computeds.
+
+  it('does not fetch when enabled starts as false', async () => {
+    const enabled          = ref(false)
+    const routeBounds      = ref<RouteBounds | null>(BOUNDS)
+    const projectionParams = ref<ProjectionParams | null>(PARAMS)
+    const config           = ref<SimpleConfig | null>(CFG)
+    const viewWidth        = ref(1080)
+    const viewHeight       = ref(1152)
+
+    const { layerSvg } = useGeoLayer<SimpleConfig>(
+      generate, routeBounds, projectionParams, config, viewWidth, viewHeight, [], enabled,
+    )
+
+    await flushPromises()
+    expect(generate).not.toHaveBeenCalled()
+    expect(layerSvg.value).toBe('')
+  })
+
+  it('fetches when enabled switches false → true', async () => {
+    const enabled          = ref(false)
+    const routeBounds      = ref<RouteBounds | null>(BOUNDS)
+    const projectionParams = ref<ProjectionParams | null>(PARAMS)
+    const config           = ref<SimpleConfig | null>(CFG)
+    const viewWidth        = ref(1080)
+    const viewHeight       = ref(1152)
+
+    const { layerSvg } = useGeoLayer<SimpleConfig>(
+      generate, routeBounds, projectionParams, config, viewWidth, viewHeight, [], enabled,
+    )
+
+    await flushPromises()
+    expect(generate).not.toHaveBeenCalled()
+
+    enabled.value = true
+    await flushPromises()
+
+    expect(generate).toHaveBeenCalledTimes(1)
+    expect(layerSvg.value).toBe('<svg>result</svg>')
+  })
+
+  it('clears the SVG and stops fetching when enabled switches true → false', async () => {
+    generate = vi.fn()
+      .mockResolvedValueOnce('<svg>loaded</svg>')
+
+    const enabled          = ref(true)
+    const routeBounds      = ref<RouteBounds | null>(BOUNDS)
+    const projectionParams = ref<ProjectionParams | null>(PARAMS)
+    const config           = ref<SimpleConfig | null>(CFG)
+    const viewWidth        = ref(1080)
+    const viewHeight       = ref(1152)
+
+    const { layerSvg } = useGeoLayer<SimpleConfig>(
+      generate, routeBounds, projectionParams, config, viewWidth, viewHeight, [], enabled,
+    )
+
+    await flushPromises()
+    expect(layerSvg.value).toBe('<svg>loaded</svg>')
+
+    enabled.value = false
+    await flushPromises()
+
+    expect(layerSvg.value).toBe('')
+    // Config changes while disabled must NOT trigger a new fetch
+    config.value = { opacity: 0.9, color: '#ff0000' }
+    await flushPromises()
+    expect(generate).toHaveBeenCalledTimes(1) // still only the original fetch
+  })
+
+  it('re-fetches after re-enable even when config did not change (lastKey was reset)', async () => {
+    generate = vi.fn()
+      .mockResolvedValueOnce('<svg>first</svg>')
+      .mockResolvedValueOnce('<svg>second</svg>')
+
+    const enabled          = ref(true)
+    const routeBounds      = ref<RouteBounds | null>(BOUNDS)
+    const projectionParams = ref<ProjectionParams | null>(PARAMS)
+    const config           = ref<SimpleConfig | null>(CFG)
+    const viewWidth        = ref(1080)
+    const viewHeight       = ref(1152)
+
+    const { layerSvg } = useGeoLayer<SimpleConfig>(
+      generate, routeBounds, projectionParams, config, viewWidth, viewHeight, [], enabled,
+    )
+
+    await flushPromises()
+    expect(layerSvg.value).toBe('<svg>first</svg>')
+
+    enabled.value = false
+    await flushPromises()
+    expect(layerSvg.value).toBe('')
+
+    enabled.value = true
+    await flushPromises()
+
+    expect(generate).toHaveBeenCalledTimes(2)
+    expect(layerSvg.value).toBe('<svg>second</svg>')
+  })
+
+  it('layers without enabled work identically to before (backwards-compat)', async () => {
+    // No enabled ref passed — must behave exactly like the original implementation.
+    const { routeBounds, projectionParams, layerSvg } = makeLayer(generate)
+    routeBounds.value = BOUNDS
+    projectionParams.value = PARAMS
+    await flushPromises()
+
+    expect(generate).toHaveBeenCalledTimes(1)
+    expect(layerSvg.value).toBe('<svg>result</svg>')
   })
 })

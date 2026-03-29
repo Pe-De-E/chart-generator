@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
-import { useAuth } from '../composables/useAuth'
+import { useAuthStore } from '../stores/useAuthStore'
 
 // Import views
 import LandingPage from '../views/LandingPage.vue'
@@ -89,27 +89,27 @@ const router = createRouter({
 
 // Navigation guard to protect routes
 router.beforeEach(async (to, _from, next) => {
-  const { isAuthenticated, isAdmin, isInitialized, init } = useAuth()
+  const authStore = useAuthStore()
 
   // Wait for auth initialization to complete
-  if (!isInitialized.value) {
-    await init()
+  if (!authStore.isInitialized) {
+    await authStore.init()
   }
 
   // Check if route requires authentication
-  if (to.meta.requiresAuth && !isAuthenticated.value) {
+  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     next({ name: 'Login' })
     return
   }
 
   // Check if route requires admin
-  if (to.meta.requiresAdmin && !isAdmin.value) {
+  if (to.meta.requiresAdmin && !authStore.isAdmin) {
     next({ name: 'Dashboard' })
     return
   }
 
   // Check if route requires guest (not authenticated)
-  if (to.meta.requiresGuest && isAuthenticated.value) {
+  if (to.meta.requiresGuest && authStore.isAuthenticated) {
     next({ name: 'Dashboard' })
     return
   }
