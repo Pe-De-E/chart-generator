@@ -301,6 +301,8 @@ function handleFileUpload(files: File | File[] | null) {
 
   lastGPXResult.value = null
   routePoints.value = []
+  routeMapStore.resetConfig()
+  routeMapStore.chartTitle = 'Route Map'
 
   const reader = new FileReader()
   reader.onload = (e) => {
