@@ -34,9 +34,11 @@
       v-model:collapsed="controlsCollapsed"
       :video-export-supported="videoExport.isSupported.value"
       :video-exporting="videoExport.isExporting.value"
+      :image-exporting="imageExport.isExporting.value"
       @back="$emit('back')"
       @save="$emit('save')"
       @open-export-settings="openExportSettings"
+      @export-frame="exportCurrentFrame"
     />
 
     <!-- Export Settings Dialog -->
@@ -72,6 +74,7 @@ import { DEFAULT_ANIMATION_OPTIONS } from '@chart-generator/shared'
 import { useChartAnimation } from '../../composables/useChartAnimation'
 import { useRouteMapStore } from '../../stores/useRouteMapStore'
 import { useVideoExport } from '../../composables/useVideoExport'
+import { useImageExport } from '../../composables/useImageExport'
 import { generateCombinedFrame, getLastKmAnchorPositions, getLastAnnotationChipPositions } from '../../utils/chartGenerators/routeMap/combinedFrame'
 import type { CombinedFrameOptions } from '../../utils/chartGenerators/routeMap/combinedFrame'
 import { getTitleCardOpacity } from '../../utils/titleCardGenerator'
@@ -914,6 +917,14 @@ const animationSvg = computed(() => {
 
 // Video export
 const videoExport = useVideoExport()
+
+// Image (PNG) export
+const imageExport = useImageExport()
+
+async function exportCurrentFrame() {
+  const title = routeMapStore.chartTitle.trim() || 'frame'
+  await imageExport.exportFrame(animationSvg.value, 1080, 1920, title)
+}
 
 function openExportSettings() {
   showExportSettingsDialog.value = true

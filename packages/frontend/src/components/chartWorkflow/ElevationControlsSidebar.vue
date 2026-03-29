@@ -96,6 +96,11 @@
           <v-btn v-bind="props" icon="mdi-video-outline" color="deep-purple" variant="flat" size="small" @click="$emit('open-export-settings')" :disabled="!videoExportSupported || videoExporting" />
         </template>
       </v-tooltip>
+      <v-tooltip location="left" text="PNG exportieren">
+        <template v-slot:activator="{ props }">
+          <v-btn v-bind="props" icon="mdi-camera-outline" color="teal" variant="flat" size="small" @click="$emit('export-frame')" :disabled="imageExporting" />
+        </template>
+      </v-tooltip>
     </div>
 
     <!-- Expanded state: Full controls -->
@@ -957,6 +962,13 @@
           @click="$emit('open-export-settings')"
           :disabled="!videoExportSupported || videoExporting"
         />
+        <v-btn
+          icon="mdi-camera-outline"
+          color="teal"
+          variant="flat"
+          @click="$emit('export-frame')"
+          :disabled="imageExporting"
+        />
       </div>
     </div>
   </v-navigation-drawer>
@@ -1008,6 +1020,10 @@ const props = defineProps({
     type: Boolean,
     required: true,
   },
+  imageExporting: {
+    type: Boolean,
+    default: false,
+  },
   collapsed: {
     type: Boolean,
     default: false,
@@ -1021,6 +1037,7 @@ const emit = defineEmits<{
   'back': []
   'save': []
   'open-export-settings': []
+  'export-frame': []
 }>()
 
 // --- Animation store ---

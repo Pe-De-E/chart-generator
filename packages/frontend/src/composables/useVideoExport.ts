@@ -38,6 +38,70 @@ const QUALITY_PRESETS: Record<ExportOptions['quality'], { crf: number; preset: s
   high: { crf: 18, preset: 'fast' }
 }
 
+// ── Module-level image embedding helpers ─────────────────────────────────────
+// Shared between useVideoExport (video frames) and useImageExport (single PNG).
+
+/** Cache for converted image data URLs (to avoid re-fetching across frames). */
+const _imageDataUrlCache = new Map<string, string>()
+
+async function _imageUrlToDataUrl(url: string): Promise<string> {
+  const cached = _imageDataUrlCache.get(url)
+  if (cached) return cached
+
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => {
+      const maxDim = 1920
+      let w = img.naturalWidth
+      let h = img.naturalHeight
+      if (w > maxDim || h > maxDim) {
+        const ratio = Math.min(maxDim / w, maxDim / h)
+        w = Math.round(w * ratio)
+        h = Math.round(h * ratio)
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width = w
+      canvas.height = h
+      const ctx = canvas.getContext('2d')
+      if (!ctx) { reject(new Error('Failed to get canvas context')); return }
+      ctx.drawImage(img, 0, 0, w, h)
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.85)
+      _imageDataUrlCache.set(url, dataUrl)
+      resolve(dataUrl)
+    }
+    img.onerror = () => reject(new Error(`Failed to load image: ${url}`))
+    img.src = url
+  })
+}
+
+/**
+ * Embed external `<image>` hrefs in an SVG string as Base64 data URLs.
+ * Already-embedded data: URLs are skipped.  Exported so that useImageExport
+ * can reuse this without importing FFmpeg.
+ */
+export async function embedImagesInSvg(svgString: string): Promise<string> {
+  const imageRegex = /<image[^>]*(?:href|xlink:href)="([^"]+)"[^>]*>/gi
+  const matches = [...svgString.matchAll(imageRegex)]
+  if (matches.length === 0) return svgString
+
+  let result = svgString
+  for (const match of matches) {
+    const fullMatch = match[0]
+    const imageUrl = match[1]
+    if (imageUrl.startsWith('data:')) continue
+    try {
+      const dataUrl = await _imageUrlToDataUrl(imageUrl)
+      result = result.replace(fullMatch, fullMatch.replace(imageUrl, dataUrl))
+    } catch (e) {
+      console.warn('Failed to embed image:', imageUrl, e)
+    }
+  }
+  return result
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export function useVideoExport() {
   const ffmpeg = shallowRef<FFmpeg | null>(null)
   const isLoaded = ref(false)
@@ -128,91 +192,6 @@ export function useVideoExport() {
       }
       return false
     }
-  }
-
-  // Cache for converted image data URLs (to avoid re-fetching for each frame)
-  const imageDataUrlCache = new Map<string, string>()
-
-  /**
-   * Convert an image URL to a Base64 data URL (with caching)
-   */
-  async function imageUrlToDataUrl(url: string): Promise<string> {
-    const cached = imageDataUrlCache.get(url)
-    if (cached) return cached
-
-    return new Promise((resolve, reject) => {
-      const img = new Image()
-      img.crossOrigin = 'anonymous'
-
-      img.onload = () => {
-        // Scale down to max 1920px for export (no need for full resolution)
-        const maxDim = 1920
-        let w = img.naturalWidth
-        let h = img.naturalHeight
-        if (w > maxDim || h > maxDim) {
-          const ratio = Math.min(maxDim / w, maxDim / h)
-          w = Math.round(w * ratio)
-          h = Math.round(h * ratio)
-        }
-
-        const canvas = document.createElement('canvas')
-        canvas.width = w
-        canvas.height = h
-        const ctx = canvas.getContext('2d')
-        if (!ctx) {
-          reject(new Error('Failed to get canvas context'))
-          return
-        }
-        ctx.drawImage(img, 0, 0, w, h)
-        // JPEG is ~10-20x smaller than PNG as base64 — critical for SVG embedding
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.85)
-        imageDataUrlCache.set(url, dataUrl)
-        resolve(dataUrl)
-      }
-
-      img.onerror = () => {
-        reject(new Error(`Failed to load image: ${url}`))
-      }
-
-      img.src = url
-    })
-  }
-
-  /**
-   * Embed external images in SVG as Base64 data URLs
-   */
-  async function embedImagesInSvg(svgString: string): Promise<string> {
-    // Find all image elements with href or xlink:href
-    const imageRegex = /<image[^>]*(?:href|xlink:href)="([^"]+)"[^>]*>/gi
-    const matches = [...svgString.matchAll(imageRegex)]
-
-    if (matches.length === 0) {
-      return svgString
-    }
-
-    let result = svgString
-
-    for (const match of matches) {
-      const fullMatch = match[0]
-      const imageUrl = match[1]
-
-      // Skip if already a data URL
-      if (imageUrl.startsWith('data:')) {
-        continue
-      }
-
-      try {
-        const dataUrl = await imageUrlToDataUrl(imageUrl)
-        // Replace the URL in the image tag
-        const newImageTag = fullMatch.replace(imageUrl, dataUrl)
-        result = result.replace(fullMatch, newImageTag)
-      } catch (e) {
-        console.warn('Failed to embed image:', imageUrl, e)
-        // Continue without embedding this image
-      }
-    }
-
-    return result
   }
 
   // Reusable canvas for frame rendering (avoids creating/destroying per frame)

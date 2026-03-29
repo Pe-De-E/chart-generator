@@ -24,11 +24,13 @@
       :time-array="timeArray"
       :video-export-supported="videoExport.isSupported.value"
       :video-exporting="videoExport.isExporting.value"
+      :image-exporting="imageExport.isExporting.value"
       @update:animation-config="$emit('update:animationConfig', $event)"
       @update:chart-title="$emit('update:chartTitle', $event)"
       @back="$emit('back')"
       @save="$emit('save')"
       @open-export-settings="openExportSettings"
+      @export-frame="exportCurrentFrame"
     />
 
     <!-- Export Settings Dialog -->
@@ -164,6 +166,7 @@ import type { ChartOptions, AnimationOptions } from "@chart-generator/shared";
 import { DEFAULT_ANIMATION_OPTIONS } from "@chart-generator/shared";
 import { useChartAnimation } from "../../composables/useChartAnimation";
 import { useVideoExport } from "../../composables/useVideoExport";
+import { useImageExport } from "../../composables/useImageExport";
 import { generateElevationFrame } from "../../utils/chartGenerators/elevationChart/elevationChart";
 import { getTitleCardOpacity, TITLE_CARD_DURATION_MS, TRANSITION_DURATION_MS } from "../../utils/titleCardGenerator";
 import { findHookPoint } from "../../utils/chartGenerators/elevationChart/hookDetection";
@@ -445,6 +448,14 @@ const silhouetteSvg = computed(() => {
 
 // Video export
 const videoExport = useVideoExport();
+
+// Image (PNG) export
+const imageExport = useImageExport();
+
+async function exportCurrentFrame() {
+  const title = (props.chartTitle ?? '').trim() || 'frame';
+  await imageExport.exportFrame(silhouetteSvg.value, 1080, 1920, title);
+}
 
 // Open export settings dialog
 function openExportSettings() {

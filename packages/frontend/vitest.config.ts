@@ -52,6 +52,8 @@ export default defineConfig({
         'src/utils/chartGenerators/routeMap/index.ts',
         // WebGL / Three.js — not testable in jsdom
         'src/utils/chartGenerators/terrain3d/**',
+        // Browser-only composable: canvas, URL.createObjectURL — not testable in jsdom
+        'src/composables/useImageExport.ts',
         // Views: auth pages + legal — tested via E2E
         'src/views/Login/**',
         'src/views/Signup.vue',
