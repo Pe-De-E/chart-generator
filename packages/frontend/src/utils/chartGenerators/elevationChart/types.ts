@@ -23,6 +23,16 @@ export interface Annotation {
 }
 
 /**
+ * A secondary data series to overlay on the elevation curve (normalized 0–100%)
+ */
+export interface OverlaySeries {
+  values: number[]    // Raw values, same length as chartData
+  color: string
+  label: string       // e.g. 'HR', 'Tempo'
+  opacity?: number    // default 0.7
+}
+
+/**
  * Animation frame options
  */
 export interface FrameOptions {
@@ -69,6 +79,7 @@ export interface FrameOptions {
   cameraOverrideProgress?: number      // 0-1, override camera position (clip-path still uses main progress)
   curveOpacity?: number                // 0-1, opacity of curve + fill + marker (default: 1). Used for fade transitions.
   annotations?: Annotation[]           // Text annotations shown at their progress points
+  overlays?: OverlaySeries[]           // Secondary curves overlaid (HR, speed, …)
 }
 
 /**

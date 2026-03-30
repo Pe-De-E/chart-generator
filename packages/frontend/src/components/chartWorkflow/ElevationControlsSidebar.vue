@@ -68,6 +68,13 @@
           </v-btn>
         </template>
       </v-tooltip>
+      <v-tooltip v-if="hasHrData || hasSpeedData" location="left" text="Kurven-Overlays">
+        <template v-slot:activator="{ props }">
+          <v-btn v-bind="props" icon variant="text" @click="controlsCollapsed = false; expandedPanels = ['overlays']">
+            <v-icon>mdi-chart-line</v-icon>
+          </v-btn>
+        </template>
+      </v-tooltip>
 
       <v-spacer />
 
@@ -883,6 +890,61 @@
           </v-expansion-panel-text>
         </v-expansion-panel>
 
+        <!-- Kurven-Overlays (HR, Tempo) -->
+        <v-expansion-panel v-if="hasHrData || hasSpeedData" value="overlays">
+          <v-expansion-panel-title>
+            <v-icon start size="small">mdi-chart-line</v-icon>
+            Kurven-Overlays
+          </v-expansion-panel-title>
+          <v-expansion-panel-text>
+            <div class="panel-stack">
+              <p class="text-caption text-medium-emphasis mb-2">
+                Alle Kurven werden auf 0–100% normalisiert — die Kurvenformen zeigen die Korrelation direkt.
+              </p>
+
+              <!-- HR overlay -->
+              <template v-if="hasHrData">
+                <v-checkbox
+                  v-model="showHrOverlay"
+                  label="Herzfrequenz"
+                  density="compact"
+                  hide-details
+                  color="primary"
+                />
+                <v-menu v-if="showHrOverlay" :close-on-content-click="false">
+                  <template v-slot:activator="{ props: menuProps }">
+                    <v-btn v-bind="menuProps" variant="outlined" block size="small" class="mt-1 mb-2">
+                      <div class="color-swatch mr-2" :style="{ backgroundColor: hrOverlayColor }"></div>
+                      HR-Farbe
+                    </v-btn>
+                  </template>
+                  <v-color-picker v-model="hrOverlayColor" mode="hexa" show-swatches />
+                </v-menu>
+              </template>
+
+              <!-- Speed overlay -->
+              <template v-if="hasSpeedData">
+                <v-checkbox
+                  v-model="showSpeedOverlay"
+                  label="Tempo (km/h)"
+                  density="compact"
+                  hide-details
+                  color="primary"
+                />
+                <v-menu v-if="showSpeedOverlay" :close-on-content-click="false">
+                  <template v-slot:activator="{ props: menuProps }">
+                    <v-btn v-bind="menuProps" variant="outlined" block size="small" class="mt-1">
+                      <div class="color-swatch mr-2" :style="{ backgroundColor: speedOverlayColor }"></div>
+                      Tempo-Farbe
+                    </v-btn>
+                  </template>
+                  <v-color-picker v-model="speedOverlayColor" mode="hexa" show-swatches />
+                </v-menu>
+              </template>
+            </div>
+          </v-expansion-panel-text>
+        </v-expansion-panel>
+
       </v-expansion-panels>
     </div>
 
@@ -1024,6 +1086,14 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  hasHrData: {
+    type: Boolean,
+    default: false,
+  },
+  hasSpeedData: {
+    type: Boolean,
+    default: false,
+  },
   collapsed: {
     type: Boolean,
     default: false,
@@ -1117,6 +1187,25 @@ const {
   () => props.animationConfig,
   updateAnimationConfig,
 )
+
+// --- Overlay config computeds ---
+
+const showHrOverlay = computed({
+  get: () => props.animationConfig.showHrOverlay,
+  set: (v: boolean) => updateAnimationConfig({ showHrOverlay: v }),
+})
+const hrOverlayColor = computed({
+  get: () => props.animationConfig.hrOverlayColor,
+  set: (v: string) => updateAnimationConfig({ hrOverlayColor: v }),
+})
+const showSpeedOverlay = computed({
+  get: () => props.animationConfig.showSpeedOverlay,
+  set: (v: boolean) => updateAnimationConfig({ showSpeedOverlay: v }),
+})
+const speedOverlayColor = computed({
+  get: () => props.animationConfig.speedOverlayColor,
+  set: (v: string) => updateAnimationConfig({ speedOverlayColor: v }),
+})
 
 // --- Theme system ---
 

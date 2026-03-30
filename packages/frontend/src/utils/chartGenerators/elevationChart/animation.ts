@@ -10,7 +10,7 @@ import {
   type ViewBoxPoint
 } from '../../coordinateContract'
 import { remapProgressByTime, remapProgressDirect, buildGradientTimeArray } from '../../timeMapping'
-import type { Annotation, BackgroundType, PanZoomConfig } from './types'
+import type { Annotation, BackgroundType, OverlaySeries, PanZoomConfig } from './types'
 import { generateBackgroundElements } from './background'
 import { generateEffortCurve } from './effort'
 import { calculateCameraViewport } from './panZoom'
@@ -179,7 +179,8 @@ export function generateAnimatedSilhouette(
   titleOverlay?: { text: string; opacity: number; color: string },
   cameraOverrideProgress?: number,
   curveOpacity: number = 1,
-  annotations: Annotation[] = []
+  annotations: Annotation[] = [],
+  overlays: OverlaySeries[] = []
 ): string {
   if (data.length === 0) return '<svg></svg>'
 
@@ -235,6 +236,46 @@ export function generateAnimatedSilhouette(
 
   const smoothLinePath = pointsToSmoothPath(offsetPoints)
   const smoothAreaPath = pointsToSmoothAreaPath(offsetPoints, offsetChartArea)
+
+  // Build normalized overlay paths (each series scaled to 0–100% of its own range)
+  const overlayPathsHtml = overlays.map(o => {
+    const valid = o.values.filter(v => v > 0)
+    if (valid.length === 0) return ''
+    const oMin = Math.min(...valid)
+    const oMax = Math.max(...valid)
+    const oRange = oMax - oMin || 1
+    const yBottom = offsetChartArea.y + offsetChartArea.height
+    const pts: ViewBoxPoint[] = o.values.map((v, i) => ({
+      x: offsetPoints[i]?.x ?? 0,
+      y: v > 0 ? yBottom - ((v - oMin) / oRange) * offsetChartArea.height : yBottom,
+      originalDistance: offsetPoints[i]?.originalDistance ?? i,
+      originalElevation: v,
+    }))
+    const path = pointsToSmoothPath(pts)
+    return `<path d="${path}" fill="none" stroke="${o.color}"
+                  stroke-width="4" stroke-linejoin="round" stroke-linecap="round"
+                  opacity="${o.opacity ?? 0.7}"/>`
+  }).join('')
+
+  // Legend: Höhe (always) + active overlays — rendered outside clip-path
+  const legendItems = [
+    { color, label: 'Höhe' },
+    ...overlays.map(o => ({ color: o.color, label: o.label })),
+  ]
+  const legendY = height - 16
+  const legendSpacing = 120
+  const legendStartX = (width - legendItems.length * legendSpacing) / 2
+  const legendHtml = overlays.length > 0 ? `
+    <g font-family="system-ui,-apple-system,sans-serif" font-size="22" fill="white">
+      ${legendItems.map((item, i) => {
+        const x = legendStartX + i * legendSpacing
+        return `
+          <line x1="${x}" y1="${legendY}" x2="${x + 32}" y2="${legendY}"
+                stroke="${item.color}" stroke-width="4" stroke-linecap="round"/>
+          <text x="${x + 40}" y="${legendY + 8}" opacity="0.85">${item.label}</text>
+        `
+      }).join('')}
+    </g>` : ''
 
   const gradientId = `silhouette-gradient-anim`
   const clipId = `reveal-clip-anim`
@@ -391,13 +432,15 @@ export function generateAnimatedSilhouette(
     ? `filter="url(#${effortElements.glowFilter})"`
     : ''
 
-  // Chart content: labels + clipped curve + marker
+  // Chart content: labels + clipped curve + overlays + legend
   const chartContentHtml = `
     ${elevationLabelsHtml}
     ${distanceLabelsHtml}
     <g clip-path="url(#${clipId})">
       ${curveContent}
+      ${overlayPathsHtml}
     </g>
+    ${legendHtml}
   `
 
   // Title overlay SVG element (rendered in outer SVG, on top of everything)

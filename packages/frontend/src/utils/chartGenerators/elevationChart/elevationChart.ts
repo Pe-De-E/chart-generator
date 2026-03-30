@@ -592,7 +592,8 @@ export function generateElevationFrame(
       frameOptions.titleOverlay,
       frameOptions.cameraOverrideProgress,
       frameOptions.curveOpacity ?? 1,
-      frameOptions.annotations ?? []
+      frameOptions.annotations ?? [],
+      frameOptions.overlays ?? []
     )
   }
 

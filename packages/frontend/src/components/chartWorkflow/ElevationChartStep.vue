@@ -25,6 +25,8 @@
       :video-export-supported="videoExport.isSupported.value"
       :video-exporting="videoExport.isExporting.value"
       :image-exporting="imageExport.isExporting.value"
+      :has-hr-data="hasHrData"
+      :has-speed-data="hasSpeedData"
       @update:animation-config="$emit('update:animationConfig', $event)"
       @update:chart-title="$emit('update:chartTitle', $event)"
       @back="$emit('back')"
@@ -112,6 +114,11 @@ export interface ElevationAnimationConfig {
   panZoomZoomOutStart: number;      // 0.5-0.95, default 0.75
   // Annotations — text labels shown at specific progress points
   annotations?: Annotation[];
+  // Overlay curves (HR, speed)
+  showHrOverlay: boolean;
+  hrOverlayColor: string;
+  showSpeedOverlay: boolean;
+  speedOverlayColor: string;
   // Legacy support
   useGradientBackground?: boolean;
 }
@@ -151,6 +158,10 @@ export const DEFAULT_ELEVATION_ANIMATION_CONFIG: ElevationAnimationConfig = {
   panZoomZoomLevel: 3,
   panZoomZoomOutStart: 0.75,
   annotations: [],
+  showHrOverlay: false,
+  hrOverlayColor: '#ff6b6b',
+  showSpeedOverlay: false,
+  speedOverlayColor: '#4ecdc4',
 };
 </script>
 
@@ -162,8 +173,9 @@ import type {
   SeriesConfig,
   ChartStyleOverrides,
 } from "../../utils/chartGenerators/types";
-import type { ChartOptions, AnimationOptions } from "@chart-generator/shared";
+import type { ChartOptions, AnimationOptions, RoutePoint } from "@chart-generator/shared";
 import { DEFAULT_ANIMATION_OPTIONS } from "@chart-generator/shared";
+import type { OverlaySeries } from "../../utils/chartGenerators/elevationChart/types";
 import { useChartAnimation } from "../../composables/useChartAnimation";
 import { useVideoExport } from "../../composables/useVideoExport";
 import { useImageExport } from "../../composables/useImageExport";
@@ -223,6 +235,10 @@ const props = defineProps({
     type: Array as PropType<number[]>,
     default: undefined,
   },
+  routePoints: {
+    type: Array as PropType<RoutePoint[]>,
+    default: () => [],
+  },
 });
 
 const emit = defineEmits<{
@@ -239,6 +255,29 @@ const emit = defineEmits<{
   updateSeriesColor: [index: number, color: string];
   regenerateColors: [];
 }>();
+
+// Overlay series: HR and speed, derived from routePoints (index-aligned with chartData)
+const hrValues = computed(() => props.routePoints.map(p => p.hr ?? 0))
+const speedValues = computed(() =>
+  props.routePoints.map((p, i) => {
+    if (i === 0) return 0
+    const prev = props.routePoints[i - 1]
+    if (!p.time || !prev.time) return 0
+    const dt = (p.time - prev.time) / 3_600_000
+    const dd = p.distance - prev.distance
+    return dt > 0 ? dd / dt : 0
+  })
+)
+const hasHrData = computed(() => hrValues.value.some(v => v > 0))
+const hasSpeedData = computed(() => speedValues.value.some(v => v > 0))
+const activeOverlays = computed<OverlaySeries[]>(() => {
+  const r: OverlaySeries[] = []
+  if (props.animationConfig.showHrOverlay && hasHrData.value)
+    r.push({ values: hrValues.value, color: props.animationConfig.hrOverlayColor, label: 'HR' })
+  if (props.animationConfig.showSpeedOverlay && hasSpeedData.value)
+    r.push({ values: speedValues.value, color: props.animationConfig.speedOverlayColor, label: 'Tempo' })
+  return r
+})
 
 // Title card: include title + transition in total duration when title exists
 const hasTitleCard = computed(() => !!props.chartTitle.trim());
@@ -437,6 +476,7 @@ const animationSvg = computed(() => {
     } : undefined,
     curveOpacity: hasTitleCard.value ? fadeIn : undefined,
     annotations: props.animationConfig.annotations ?? [],
+    overlays: activeOverlays.value,
   });
 });
 

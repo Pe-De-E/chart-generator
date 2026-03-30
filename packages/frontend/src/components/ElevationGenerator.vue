@@ -128,6 +128,7 @@
               :style-overrides="styleOverrides"
               :chart-data="chartDataForAnimation"
               :time-array="timeArray"
+              :route-points="routePoints"
               @update:styleOverrides="setStyleOverrides"
               @update-series-color="updateSeriesColor"
               @regenerate-colors="regenerateColors"
@@ -183,6 +184,7 @@ import { useDataGrouping } from '../composables/useDataGrouping'
 import { chartService } from '../services/chart.service'
 import { extractNormalizedTimeArray, buildSmoothedTimeArray } from '../utils/timeMapping'
 import type { GPXParseResult } from '../composables/useCSVParser'
+import type { RoutePoint } from '@chart-generator/shared'
 
 const router = useRouter()
 const route = useRoute()
@@ -280,6 +282,10 @@ const chartDataForAnimation = computed(() => {
 // Source 2: Saved chart (tableItems with col_2 = time in ms)
 // buildSmoothedTimeArray clamps and smooths speeds so the animation
 // feels rhythmic, not jerky from raw GPS data.
+const routePoints = computed<RoutePoint[]>(() =>
+  (lastGPXResult.value?.downsampling.points ?? []) as RoutePoint[]
+)
+
 const timeArray = computed<number[] | undefined>(() => {
   // Try from fresh GPX parse first
   if (lastGPXResult.value) {
