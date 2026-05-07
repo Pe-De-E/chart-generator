@@ -13,7 +13,7 @@ export const MOCK_USER = {
  * Call this before page.goto() so the token is available when the app boots.
  */
 export async function setupAuth(page: Page) {
-  // Inject token before page load so useAuth.init() finds it
+  // Inject token before page load so useAuthStore.init() finds it
   await page.addInitScript(() => {
     sessionStorage.setItem('accessToken', 'mock-access-token-for-testing')
   })
