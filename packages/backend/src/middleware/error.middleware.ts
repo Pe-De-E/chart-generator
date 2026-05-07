@@ -26,7 +26,7 @@ export async function errorHandler(
 
   // Log 5xx errors to database
   if (statusCode >= 500) {
-    const user = (request as any).user
+    const user = request.user
     try {
       await prisma.errorLog.create({
         data: {

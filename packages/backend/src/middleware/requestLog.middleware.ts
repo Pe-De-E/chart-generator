@@ -8,7 +8,7 @@ export function requestLogMiddleware(
   _reply: FastifyReply,
   done: HookHandlerDoneFunction
 ) {
-  ;(request as any).startTime = Date.now()
+  request.startTime = Date.now()
   done()
 }
 
@@ -20,8 +20,8 @@ export async function onResponseLog(
     return
   }
 
-  const responseTime = Date.now() - ((request as any).startTime || Date.now())
-  const user = (request as any).user
+  const responseTime = Date.now() - (request.startTime || Date.now())
+  const user = request.user
 
   try {
     await prisma.requestLog.create({

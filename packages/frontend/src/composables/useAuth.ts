@@ -1,3 +1,4 @@
+import axios from 'axios'
 import { ref, computed, type Ref } from 'vue'
 import { authService } from '../services/auth.service'
 import { userService } from '../services/user.service'
@@ -46,8 +47,8 @@ export function useAuth() {
     try {
       const response = await authService.signup(data)
       currentUser.value = response.user
-    } catch (err: any) {
-      error.value = err.response?.data?.error?.message || 'Signup failed'
+    } catch (err) {
+      error.value = axios.isAxiosError(err) ? err.response?.data?.error?.message || 'Signup failed' : 'Signup failed'
       throw err
     } finally {
       isLoading.value = false
@@ -64,8 +65,8 @@ export function useAuth() {
     try {
       const response = await authService.login(data)
       currentUser.value = response.user
-    } catch (err: any) {
-      error.value = err.response?.data?.error?.message || 'Login failed'
+    } catch (err) {
+      error.value = axios.isAxiosError(err) ? err.response?.data?.error?.message || 'Login failed' : 'Login failed'
       throw err
     } finally {
       isLoading.value = false
@@ -97,8 +98,8 @@ export function useAuth() {
     try {
       const user = await userService.getCurrentUser()
       currentUser.value = user
-    } catch (err: any) {
-      error.value = err.response?.data?.error?.message || 'Failed to fetch user'
+    } catch (err) {
+      error.value = axios.isAxiosError(err) ? err.response?.data?.error?.message || 'Failed to fetch user' : 'Failed to fetch user'
       throw err
     }
   }
@@ -113,8 +114,8 @@ export function useAuth() {
     try {
       const user = await userService.updateProfile(data)
       currentUser.value = user
-    } catch (err: any) {
-      error.value = err.response?.data?.error?.message || 'Failed to update profile'
+    } catch (err) {
+      error.value = axios.isAxiosError(err) ? err.response?.data?.error?.message || 'Failed to update profile' : 'Failed to update profile'
       throw err
     } finally {
       isLoading.value = false

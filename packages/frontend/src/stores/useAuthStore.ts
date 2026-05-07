@@ -1,3 +1,4 @@
+import axios from 'axios'
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import { authService } from '../services/auth.service'
@@ -39,8 +40,8 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const response = await authService.signup(data)
       currentUser.value = response.user
-    } catch (err: any) {
-      error.value = err.response?.data?.error?.message || 'Signup failed'
+    } catch (err) {
+      error.value = axios.isAxiosError(err) ? err.response?.data?.error?.message || 'Signup failed' : 'Signup failed'
       throw err
     } finally {
       isLoading.value = false
@@ -54,8 +55,8 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const response = await authService.login(data)
       currentUser.value = response.user
-    } catch (err: any) {
-      error.value = err.response?.data?.error?.message || 'Login failed'
+    } catch (err) {
+      error.value = axios.isAxiosError(err) ? err.response?.data?.error?.message || 'Login failed' : 'Login failed'
       throw err
     } finally {
       isLoading.value = false
@@ -81,8 +82,8 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const user = await userService.getCurrentUser()
       currentUser.value = user
-    } catch (err: any) {
-      error.value = err.response?.data?.error?.message || 'Failed to fetch user'
+    } catch (err) {
+      error.value = axios.isAxiosError(err) ? err.response?.data?.error?.message || 'Failed to fetch user' : 'Failed to fetch user'
       throw err
     }
   }
@@ -94,8 +95,8 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const user = await userService.updateProfile(data)
       currentUser.value = user
-    } catch (err: any) {
-      error.value = err.response?.data?.error?.message || 'Failed to update profile'
+    } catch (err) {
+      error.value = axios.isAxiosError(err) ? err.response?.data?.error?.message || 'Failed to update profile' : 'Failed to update profile'
       throw err
     } finally {
       isLoading.value = false

@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client'
 import { prisma } from '../config/database.js'
 import { SYSTEM_ELEVATION_THEMES } from '../config/systemElevationThemes.js'
 import type {
@@ -73,7 +74,7 @@ export class ElevationThemeService {
         name: data.name,
         description: data.description || null,
         preview: data.preview,
-        tokens: data.tokens as any,
+        tokens: data.tokens as Prisma.InputJsonValue,
       },
     })
 
@@ -105,7 +106,7 @@ export class ElevationThemeService {
         ...(data.name !== undefined && { name: data.name }),
         ...(data.description !== undefined && { description: data.description }),
         ...(data.preview !== undefined && { preview: data.preview }),
-        ...(data.tokens !== undefined && { tokens: data.tokens as any }),
+        ...(data.tokens !== undefined && { tokens: data.tokens as Prisma.InputJsonValue }),
       },
     })
 

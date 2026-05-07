@@ -1,213 +1,220 @@
-# Chart Generator - Full-Stack Application
+# Altavio – Chart & Route Visualizer
 
-Ein Full-Stack Chart Generator mit Vue 3 Frontend und Node.js Backend mit Benutzerauthentifizierung.
+A full-stack web application for creating publication-quality SVG charts and route visualizations from CSV and GPX data. Charts can be exported as static images or rendered as animated MP4 videos — entirely in the browser.
 
-## 🏗️ Architektur
+Built with **Vue 3**, **TypeScript**, **Fastify**, and **PostgreSQL** in a pnpm monorepo.
 
-- **Frontend**: Vue 3 + TypeScript + Vuetify + Vite
-- **Backend**: Node.js + TypeScript + Fastify + Prisma
-- **Database**: PostgreSQL
-- **Monorepo**: pnpm workspaces
+---
 
-## 📁 Projektstruktur
+## What it does
 
-```
-chart-generator/
-├── packages/
-│   ├── frontend/          # Vue 3 Frontend
-│   ├── backend/           # Fastify Backend API
-│   └── shared/            # Geteilte TypeScript Types
-├── docker-compose.yml     # PostgreSQL Development Setup
-└── package.json           # Root Workspace Konfiguration
-```
+### Data Charts (CSV input)
 
-## 🚀 Getting Started
+Upload any CSV file and generate styled, scalable SVG charts:
 
-### Voraussetzungen
+- **Bar, Line, Scatter, Pie, Area** charts with configurable colors, titles, and axes
+- **Statistical overlays** — mean, median, trend lines, and confidence bands rendered directly into the SVG
+- **Multi-series support** — overlay multiple data series in a single chart
+- **Data cleaning workflow** — remove outliers, rename columns, handle nulls before generating
 
-- Node.js 18+
-- pnpm 8+
-- Docker Desktop (für PostgreSQL)
+### Route & Elevation Visualizations (GPX input)
 
-### Installation
+Upload a GPX track and generate:
 
-1. **Dependencies installieren**:
+- **Elevation chart** — altitude profile with automatic annotation detection (climbs, descents, peaks), effort zones, animated drawing, and pan/zoom
+- **Route map** — SVG map rendered from real geodata: roads, forests, rivers, contour lines, hillshading, vineyards, meadows, and satellite tiles fetched live from Overpass API and Mapbox
+- **3D terrain view** — interactive Three.js scene built from elevation tiles
+
+### Export
+
+| Format | Description |
+|---|---|
+| SVG | Scalable, print-ready vector output |
+| PNG | Rasterized frame export |
+| MP4 | Animated chart rendered via FFmpeg.wasm — no server upload needed |
+| QR Code | Shareable link for the current chart |
+
+### User Accounts
+
+- Register and log in to save charts and configuration presets to the cloud
+- Manage personal chart style presets and elevation color themes
+- Admin dashboard with request logs and error tracking
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | Vue 3 (Composition API), Vite, Vuetify 3, Pinia, TypeScript |
+| Backend | Fastify 5, Prisma ORM, PostgreSQL 16, Zod |
+| Auth | JWT with access + refresh token rotation, httpOnly cookies |
+| Video export | FFmpeg.wasm (runs in-browser, no server processing) |
+| Maps | Overpass API, Mapbox Vector Tiles, D3, Three.js |
+| Testing | Vitest (747 unit tests), Playwright (E2E + component tests) |
+| Monorepo | pnpm workspaces |
+
+---
+
+## Prerequisites
+
+- [Node.js](https://nodejs.org/) 20+
+- [pnpm](https://pnpm.io/) 9+ — install with `npm install -g pnpm`
+- [Docker](https://www.docker.com/) — used to run PostgreSQL locally
+
+---
+
+## Getting Started
+
+### 1. Install dependencies
+
 ```bash
+git clone <repo-url>
+cd chart-generator
 pnpm install
 ```
 
-2. **PostgreSQL starten**:
+### 2. Configure environment variables
+
 ```bash
-npm run db:start
+cp .env.example packages/backend/.env
 ```
 
-3. **Shared Types bauen**:
-```bash
-pnpm --filter @chart-generator/shared build
+Edit `packages/backend/.env` and set the two JWT secrets to long random strings:
+
+```env
+ACCESS_TOKEN_SECRET=change-this-to-a-random-string-at-least-32-characters-long
+REFRESH_TOKEN_SECRET=change-this-to-a-different-random-string-at-least-32-chars
 ```
 
-4. **Datenbank migrieren**:
+All other values work out of the box for local development.
+
+### 3. Start the database
+
 ```bash
-pnpm --filter @chart-generator/backend db:generate
-pnpm --filter @chart-generator/backend db:migrate
+npm run db:start                                       # starts PostgreSQL via Docker on port 5433
+pnpm --filter @chart-generator/backend db:migrate      # runs Prisma migrations
 ```
 
-### Development
+### 4. Start the application
 
-**Frontend + Backend gleichzeitig starten**:
 ```bash
 npm run dev
 ```
 
-Oder separat:
+This starts both frontend and backend concurrently.
 
-**Nur Frontend**:
-```bash
-npm run dev:frontend
+| Service | URL |
+|---|---|
+| Frontend | http://localhost:5173 |
+| Backend API | http://localhost:3000 |
+| Health check | http://localhost:3000/api/v1/health |
+
+---
+
+## Project Structure
+
+```
+packages/
+├── frontend/                    # Vue 3 SPA
+│   └── src/
+│       ├── components/
+│       │   └── chartWorkflow/   # Multi-step chart creation UI
+│       ├── composables/         # Reusable Vue 3 composition functions
+│       ├── stores/              # Pinia state (auth, route map, chart config)
+│       ├── utils/
+│       │   └── chartGenerators/ # Pure SVG generator functions, one per chart type
+│       └── services/            # Axios API client
+│
+├── backend/                     # Fastify REST API
+│   └── src/
+│       ├── routes/              # Route registration
+│       ├── controllers/         # Request/response handling
+│       ├── services/            # Business logic (auth, charts, uploads)
+│       ├── middleware/          # Auth, validation, error handling
+│       └── validators/          # Zod input schemas
+│
+└── shared/                      # TypeScript types shared across packages
 ```
 
-**Nur Backend**:
+### How the chart pipeline works
+
+1. **Upload** — CSV or GPX is parsed client-side into a typed `DataPoint[]` array
+2. **Inspect & Clean** — optional step to remove bad rows, rename columns, handle nulls
+3. **Configure** — choose chart type, colors, title, overlays
+4. **Generate** — a pure TypeScript function returns an SVG string (no canvas, no third-party chart library)
+5. **Export** — download SVG/PNG, or pass frames through FFmpeg.wasm for video
+
+All chart generators are in `packages/frontend/src/utils/chartGenerators/` and are pure functions with no side effects.
+
+---
+
+## Available Scripts
+
 ```bash
-npm run dev:backend
+# Development
+npm run dev               # Start frontend + backend together
+npm run dev:frontend      # Frontend only (port 5173)
+npm run dev:backend       # Backend only (port 3000)
+
+# Testing
+npm test                  # All unit tests (747 tests)
+npm run test:coverage     # Unit tests with coverage report
+npm run test:e2e          # Playwright end-to-end tests
+npm run test:ct           # Playwright component tests
+
+# Database
+npm run db:start          # Start PostgreSQL container
+npm run db:stop           # Stop PostgreSQL container
+npm run db:reset          # Reset and re-run all migrations
+
+# Build & type checking
+npm run build             # Build all packages
+npm run type-check        # TypeScript check across all packages
 ```
 
-### URLs
+---
 
-- **Frontend**: http://localhost:5173
-- **Backend API**: http://localhost:3000
-- **API Health Check**: http://localhost:3000/api/v1/health
-
-## 🔐 Authentication Flow
-
-1. Benutzer registriert sich über `/signup`
-2. Login über `/login` generiert JWT Access Token (15min) + Refresh Token (7 Tage, httpOnly Cookie)
-3. Access Token wird im sessionStorage gespeichert
-4. Bei 401 Errors wird automatisch Token Refresh durchgeführt
-5. Geschützte Routen sind nur mit gültiger Authentifizierung zugänglich
-
-## 📡 API Endpoints
+## API Reference
 
 ### Authentication
-- `POST /api/v1/auth/signup` - Benutzer registrieren
-- `POST /api/v1/auth/login` - Benutzer anmelden
-- `POST /api/v1/auth/logout` - Benutzer abmelden
-- `POST /api/v1/auth/refresh` - Access Token erneuern
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/v1/auth/signup` | Register a new user |
+| POST | `/api/v1/auth/login` | Log in, receive token pair |
+| POST | `/api/v1/auth/logout` | Invalidate refresh token |
+| POST | `/api/v1/auth/refresh` | Rotate tokens |
 
-### User Management
-- `GET /api/v1/users/me` - Aktuellen Benutzer abrufen
-- `PATCH /api/v1/users/me` - Profil aktualisieren
-- `PATCH /api/v1/users/me/password` - Passwort ändern
-- `DELETE /api/v1/users/me` - Account löschen
+### User
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/v1/users/me` | Get current user profile |
+| PATCH | `/api/v1/users/me` | Update profile |
+| PATCH | `/api/v1/users/me/password` | Change password |
+| DELETE | `/api/v1/users/me` | Delete account |
 
-### Health Check
-- `GET /api/v1/health` - API Status
+### Charts & Presets
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/v1/charts` | List saved charts |
+| POST | `/api/v1/charts` | Save a chart |
+| DELETE | `/api/v1/charts/:id` | Delete a chart |
+| GET | `/api/v1/chart-presets` | List style presets |
+| POST | `/api/v1/chart-presets` | Create a preset |
 
-## 🗄️ Datenbank
+---
 
-### Prisma Commands
+## Security
 
-```bash
-# Datenbank migrieren
-pnpm --filter @chart-generator/backend db:migrate
+- Passwords hashed with **bcrypt** (12 rounds)
+- Access tokens expire after **15 minutes**
+- Refresh tokens expire after **7 days**, stored server-side with rotation on every use
+- Refresh tokens are sent via **httpOnly cookies** — not accessible to JavaScript
+- **Rate limiting**: 100 req/15 min globally, 5 req/15 min on auth endpoints
+- **CORS**, **Helmet** security headers, and input validation via Zod on all endpoints
 
-# Prisma Client generieren
-pnpm --filter @chart-generator/backend db:generate
+---
 
-# Datenbank zurücksetzen (Vorsicht!)
-pnpm --filter @chart-generator/backend db:reset
-```
+## License
 
-### Schema
-
-- **users** - Benutzerkonten (email, password hash, name)
-- **refresh_tokens** - JWT Refresh Tokens
-- **charts** - Gespeicherte Charts (zukünftige Funktion)
-
-## 🔒 Sicherheit
-
-- Passwörter werden mit **bcrypt** (12 Rounds) gehasht
-- JWT Access Tokens: **15 Minuten** Gültigkeit
-- JWT Refresh Tokens: **7 Tage** Gültigkeit, httpOnly Cookies
-- **Refresh Token Rotation** - neue Tokens bei jedem Refresh
-- **Rate Limiting**: 100 Requests/15min (global), 5 Requests/15min (auth)
-- **CORS** konfiguriert für localhost Development
-- **Helmet** Security Headers
-
-## 🧪 Testing
-
-```bash
-# Alle Tests
-npm run test
-
-# Nur Frontend Tests
-pnpm --filter @chart-generator/frontend test
-
-# Nur Backend Tests
-pnpm --filter @chart-generator/backend test
-```
-
-## 🏗️ Build
-
-```bash
-# Alle Packages bauen
-npm run build
-
-# Nur Frontend
-pnpm --filter @chart-generator/frontend build
-
-# Nur Backend
-pnpm --filter @chart-generator/backend build
-```
-
-## 📦 Deployment
-
-### Backend
-
-1. Environment Variables setzen (siehe `.env.example`)
-2. Datenbank migrieren: `pnpm --filter @chart-generator/backend db:migrate`
-3. Build: `pnpm --filter @chart-generator/backend build`
-4. Start: `pnpm --filter @chart-generator/backend start`
-
-### Frontend
-
-1. Environment Variable `VITE_API_URL` setzen
-2. Build: `pnpm --filter @chart-generator/frontend build`
-3. Statische Files aus `packages/frontend/dist` deployen
-
-## 🛠️ Technologie Stack
-
-### Frontend
-- Vue 3 (Composition API)
-- TypeScript
-- Vuetify 3 (Material Design)
-- Vue Router 4
-- Axios (HTTP Client)
-- Vite (Build Tool)
-
-### Backend
-- Node.js + TypeScript
-- Fastify (Web Framework)
-- Prisma (ORM)
-- PostgreSQL (Database)
-- JWT (jsonwebtoken)
-- bcrypt (Password Hashing)
-- Zod (Validation)
-
-### DevOps
-- Docker Compose
-- pnpm Workspaces
-- tsx (TypeScript Execution)
-
-## 🔮 Zukünftige Features
-
-- Chart Persistenz (Charts in DB speichern/laden)
-- Chart Sharing (Öffentliche Links)
-- Email Verification
-- Password Reset Flow
-- OAuth Integration (Google, GitHub)
-- Two-Factor Authentication
-- Team/Workspace Support
-
-## 📝 Lizenz
-
-MIT
+Copyright (c) 2026 Philipp Demmelmair. All rights reserved. See [LICENSE](./LICENSE) for details.

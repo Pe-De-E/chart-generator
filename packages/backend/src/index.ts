@@ -8,6 +8,7 @@ import fastifyStatic from '@fastify/static'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { env } from './config/env.js'
+import './types/fastify.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -15,6 +16,7 @@ import { registerRoutes } from './routes/index.js'
 import { errorHandler, notFoundHandler } from './middleware/error.middleware.js'
 import { requestLogMiddleware, onResponseLog } from './middleware/requestLog.middleware.js'
 import { AuthService } from './services/auth.service.js'
+import { tempExportService } from './services/tempExport.service.js'
 
 // Create Fastify instance
 const fastify = Fastify({
@@ -52,10 +54,10 @@ await fastify.register(rateLimit, {
   timeWindow: env.RATE_LIMIT_WINDOW,
 })
 
-// Multipart for file uploads
+// Multipart for file uploads (300 MB global limit; image routes enforce 10 MB in service layer)
 await fastify.register(multipart, {
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10 MB
+    fileSize: 300 * 1024 * 1024, // 300 MB (for video exports)
   },
   attachFieldsToBody: false,
 })
@@ -82,6 +84,9 @@ await registerRoutes(fastify)
 // Error handlers
 fastify.setErrorHandler(errorHandler)
 fastify.setNotFoundHandler(notFoundHandler)
+
+// Cleanup expired temp exports every hour
+setInterval(() => tempExportService.cleanupExpiredVideos(), 60 * 60 * 1000)
 
 // Start server
 const start = async () => {

@@ -1,3 +1,5 @@
+import { Prisma } from '@prisma/client'
+import type { Chart } from '@prisma/client'
 import { prisma } from '../config/database.js'
 import type { CreateChartRequest, UpdateChartRequest, SavedChart } from '@chart-generator/shared'
 
@@ -8,8 +10,8 @@ export class ChartService {
         userId,
         title: data.title,
         type: data.type,
-        data: data.data as any,
-        config: data.config as any,
+        data: data.data as Prisma.InputJsonValue,
+        config: data.config as Prisma.InputJsonValue,
         svgContent: data.svgContent || null,
         isPublic: data.isPublic || false,
       },
@@ -61,8 +63,8 @@ export class ChartService {
       data: {
         ...(data.title !== undefined && { title: data.title }),
         ...(data.type !== undefined && { type: data.type }),
-        ...(data.data !== undefined && { data: data.data as any }),
-        ...(data.config !== undefined && { config: data.config as any }),
+        ...(data.data !== undefined && { data: data.data as Prisma.InputJsonValue }),
+        ...(data.config !== undefined && { config: data.config as Prisma.InputJsonValue }),
         ...(data.svgContent !== undefined && { svgContent: data.svgContent }),
         ...(data.isPublic !== undefined && { isPublic: data.isPublic }),
       },
@@ -87,7 +89,7 @@ export class ChartService {
     return true
   }
 
-  private mapToSavedChart(chart: any): SavedChart {
+  private mapToSavedChart(chart: Chart): SavedChart {
     return {
       id: chart.id,
       userId: chart.userId,

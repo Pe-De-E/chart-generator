@@ -1,5 +1,5 @@
 import { prisma } from '../config/database.js'
-import { Prisma } from '@prisma/client'
+import { Prisma, PaymentStatus } from '@prisma/client'
 
 export class AdminService {
   // ===== DASHBOARD =====
@@ -55,7 +55,7 @@ export class AdminService {
   static async getPayments(options: { page: number; pageSize: number; status?: string }) {
     const { page, pageSize, status } = options
     const skip = (page - 1) * pageSize
-    const where: Prisma.PaymentWhereInput = status ? { status: status as any } : {}
+    const where: Prisma.PaymentWhereInput = status ? { status: status as PaymentStatus } : {}
 
     const [items, total] = await Promise.all([
       prisma.payment.findMany({

@@ -6,8 +6,9 @@ export class AdminController {
     try {
       const overview = await AdminService.getDashboardOverview()
       return reply.status(200).send(overview)
-    } catch (error: any) {
-      return reply.status(500).send({ error: { code: 'INTERNAL_ERROR', message: error.message, statusCode: 500 } })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      return reply.status(500).send({ error: { code: 'INTERNAL_ERROR', message, statusCode: 500 } })
     }
   }
 
@@ -19,16 +20,18 @@ export class AdminController {
       const { page = '1', pageSize = '20', search } = request.query
       const result = await AdminService.getUsers({ page: parseInt(page), pageSize: parseInt(pageSize), search })
       return reply.status(200).send(result)
-    } catch (error: any) {
-      return reply.status(500).send({ error: { code: 'INTERNAL_ERROR', message: error.message, statusCode: 500 } })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      return reply.status(500).send({ error: { code: 'INTERNAL_ERROR', message, statusCode: 500 } })
     }
   }
 
   static async getUserStats(_request: FastifyRequest, reply: FastifyReply) {
     try {
       return reply.status(200).send(await AdminService.getUserStats())
-    } catch (error: any) {
-      return reply.status(500).send({ error: { code: 'INTERNAL_ERROR', message: error.message, statusCode: 500 } })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      return reply.status(500).send({ error: { code: 'INTERNAL_ERROR', message, statusCode: 500 } })
     }
   }
 
@@ -40,16 +43,18 @@ export class AdminController {
       const { page = '1', pageSize = '20', status } = request.query
       const result = await AdminService.getPayments({ page: parseInt(page), pageSize: parseInt(pageSize), status })
       return reply.status(200).send(result)
-    } catch (error: any) {
-      return reply.status(500).send({ error: { code: 'INTERNAL_ERROR', message: error.message, statusCode: 500 } })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      return reply.status(500).send({ error: { code: 'INTERNAL_ERROR', message, statusCode: 500 } })
     }
   }
 
   static async getPaymentStats(_request: FastifyRequest, reply: FastifyReply) {
     try {
       return reply.status(200).send(await AdminService.getPaymentStats())
-    } catch (error: any) {
-      return reply.status(500).send({ error: { code: 'INTERNAL_ERROR', message: error.message, statusCode: 500 } })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      return reply.status(500).send({ error: { code: 'INTERNAL_ERROR', message, statusCode: 500 } })
     }
   }
 
@@ -64,16 +69,18 @@ export class AdminController {
         statusCode: statusCode ? parseInt(statusCode) : undefined, method,
       })
       return reply.status(200).send(result)
-    } catch (error: any) {
-      return reply.status(500).send({ error: { code: 'INTERNAL_ERROR', message: error.message, statusCode: 500 } })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      return reply.status(500).send({ error: { code: 'INTERNAL_ERROR', message, statusCode: 500 } })
     }
   }
 
   static async getRequestStats(_request: FastifyRequest, reply: FastifyReply) {
     try {
       return reply.status(200).send(await AdminService.getRequestStats())
-    } catch (error: any) {
-      return reply.status(500).send({ error: { code: 'INTERNAL_ERROR', message: error.message, statusCode: 500 } })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      return reply.status(500).send({ error: { code: 'INTERNAL_ERROR', message, statusCode: 500 } })
     }
   }
 
@@ -88,27 +95,30 @@ export class AdminController {
         resolved: resolved !== undefined ? resolved === 'true' : undefined, severity,
       })
       return reply.status(200).send(result)
-    } catch (error: any) {
-      return reply.status(500).send({ error: { code: 'INTERNAL_ERROR', message: error.message, statusCode: 500 } })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      return reply.status(500).send({ error: { code: 'INTERNAL_ERROR', message, statusCode: 500 } })
     }
   }
 
   static async resolveError(request: FastifyRequest<{ Params: { errorId: string } }>, reply: FastifyReply) {
     try {
       const { errorId } = request.params
-      const { userId } = (request as any).user
+      const { userId } = request.user!
       const result = await AdminService.resolveError(errorId, userId)
       return reply.status(200).send(result)
-    } catch (error: any) {
-      return reply.status(500).send({ error: { code: 'INTERNAL_ERROR', message: error.message, statusCode: 500 } })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      return reply.status(500).send({ error: { code: 'INTERNAL_ERROR', message, statusCode: 500 } })
     }
   }
 
   static async getErrorStats(_request: FastifyRequest, reply: FastifyReply) {
     try {
       return reply.status(200).send(await AdminService.getErrorStats())
-    } catch (error: any) {
-      return reply.status(500).send({ error: { code: 'INTERNAL_ERROR', message: error.message, statusCode: 500 } })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      return reply.status(500).send({ error: { code: 'INTERNAL_ERROR', message, statusCode: 500 } })
     }
   }
 }

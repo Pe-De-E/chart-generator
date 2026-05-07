@@ -628,11 +628,16 @@ const loadChartData = async (chartId: string) => {
 
     // Set chart configuration
     chartTitle.value = chart.title
-    chartType.value = chart.type as any
+    chartType.value = chart.type
 
     // Load data from saved chart
-    const savedData = chart.data as any
-    const savedConfig = chart.config as any
+    const savedData = chart.data as { tableItems?: Record<string, unknown>[] }
+    const savedConfig = chart.config as {
+      selectedLabelColumn?: string
+      selectedValueColumns?: string[]
+      seriesConfig?: Array<{ name: string; columnKey: string; color: string }>
+      [key: string]: unknown
+    }
 
     if (savedData.tableItems && Array.isArray(savedData.tableItems)) {
       // Reconstruct table headers from first item

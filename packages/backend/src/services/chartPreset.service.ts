@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client'
 import { prisma } from '../config/database.js'
 import { SYSTEM_CHART_PRESETS } from '../config/systemChartPresets.js'
 import type {
@@ -67,7 +68,7 @@ export class ChartPresetService {
       data: {
         userId,
         name: data.name,
-        config: data.config as any,
+        config: data.config as Prisma.InputJsonValue,
       },
     })
 
@@ -97,7 +98,7 @@ export class ChartPresetService {
       where: { id: presetId },
       data: {
         ...(data.name !== undefined && { name: data.name }),
-        ...(data.config !== undefined && { config: data.config as any }),
+        ...(data.config !== undefined && { config: data.config as Prisma.InputJsonValue }),
       },
     })
 

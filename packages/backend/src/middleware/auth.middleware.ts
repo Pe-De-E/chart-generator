@@ -29,7 +29,7 @@ export async function authMiddleware(
     const payload = JwtService.verifyAccessToken(token)
 
     // Attach user info to request
-    ;(request as any).user = {
+    request.user = {
       userId: payload.userId,
       email: payload.email,
     }

@@ -11,7 +11,7 @@ export async function adminMiddleware(
   reply: FastifyReply
 ): Promise<void> {
   try {
-    const user = (request as any).user
+    const user = request.user
 
     if (!user?.userId) {
       return reply.status(401).send({
